@@ -1,0 +1,270 @@
+@use './tokens.scss' as *;
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Default Onyx/Obsidian Dark Theme ───────────────────────────── */
+:root {
+  /* Surface System */
+  --bg-canvas:  #07080B;
+  --bg-surface: #0E1017;
+  --bg-overlay: #161929;
+  --bg-element: #202438;
+  --bg-active:  rgba(255, 255, 255, 0.08);
+
+  /* Border System */
+  --border:        #252A40;
+  --border-strong: #353A56;
+  --border-glow:   rgba(59, 130, 246, 0.15);
+
+  /* Brand & Accent */
+  --brand-primary: #10B981; /* Emerald */
+  --brand-hover:   #34D399;
+  --brand-subtle:  rgba(16, 185, 129, 0.1);
+
+  --accent-primary: #3B82F6; /* Azure Blue */
+  --accent-hover:   #60A5FA;
+  --accent-subtle:  rgba(59, 130, 246, 0.1);
+
+  /* Typography Hierarchy (WCAG AAA/AA Compliant) */
+  --text-primary:   #FFFFFF;
+  --text-secondary: #E2E8F0;
+  --text-muted:     #94A3B8;
+  --text-disabled:  #475569;
+
+  --color-rgb-text: 255, 255, 255;
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Alert & Incident Tokens (Dark Mode) */
+  --alert-danger-bg: rgba(225, 29, 72, 0.14);
+  --alert-danger-border: rgba(225, 29, 72, 0.35);
+  --alert-danger-text: #fda4af;
+  --alert-danger-heading: #ffe4e6;
+  --alert-danger-badge-bg: rgba(225, 29, 72, 0.25);
+  --alert-danger-badge-text: #fecdd3;
+
+  --alert-warning-bg: rgba(217, 119, 6, 0.14);
+  --alert-warning-border: rgba(217, 119, 6, 0.35);
+  --alert-warning-text: #fde68a;
+  --alert-warning-heading: #fef3c7;
+  --alert-warning-badge-bg: rgba(217, 119, 6, 0.25);
+  --alert-warning-badge-text: #fef08a;
+
+  --alert-success-bg: rgba(16, 185, 129, 0.14);
+  --alert-success-border: rgba(16, 185, 129, 0.35);
+  --alert-success-text: #a7f3d0;
+  --alert-success-heading: #d1fae5;
+  --alert-success-badge-bg: rgba(16, 185, 129, 0.25);
+  --alert-success-badge-text: #6ee7b7;
+}
+
+/* ─── 5-Layer Surface Codespace Light Theme ─────────────────────── */
+:root.light-theme {
+  --surface-canvas:  #ffffff;
+  --surface-chrome:  #f4f4f6;
+  --surface-sunken:  #f1f5f9;
+  --surface-overlay: #ffffff;
+
+  --bg-canvas:  #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-sidebar: #0f172a;
+  --bg-overlay: #ffffff;
+  --bg-element: #f1f5f9;
+  --bg-active:  rgba(5, 150, 105, 0.1);
+
+  --border-subtle:      #e2e8f0;
+  --border:             #e2e8f0;
+  --border-strong:      #cbd5e1;
+  --border-glow:        rgba(5, 150, 105, 0.2);
+
+  --brand-primary: #059669;
+  --brand-hover:   #047857;
+  --brand-subtle:  rgba(5, 150, 105, 0.1);
+
+  --accent-primary: #0284c7;
+  --accent-hover:   #0369a1;
+  --accent-subtle:  rgba(2, 132, 199, 0.1);
+
+  --text-primary:   #0f172a;
+  --text-secondary: #334155;
+  --text-muted:     #64748b;
+  --text-disabled:  #94a3b8;
+
+  --color-rgb-text: 15, 23, 42;
+
+  /* Alert & Incident Tokens (Light Mode - Crisp High-Contrast) */
+  --alert-danger-bg: #fff1f2;
+  --alert-danger-border: #fecdd3;
+  --alert-danger-text: #9f1239;
+  --alert-danger-heading: #881337;
+  --alert-danger-badge-bg: #ffe4e6;
+  --alert-danger-badge-text: #9f1239;
+
+  --alert-warning-bg: #fffbeb;
+  --alert-warning-border: #fde68a;
+  --alert-warning-text: #92400e;
+  --alert-warning-heading: #78350f;
+  --alert-warning-badge-bg: #fef3c7;
+  --alert-warning-badge-text: #92400e;
+
+  --alert-success-bg: #f0fdf4;
+  --alert-success-border: #bbf7d0;
+  --alert-success-text: #166534;
+  --alert-success-heading: #14532d;
+  --alert-success-badge-bg: #dcfce7;
+  --alert-success-badge-text: #166534;
+}
+
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  input, select, textarea {
+    color: var(--text-primary);
+    background-color: var(--bg-element);
+  }
+}
+
+/* Chrome/Safari/Edge autofill dark mode & text color fix */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--bg-element) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  caret-color: var(--text-primary) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ─── Standardized Action Controls ───────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-hover));
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px var(--brand-subtle);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px var(--brand-subtle);
+    filter: brightness(1.05);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  color: var(--text-primary);
+  background: var(--bg-element);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-active);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #e11d48, #f43f5e);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.25);
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+  }
+}
+
+/* ─── Animations & Shimmers ──────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  @include skeleton;
+}
+
+.card-container {
+  @include card;
+}
+
+/* ─── Reduced Motion Accessibility (WCAG Requirement) ────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

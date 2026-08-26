@@ -1,0 +1,25 @@
+{
+  "name": "pharma-core",
+  "version": "1.0.0",
+  "description": "PharmaChain Central Cryptographic Vault — AES-256-GCM Keystore, ES256 Engine, JWKS Server",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon -L server.js",
+    "start": "node server.js",
+    "test": "node test_auth.js && node test_http.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1116.0",
+    "@aws-sdk/lib-storage": "^3.1116.0",
+    "@aws-sdk/s3-request-presigner": "^3.1116.0",
+    "axios": "^1.7.2",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "express": "^5.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

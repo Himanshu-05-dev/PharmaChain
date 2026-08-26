@@ -1,0 +1,158 @@
+# API Endpoints Required for Shopkeeper App
+
+This document outlines the REST API endpoints required by the React Native Shopkeeper mobile app to replace all mock data with live server data. Please provide these to your backend developer.
+
+## General Requirements
+- **Base URL**: e.g., `https://api.yourdomain.com/v1`
+- **Content-Type**: `application/json`
+
+---
+
+## 0. Token Handling & Authentication Flow (Crucial)
+
+Here is exactly how the backend should handle Tokens (JWTs) when communicating with the mobile app:
+
+### 1. Generating the Token (On Login/Registration)
+When the user successfully logs in, the backend must generate a **JSON Web Token (JWT)**.
+- The payload should contain the `userId`, `role`, and `shopId`.
+- It should have an expiration (e.g., 7 days).
+- The token is sent back in the JSON response of `/auth/login`. (The mobile app will automatically save this into the device's hardware Secure Storage).
+
+### 2. Receiving the Token (On Authenticated Requests)
+For every protected route (Dashboard, History, Scan, Profile), the mobile app will automatically attach the token in the HTTP Headers using the Bearer format:
+```http
+Authorization: Bearer <your_jwt_token_here>
+```
+
+### 3. Backend Verification (Middleware)
+The backend developer should write an **Auth Middleware** that runs on all protected routes:
+1. Extract the token from the `Authorization` header.
+2. Verify the token using the secret key (to ensure it wasn't forged or expired).
+3. Extract the `userId` from the token payload.
+4. Attach the `userId` to the request object (e.g., `req.user = { id: ... }`).
+5. Process the request. If the token is missing or invalid, return a `401 Unauthorized` status code. 
+
+*(If the mobile app receives a `401 Unauthorized`, it is programmed to instantly log the user out and redirect them to the Login screen).*
+
+---
+
+## 1. Authentication
+
+### 1.1 Shopkeeper Login
+Authenticates the user and returns an access token.
+- **Endpoint**: `POST /auth/login`
+- **Request Body**:
+  ```json
+  {
+    "email": "shopkeeper@example.com",
+    "password": "securepassword123"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "token": "eyJhbG...",
+    "user": {
+      "id": "USR-123",
+      "shopId": "SHOP-456",
+      "displayName": "John Doe",
+      "role": "SHOPKEEPER"
+    }
+  }
+  ```
+
+### 1.2 Shopkeeper Registration
+Registers a new shopkeeper account.
+- **Endpoint**: `POST /auth/register`
+- **Request Body**:
+  ```json
+  {
+    "email": "shopkeeper@example.com",
+    "password": "securepassword123",
+    "displayName": "John Doe",
+    "shopId": "SHOP-456"
+  }
+  ```
+- **Response**: `201 Created`
+
+---
+
+## 2. Medicine Verification (Scanning)
+
+### 2.1 Verify Medicine QR Code
+When a shopkeeper or guest scans a medicine's QR code, this endpoint validates its authenticity.
+- **Endpoint**: `POST /scan/verify`
+- **Request Body**:
+  ```json
+  {
+    "qrData": "raw-string-data-from-qr-code",
+    "scannedBy": "USR-123" // null if guest
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "medicineId": "MED-789",
+    "name": "Paracetamol 500mg",
+    "manufacturer": "XYZ Pharma Pvt. Ltd.",
+    "batchNo": "PCM-26-A91",
+    "mfgDate": "2026-08-20",
+    "expDate": "2028-08-19",
+    "packId": "PK8F29A71X",
+    "status": "Verified", // Enums: "Verified", "Suspicious", "Counterfeit"
+    "trustScore": 96,
+    "message": "This medicine is genuine and safe to use."
+  }
+  ```
+
+---
+
+## 3. Dashboard & History
+
+### 3.1 Get Dashboard Statistics
+Retrieves high-level metrics for the shopkeeper's home screen.
+- **Endpoint**: `GET /shopkeeper/stats`
+- **Response**:
+  ```json
+  {
+    "totalScans": 145,
+    "verifiedCount": 130,
+    "suspiciousCount": 10,
+    "counterfeitCount": 5
+  }
+  ```
+
+### 3.2 Get Scan History (Transactions)
+Retrieves the list of past scans performed by this shopkeeper for the History tab.
+- **Endpoint**: `GET /shopkeeper/history`
+- **Query Params**: `?status=Verified` (optional filter), `?page=1&limit=20` (pagination)
+- **Response**:
+  ```json
+  {
+    "history": [
+      {
+        "id": "SCAN-001",
+        "medicineName": "Paracetamol 500mg",
+        "timestamp": "2026-08-20T10:00:00Z",
+        "status": "Verified",
+        "packId": "PK8F29A71X"
+      }
+    ],
+    "totalPages": 5
+  }
+  ```
+
+---
+
+## 4. Profile Management
+
+### 4.1 Update Profile
+Updates the shopkeeper's details (like the Display Name feature we just added).
+- **Endpoint**: `PATCH /shopkeeper/profile`
+- **Request Body**:
+  ```json
+  {
+    "displayName": "New Shop Name"
+  }
+  ```
+- **Response**: `200 OK` (Returns the updated user object)

@@ -1,0 +1,54 @@
+# ── Node.js & Dependencies ───────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# ── Environment & Secrets — NEVER commit real secrets ────────────────────────
+.env
+.env.*
+*.env
+!.env.example
+services/*/.env
+services/*/.env.*
+!services/*/.env.example
+
+# ── Kubernetes Secrets ────────────────────────────────────────────────────────
+k8s/secrets.yml
+k8s/*.secret.yml
+!k8s/secrets.yml.example
+
+# ── Crypto Data & Private Keys ────────────────────────────────────────────────
+services/pharma-core/data/
+services/pharma-core/config/rsa/pharma-core-private.pem
+*.pem
+!services/pharma-core/config/rsa/pharma-core-public.pem
+*.key
+*.keystore
+
+# ── Build & Cache Artifacts ──────────────────────────────────────────────────
+dist/
+build/
+coverage/
+.nyc_output/
+
+# ── OS Artifacts ──────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+# ── IDEs & Agent Workspace Artifacts ──────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.agents/
+.gemini/
+

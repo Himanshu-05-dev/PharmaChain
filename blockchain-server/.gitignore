@@ -1,0 +1,24 @@
+# chaincode build artifacts
+chaincode/build/
+chaincode/.gradle/
+
+# spring boot build artifacts
+backend/target/
+backend/build/
+backend/.gradle/
+backend/*.class
+*.class
+*.jar
+backend/application-local.yml
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+#debugging
+fixed.md
+
+.env
+
+# generated fabric crypto material (contains private keys)
+organizations/

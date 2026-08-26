@@ -1,0 +1,26 @@
+# crypto-config.yaml
+# Defines the Org1 peer organization and Orderer organization.
+# Used by `cryptogen` inside the fabric-setup-crypto container to generate
+# all X.509 certificates and private keys for the network.
+
+OrdererOrgs:
+  - Name: Orderer
+    Domain: example.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+        SANS:
+          - localhost
+          - 127.0.0.1
+
+PeerOrgs:
+  - Name: Org1
+    Domain: org1.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 1

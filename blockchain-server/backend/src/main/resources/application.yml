@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: pharma-backend
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${PHARMA_CORE_JWKS_URL:http://pharma-core:4000/.well-known/jwks.json}
+          issuer-uri: ${PHARMA_CORE_ISSUER:pharma-core}
+          audience: ${PHARMA_CORE_AUDIENCE:pharma-backend}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+server:
+  port: ${SERVER_PORT:8080}

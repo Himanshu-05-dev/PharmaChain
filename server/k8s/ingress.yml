@@ -1,0 +1,96 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pharma-ingress
+  labels:
+    app.kubernetes.io/name: pharma-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      # ── Admin Service Route ─────────────────────────────────────────────────
+      - pathType: Prefix
+        path: "/api/admin"
+        backend:
+          service:
+            name: admin-service
+            port:
+              number: 80
+
+      # ── Manufacturer Service Route ──────────────────────────────────────────
+      - pathType: Prefix
+        path: "/api/manufacturer"
+        backend:
+          service:
+            name: manufacturer-service
+            port:
+              number: 80
+
+      # ── Shopkeeper Service Routes ───────────────────────────────────────────
+      - pathType: Prefix
+        path: "/api/shopkeeper"
+        backend:
+          service:
+            name: shopkeeper-service
+            port:
+              number: 80
+
+      - pathType: Prefix
+        path: "/api/medicine"
+        backend:
+          service:
+            name: shopkeeper-service
+            port:
+              number: 80
+
+      - pathType: Prefix
+        path: "/api/v1"
+        backend:
+          service:
+            name: shopkeeper-service
+            port:
+              number: 80
+
+
+      # ── Consumer Service Route ──────────────────────────────────────────────
+      - pathType: Prefix
+        path: "/api/consumer"
+        backend:
+          service:
+            name: consumer-service
+            port:
+              number: 80
+
+      # ── Public JWKS Discovery Routes ────────────────────────────────────────
+      - pathType: ImplementationSpecific
+        path: "/.well-known"
+        backend:
+          service:
+            name: pharma-core-service
+            port:
+              number: 80
+
+      - pathType: ImplementationSpecific
+        path: "/jwks.json"
+        backend:
+          service:
+            name: pharma-core-service
+            port:
+              number: 80
+
+      # ── Pharma Core Internal/Direct Route ───────────────────────────────────
+      - pathType: Prefix
+        path: "/core"
+        backend:
+          service:
+            name: pharma-core-service
+            port:
+              number: 80
+
+
+

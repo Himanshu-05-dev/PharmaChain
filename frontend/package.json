@@ -1,0 +1,12 @@
+{
+  "name": "pharmachain-frontend-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix Shopkeeper-DashBoard run dev",
+    "dev:shopkeeper": "npm --prefix Shopkeeper-DashBoard run dev",
+    "dev:manufacturer": "npm --prefix Manufacture-DashBoard run dev",
+    "build:shopkeeper": "npm --prefix Shopkeeper-DashBoard run build",
+    "build:manufacturer": "npm --prefix Manufacture-DashBoard run build"
+  }
+}

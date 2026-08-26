@@ -1,0 +1,126 @@
+# =============================================================================
+# PharmaChain Root .gitignore (SIH 2026)
+# Multi-stack: Node.js, Spring Boot, React, Expo/React Native, Kubernetes, Fabric
+# =============================================================================
+
+# ── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+*/node_modules/
+*/*/node_modules/
+.pnp
+.pnp.js
+package-lock.json.backup
+
+# ── Environment & Secrets (NEVER COMMIT REAL CREDENTIALS) ────────────────────
+.env
+.env.*
+*.env
+!.env.example
+!*.env.example
+services/*/.env
+services/*/.env.*
+frontend/*/.env
+frontend/*/.env.*
+
+# Kubernetes Secrets & Manifests with sensitive data
+server/k8s/secrets.yml
+server/k8s/*.secret.yml
+!server/k8s/secrets.yml.example
+!server/k8s/*.secret.yml.example
+
+# ── Cryptographic Keystores & Private Keys ────────────────────────────────────
+*.pem
+*.key
+*.keystore
+*.jks
+*.p12
+*.p8
+*.mobileprovision
+keystore.json
+services/pharma-core/data/
+services/pharma-core/config/rsa/pharma-core-private.pem
+!services/pharma-core/config/rsa/pharma-core-public.pem
+data/exports/
+*.csv
+
+# ── Build Outputs & Packaging ────────────────────────────────────────────────
+dist/
+*/dist/
+build/
+*/build/
+out/
+.next/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# ── Spring Boot, Java & Gradle Artifacts (blockchain-server) ─────────────────
+target/
+*/target/
+*/*/target/
+.gradle/
+*/.gradle/
+*/*/gradle/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+backend/target/
+backend/build/
+backend/.gradle/
+backend/*.class
+chaincode/build/
+chaincode/.gradle/
+
+# ── Mobile & Expo Artifacts (shopkeeper-mobile, customer-mobile) ─────────────
+.expo/
+*/.expo/
+.expo-shared/
+*.orig.*
+.metro-health-check*
+android/
+ios/
+
+# ── Hyperledger Fabric Generated Crypto & State (blockchain-server) ──────────
+blockchain-server/organizations/fabric-ca/
+blockchain-server/organizations/peerOrganizations/
+blockchain-server/organizations/ordererOrganizations/
+blockchain-server/channel-artifacts/
+*.block
+*.tx
+channel.block
+mychannel.block
+
+# ── Logs & Debugging ─────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+fixed.md
+
+# ── OS & Filesystem Junk ─────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+
+# ── IDEs, Editors & Agent Artifacts ──────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.agents/
+.gemini/

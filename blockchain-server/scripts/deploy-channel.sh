@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 # =============================================================================
 # deploy-channel.sh
 # Joins orderer and peer, packages and deploys pharmacc chaincode.
@@ -26,21 +26,21 @@ JAR_FILE=/chaincode/build/libs/pharmacc.jar
 PACKAGE_STAGING=/tmp/chaincode-pkg
 
 # Wait for peer to be reachable
-echo "⏳ Waiting for peer0.org1.example.com to be ready..."
+echo "â³ Waiting for peer0.org1.example.com to be ready..."
 for i in $(seq 1 $MAX_RETRY); do
     peer node status >/dev/null 2>&1 && break || true
     if [ $i -eq $MAX_RETRY ]; then
-        echo "❌ Peer not ready after $MAX_RETRY attempts. Exiting."
+        echo "âŒ Peer not ready after $MAX_RETRY attempts. Exiting."
         exit 1
     fi
-    echo "  Attempt $i/$MAX_RETRY — retrying in ${DELAY}s..."
+    echo "  Attempt $i/$MAX_RETRY â€” retrying in ${DELAY}s..."
     sleep $DELAY
 done
-echo "✅ Peer is up!"
+echo "âœ… Peer is up!"
 
-# ── 1. Join Peer to Channel ───────────────────────────────────────────────────
+# â”€â”€ 1. Join Peer to Channel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 echo ""
-echo "📣 Step 1: Joining Peer to channel '$CHANNEL_NAME'..."
+echo "ðŸ“£ Step 1: Joining Peer to channel '$CHANNEL_NAME'..."
 
 # Fetch the orderer's processed genesis block (not the raw file).
 # The orderer adds etcdraft metadata during initialization, changing the block
@@ -52,28 +52,28 @@ peer channel fetch 0 "$FETCHED_BLOCK" \
     --channelID "$CHANNEL_NAME" \
     --tls \
     --cafile "$ORDERER_CA" || {
-    echo "⚠️  Could not fetch block 0 — falling back to genesis file"
+    echo "âš ï¸  Could not fetch block 0 â€” falling back to genesis file"
     FETCHED_BLOCK="$GENESIS_BLOCK"
 }
 
 peer channel join -b "$FETCHED_BLOCK" || \
-    echo "⚠️  Peer may already be joined to channel — continuing..."
+    echo "âš ï¸  Peer may already be joined to channel â€” continuing..."
 
-echo "✅ Channel joined!"
+echo "âœ… Channel joined!"
 
-# ── 2. Build Chaincode Package Manually from pre-built JAR ───────────────────
+# â”€â”€ 2. Build Chaincode Package Manually from pre-built JAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # The correct way for Java chaincode is:
 #   metadata.json + code.tar.gz (containing connection.json + chaincode.jar)
 # packed together into a final .tar.gz package
 echo ""
-echo "📦 Step 2: Packaging chaincode from pre-built JAR..."
+echo "ðŸ“¦ Step 2: Packaging chaincode from pre-built JAR..."
 
 if [ ! -f "$JAR_FILE" ]; then
-    echo "❌ ERROR: Shadow JAR not found at $JAR_FILE"
+    echo "âŒ ERROR: Shadow JAR not found at $JAR_FILE"
     echo "   Ensure fabric-build-chaincode service ran successfully."
     exit 1
 fi
-echo "✅ Found JAR at $JAR_FILE"
+echo "âœ… Found JAR at $JAR_FILE"
 
 # Clean staging directory
 rm -rf "$PACKAGE_STAGING"
@@ -96,11 +96,11 @@ tar -czf code.tar.gz -C code .
 tar -czf /tmp/${CC_NAME}.tar.gz metadata.json code.tar.gz
 cd -
 
-echo "✅ Chaincode packaged!"
+echo "âœ… Chaincode packaged!"
 
-# ── 3. Install Chaincode ──────────────────────────────────────────────────────
+# â”€â”€ 3. Install Chaincode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 echo ""
-echo "📥 Step 3: Installing chaincode on peer..."
+echo "ðŸ“¥ Step 3: Installing chaincode on peer..."
 
 peer lifecycle chaincode install /tmp/${CC_NAME}.tar.gz || true
 PACKAGE_ID=$(peer lifecycle chaincode queryinstalled \
@@ -111,7 +111,7 @@ PACKAGE_ID=$(peer lifecycle chaincode queryinstalled \
     | tail -n 1)
 
 if [ -z "$PACKAGE_ID" ]; then
-    echo "❌ ERROR: Could not determine Package ID after install."
+    echo "âŒ ERROR: Could not determine Package ID after install."
     peer lifecycle chaincode queryinstalled
     exit 1
 fi
@@ -119,17 +119,17 @@ fi
 echo "  Package ID: $PACKAGE_ID"
 
 # Wait for peer deliver service to be ready after install
-echo "⏳ Waiting 10s for peer deliver service to warm up..."
+echo "â³ Waiting 10s for peer deliver service to warm up..."
 sleep 10
 
-# ── 4 & 5. Check If Already Committed / Approve & Commit ─────────────────────
+# â”€â”€ 4 & 5. Check If Already Committed / Approve & Commit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if peer lifecycle chaincode querycommitted --channelID "$CHANNEL_NAME" --name "$CC_NAME" --tls --cafile "$ORDERER_CA" 2>/dev/null | grep -qi "Version: ${CC_VERSION}"; then
-    echo "⚠️  Chaincode '${CC_NAME}' version '${CC_VERSION}' is already committed on channel '${CHANNEL_NAME}'."
+    echo "âš ï¸  Chaincode '${CC_NAME}' version '${CC_VERSION}' is already committed on channel '${CHANNEL_NAME}'."
     echo "   Skipping approval and commit."
 else
-    # ── 4. Approve Chaincode ──────────────────────────────────────────────────
+    # â”€â”€ 4. Approve Chaincode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     echo ""
-    echo "✍️  Step 4: Approving chaincode for org..."
+    echo "âœï¸  Step 4: Approving chaincode for org..."
 
     peer lifecycle chaincode approveformyorg \
         -o orderer.example.com:7050 \
@@ -143,8 +143,8 @@ else
         --cafile "$ORDERER_CA" \
         --waitForEvent=false
 
-    echo "✅ Chaincode approve submitted!"
-    echo "⏳ Waiting 5s then verifying approval..."
+    echo "âœ… Chaincode approve submitted!"
+    echo "â³ Waiting 5s then verifying approval..."
     sleep 5
 
     peer lifecycle chaincode checkcommitreadiness \
@@ -156,9 +156,9 @@ else
         --cafile "$ORDERER_CA" \
         --output json
 
-    # ── 5. Commit Chaincode ───────────────────────────────────────────────────
+    # â”€â”€ 5. Commit Chaincode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     echo ""
-    echo "✅ Step 5: Committing chaincode to channel..."
+    echo "âœ… Step 5: Committing chaincode to channel..."
 
     peer lifecycle chaincode commit \
         -o orderer.example.com:7050 \
@@ -173,7 +173,7 @@ else
         --tlsRootCertFiles /organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt \
         --waitForEvent=false
 
-    echo "⏳ Waiting 15s then verifying commit..."
+    echo "â³ Waiting 15s then verifying commit..."
     sleep 15
 fi
 
@@ -184,7 +184,7 @@ peer lifecycle chaincode querycommitted \
     --cafile "$ORDERER_CA"
 
 echo ""
-echo "🎉 =============================================="
+echo "ðŸŽ‰ =============================================="
 echo "   pharmacc chaincode committed on '$CHANNEL_NAME'"
 echo "   pharma-backend will start momentarily."
 echo "==============================================="

@@ -22,7 +22,6 @@ import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 import org.hyperledger.fabric.shim.ledger.KeyModification;
 
 import com.owlike.genson.Genson;
-import com.owlike.genson.GenericType;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -58,6 +57,21 @@ public final class PharmaContract implements ContractInterface {
         return normalized;
     }
 
+    private static String extractBatchId(final String batchState) {
+        if (batchState == null || batchState.isEmpty()) {
+            return "";
+        }
+        if (batchState.trim().startsWith("{")) {
+            try {
+                JSONObject obj = new JSONObject(batchState);
+                return obj.optString("batchId", "");
+            } catch (Exception e) {
+                return batchState;
+            }
+        }
+        return batchState;
+    }
+
     private enum PharmaContractErrors {
         TRANSITION_NOT_FOUND,
         TRANSITION_ALREADY_EXISTS,
@@ -70,7 +84,7 @@ public final class PharmaContract implements ContractInterface {
     }
 
     /**
-     * Records a new transition (e.g. a sale) on the ledger, keyed by event key and updating current state.
+     * Records a new transition on the ledger, keyed by event key and updating current state.
      *
      * @param ctx the transaction context
      * @param packId the unique packHash for this unit
@@ -91,7 +105,9 @@ public final class PharmaContract implements ContractInterface {
         String eventKey = packId + ":" + normalizedEventType;
         String currentKey = packId + ":CURRENT";
         // Check if parent batch has been recalled
-        String batchId = ctx.getStub().getStringState(packId + ":BATCH");
+        String batchState = ctx.getStub().getStringState(packId + ":BATCH");
+        String batchId = extractBatchId(batchState);
+
         if (batchId != null && !batchId.isEmpty()) {
             String recallState = ctx.getStub().getStringState(batchId + ":RECALLED");
             if (recallState == null || recallState.isEmpty()) {
@@ -137,7 +153,18 @@ public final class PharmaContract implements ContractInterface {
             }
         }
 
-        Transition transition = new Transition(packId, normalizedEventType, eventKey, fromId, toId, sellingDate, sellingTime, sellerId);
+        Transition transition = new Transition(
+                packId,
+                batchId != null ? batchId : "",
+                normalizedEventType,
+                normalizedEventType,
+                eventKey,
+                fromId,
+                toId,
+                sellingDate,
+                sellingTime,
+                sellerId
+        );
         String sortedJson = genson.serialize(transition);
         ctx.getStub().putStringState(eventKey, sortedJson);
         ctx.getStub().putStringState(currentKey, sortedJson);
@@ -164,8 +191,13 @@ public final class PharmaContract implements ContractInterface {
                 String currentKey = packId + ":CURRENT";
                 String batchKey = packId + ":BATCH";
 
-                // Save mapping to batch
-                ctx.getStub().putStringState(batchKey, batchId);
+                // Save mapping to batch as valid JSON document for CouchDB
+                JSONObject batchDoc = new JSONObject();
+                batchDoc.put("docType", "batch_mapping");
+                batchDoc.put("packId", packId);
+                batchDoc.put("batchId", batchId == null ? "" : batchId);
+                batchDoc.put("status", eventType);
+                ctx.getStub().putStringState(batchKey, batchDoc.toString());
 
                 // Check idempotency
                 String existing = ctx.getStub().getStringState(eventKey);
@@ -176,7 +208,9 @@ public final class PharmaContract implements ContractInterface {
 
                 Transition t = new Transition(
                     packId,
+                    batchId == null ? "" : batchId,
                     eventType,
+                    eventType, // status
                     eventKey,
                     item.optString("fromId", "GENESIS"),
                     item.optString("toId", ""),
@@ -216,7 +250,18 @@ public final class PharmaContract implements ContractInterface {
         String key1 = systemBatchId + ":RECALLED";
         String key2 = systemBatchId + ":RECALL";
 
-        Transition recallTransition = new Transition(systemBatchId, "RECALLED", key1, actorId, "RECALLED", recallDate, recallTime, reason);
+        Transition recallTransition = new Transition(
+                systemBatchId,
+                systemBatchId,
+                "RECALLED",
+                "RECALLED",
+                key1,
+                actorId,
+                "RECALLED",
+                recallDate,
+                recallTime,
+                reason
+        );
         String json = genson.serialize(recallTransition);
 
         ctx.getStub().putStringState(key1, json);
@@ -251,11 +296,11 @@ public final class PharmaContract implements ContractInterface {
                 status = "Sold";
             } else if ("RECALLED".equalsIgnoreCase(t.getEventType())) {
                 status = "Recalled";
+            } else if ("MINTED".equalsIgnoreCase(t.getEventType())) {
+                status = "Minted";
             }
             return "{\"status\":\"" + status + "\",\"detail\":" + currentJson + "}";
         }
-
-
 
         return "{\"status\":\"NOT_FOUND\"}";
     }

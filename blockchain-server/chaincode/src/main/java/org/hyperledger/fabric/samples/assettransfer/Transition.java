@@ -21,7 +21,13 @@ public final class Transition {
     private final String packId;
 
     @Property()
+    private final String batchId;
+
+    @Property()
     private final String eventType;
+
+    @Property()
+    private final String status;
 
     @Property()
     private final String hash;
@@ -49,8 +55,16 @@ public final class Transition {
         return packId;
     }
 
+    public String getBatchId() {
+        return batchId != null ? batchId : "";
+    }
+
     public String getEventType() {
         return eventType;
+    }
+
+    public String getStatus() {
+        return status != null ? status : eventType;
     }
 
     public String getHash() {
@@ -79,7 +93,9 @@ public final class Transition {
 
     public Transition(
             @JsonProperty("packId") final String packId,
+            @JsonProperty("batchId") final String batchId,
             @JsonProperty("eventType") final String eventType,
+            @JsonProperty("status") final String status,
             @JsonProperty("hash") final String hash,
             @JsonProperty("fromId") final String fromId,
             @JsonProperty("toId") final String toId,
@@ -87,13 +103,28 @@ public final class Transition {
             @JsonProperty("sellingTime") final String sellingTime,
             @JsonProperty("sellerId") final String sellerId) {
         this.packId = packId;
+        this.batchId = batchId != null ? batchId : "";
         this.eventType = eventType;
+        this.status = status != null ? status : eventType;
         this.hash = hash;
         this.fromId = fromId;
         this.toId = toId;
         this.sellingDate = sellingDate;
         this.sellingTime = sellingTime;
         this.sellerId = sellerId;
+    }
+
+    // Overload constructor for backwards compatibility
+    public Transition(
+            final String packId,
+            final String eventType,
+            final String hash,
+            final String fromId,
+            final String toId,
+            final String sellingDate,
+            final String sellingTime,
+            final String sellerId) {
+        this(packId, "", eventType, eventType, hash, fromId, toId, sellingDate, sellingTime, sellerId);
     }
 
     @Override
@@ -109,21 +140,21 @@ public final class Transition {
         Transition other = (Transition) obj;
 
         return Objects.deepEquals(
-                new String[] {getPackId(), getEventType(), getHash(), getFromId(), getToId(), getSellingDate(), getSellingTime(), getSellerId()},
-                new String[] {other.getPackId(), other.getEventType(), other.getHash(), other.getFromId(), other.getToId(), other.getSellingDate(),
+                new String[] {getPackId(), getBatchId(), getEventType(), getStatus(), getHash(), getFromId(), getToId(), getSellingDate(), getSellingTime(), getSellerId()},
+                new String[] {other.getPackId(), other.getBatchId(), other.getEventType(), other.getStatus(), other.getHash(), other.getFromId(), other.getToId(), other.getSellingDate(),
                         other.getSellingTime(), other.getSellerId()});
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getPackId(), getEventType(), getHash(), getFromId(), getToId(), getSellingDate(), getSellingTime(), getSellerId());
+        return Objects.hash(getPackId(), getBatchId(), getEventType(), getStatus(), getHash(), getFromId(), getToId(), getSellingDate(), getSellingTime(), getSellerId());
     }
 
     @Override
     public String toString() {
         return this.getClass().getSimpleName() + "@" + Integer.toHexString(hashCode())
-                + " [packId=" + packId + ", eventType=" + eventType + ", hash=" + hash + ", fromId=" + fromId + ", toId=" + toId
+                + " [packId=" + packId + ", batchId=" + batchId + ", eventType=" + eventType + ", status=" + status
+                + ", hash=" + hash + ", fromId=" + fromId + ", toId=" + toId
                 + ", sellingDate=" + sellingDate + ", sellingTime=" + sellingTime + ", sellerId=" + sellerId + "]";
     }
 }
-

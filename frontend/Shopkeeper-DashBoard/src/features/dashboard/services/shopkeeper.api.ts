@@ -16,8 +16,8 @@ import {
   MOCK_FRAUD_INCIDENTS,
 } from './mockData';
 
-const BASE_URL = import.meta.env.VITE_SHOPKEEPER_SERVER_URL || 'http://localhost:3002';
-const CONSUMER_URL = import.meta.env.VITE_CONSUMER_SERVER_URL || 'http://localhost:3003';
+const BASE_URL = import.meta.env.VITE_API_URL || '';
+const CONSUMER_URL = import.meta.env.VITE_CONSUMER_API_URL || '';
 
 const apiClient = axios.create({
   baseURL: `${BASE_URL}/api`,

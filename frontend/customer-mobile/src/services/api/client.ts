@@ -41,29 +41,28 @@ export const consumerApiClient = axios.create({
 export const apiClient = axios.create({
   baseURL: API_URL,
   timeout: 15000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// Interceptor to attach Firebase token if authenticated
-apiClient.interceptors.request.use(async (config) => {
-  const user = useAuthStore.getState().user;
-  if (user) {
-    try {
-      const token = await user.getIdToken();
-      config.headers.Authorization = `Bearer ${token}`;
-    } catch (e) {
-      console.warn("Could not get Firebase ID token", e);
-    }
+// ── Auth Interceptor ──────────────────────────────────────────────────────────
+// Attach the PharmaChain JWT (not a Firebase token) to every apiClient request.
+apiClient.interceptors.request.use((config) => {
+  const { pharmaToken } = useAuthStore.getState();
+  if (pharmaToken) {
+    config.headers.Authorization = `Bearer ${pharmaToken}`;
   }
   return config;
 });
 
-// Sync User to MongoDB via Backend
+// ── Sync User ─────────────────────────────────────────────────────────────────
 export const syncUser = async () => {
   try {
     const response = await apiClient.post('/user/sync');
     return response.data;
   } catch (error) {
-    console.error("Failed to sync user with backend", error);
+    console.error('Failed to sync user with backend', error);
     throw error;
   }
 };

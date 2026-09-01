@@ -4,12 +4,14 @@ import { store } from './store';
 import { ToastProvider } from './context/ToastContext';
 import { useDashboard } from './features/dashboard/Hooks/dashboard.hooks';
 import { useAuth } from './features/auth/hooks/auth.hooks';
+import { useBlockStatusPoller } from './features/auth/hooks/useBlockStatusPoller';
 import { Layout } from './components/Layout';
 import { ToastContainer } from './components/common/Toast';
 import { GlobalSearchModal } from './components/layout/GlobalSearchModal';
 import { HelpSupportModal } from './components/layout/HelpSupportModal';
 import { BatchDetailsModal } from './components/batches/BatchDetailsModal';
 import { InitiateRecallModal } from './components/recall/InitiateRecallModal';
+import { BlockedScreen } from './components/common/BlockedScreen';
 
 // Auth Components
 import { AuthLayout } from './features/auth/components/AuthLayout';
@@ -31,10 +33,18 @@ import { SecuritySettingsView } from './components/settings/SecuritySettingsView
 import { Clock, ShieldAlert, CheckCircle2, Zap } from 'lucide-react';
 
 import './App.scss';
+import './styles/BlockedScreen.scss';
 
+// ── Inner orchestrator — has access to Redux store via hooks ───────────────────
 const AppOrchestrator: React.FC = () => {
   const { activeRoute, navigateTo, theme } = useDashboard();
-  const { isAuthenticated, kycStatus, simulateKYCApproval, user } = useAuth();
+  const { isAuthenticated, kycStatus, simulateKYCApproval, user, blockedReason, blockedAt } = useAuth();
+
+  // ── Real-time block status polling ────────────────────────────────────────
+  // Polls GET /auth/me every 30 s. When the server reports BLOCKED the
+  // poller dispatches setBlocked → kycStatus becomes 'BLOCKED' → blocked
+  // screen renders immediately without page reload.
+  useBlockStatusPoller();
 
   // Theme initialization on boot before paint
   useEffect(() => {
@@ -47,7 +57,6 @@ const AppOrchestrator: React.FC = () => {
       document.documentElement.classList.add('dark');
     }
   }, [theme]);
-
 
   // Sync active route to browser URL search params
   useEffect(() => {
@@ -64,7 +73,22 @@ const AppOrchestrator: React.FC = () => {
     window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
   }, [activeRoute]);
 
-  // If user is not authenticated, render the high-tech Auth portal
+  // ── BLOCKED: full-page suspension screen ────────────────────────────────────
+  if (kycStatus === 'BLOCKED' || kycStatus === 'SUSPENDED') {
+    return (
+      <>
+        <BlockedScreen
+          reason={blockedReason ?? user?.blockedReason}
+          blockedAt={blockedAt ?? user?.blockedAt}
+          companyName={user?.name}
+          email={user?.email}
+        />
+        <ToastContainer />
+      </>
+    );
+  }
+
+  // ── Not authenticated → Auth portal ────────────────────────────────────────
   if (!isAuthenticated) {
     return (
       <div className="app-container">
@@ -111,7 +135,7 @@ const AppOrchestrator: React.FC = () => {
 
   return (
     <div className="app-container">
-      {/* Top Banner when KYC Status is PENDING */}
+      {/* Top Banner: KYC PENDING */}
       {kycStatus === 'PENDING' && (
         <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-amber-200 sticky top-0 z-30 backdrop-blur-md">
           <div className="flex items-center gap-2">
@@ -153,4 +177,3 @@ export const App: React.FC = () => {
 };
 
 export default App;
-

@@ -10,6 +10,7 @@ import {
   loginSuccess,
   registerSuccess,
   setKYCStatus,
+  setBlocked,
   updateUser,
   logout as logoutAction,
 } from '../slice/auth.slice';
@@ -69,6 +70,17 @@ export const useAuth = () => {
 
         return response;
       } catch (err: any) {
+        // Handle account blocked at login time
+        if (err?.isBlocked) {
+          dispatch(setBlocked({ reason: err.reason, blockedAt: err.blockedAt }));
+          showToast({
+            type: 'error',
+            title: 'Account Blocked',
+            message: err.reason || 'Your account has been blocked by the CDSCO regulatory authority.',
+            duration: 8000,
+          });
+          return;
+        }
         const parsed = parseApiError(err, 'Login failed. Please check your credentials.');
         dispatch(setAuthError(parsed.message));
         showToast({
@@ -256,5 +268,7 @@ export const useAuth = () => {
     setAuthView: (v: AuthViewMode) => dispatch(setAuthView(v)),
     simulateKYCApproval: handleSimulateKYCApproval,
     clearError: () => dispatch(clearAuthError()),
+    blockedReason: authState.blockedReason,
+    blockedAt: authState.blockedAt,
   };
 };

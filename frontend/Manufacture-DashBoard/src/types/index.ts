@@ -24,7 +24,7 @@ export interface ManufacturerProfile {
   code: string;
   email: string;
   licenseNumber: string;
-  kycStatus: 'APPROVED' | 'PENDING' | 'REJECTED';
+  kycStatus: 'APPROVED' | 'PENDING' | 'REJECTED' | 'BLOCKED' | 'SUSPENDED';
   keyId: string;
   keyAlgorithm: 'ES256 (ECDSA P-256)' | string;
   publicKeyPem: string;
@@ -35,6 +35,8 @@ export interface ManufacturerProfile {
   registeredAt: string;
   gstin: string;
   cdscoRegistration: string;
+  blockedReason?: string;
+  blockedAt?: string;
   cin?: string;
 }
 

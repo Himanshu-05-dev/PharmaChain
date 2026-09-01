@@ -1,0 +1,449 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// BlockedScreen.scss  –  Account suspension full-page UI (Robust Centering)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Root: fixed full-screen viewport with its own scrolling ───────────────────
+.bs-root {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #060408;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+
+  /* Custom dark scrollbar */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #09060c;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(220, 38, 38, 0.3);
+    border-radius: 4px;
+    &:hover {
+      background: rgba(220, 38, 38, 0.5);
+    }
+  }
+}
+
+// ── Background Decorators (Fixed behind content) ──────────────────────────────
+.bs-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.bs-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  animation: bs-float 14s ease-in-out infinite alternate;
+}
+
+.bs-orb-1 {
+  width: 580px;
+  height: 580px;
+  top: -160px;
+  right: -100px;
+  background: radial-gradient(circle at 40% 40%, rgba(220, 38, 38, 0.45) 0%, rgba(127, 29, 29, 0.15) 60%, transparent 100%);
+  animation-duration: 16s;
+}
+
+.bs-orb-2 {
+  width: 480px;
+  height: 480px;
+  bottom: -120px;
+  left: -80px;
+  background: radial-gradient(circle at 60% 60%, rgba(139, 92, 246, 0.25) 0%, rgba(76, 29, 149, 0.08) 60%, transparent 100%);
+  animation-duration: 11s;
+  animation-delay: -5s;
+}
+
+.bs-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(220, 38, 38, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(220, 38, 38, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+// ── Flex Centerer (min-height: 100vh with margin: auto for safe centering) ─────
+.bs-scroll {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+// ── Card: Uses margin: auto to prevent flexbox top-overflow cutoff ─────────────
+.bs-card {
+  margin: auto; // Vital: Prevents top overflow cutoff on small/medium screens
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  background: rgba(15, 10, 22, 0.88);
+  border: 1px solid rgba(220, 38, 38, 0.28);
+  border-radius: 20px;
+  padding: 36px 32px 28px;
+  box-shadow:
+    0 0 0 1px rgba(220, 38, 38, 0.12),
+    0 28px 64px rgba(0, 0, 0, 0.8),
+    0 0 80px rgba(185, 28, 28, 0.1);
+  backdrop-filter: blur(24px);
+  animation: bs-appear 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  text-align: center;
+  box-sizing: border-box;
+
+  @media (max-width: 540px) {
+    padding: 28px 18px 24px;
+    gap: 18px;
+    border-radius: 16px;
+  }
+}
+
+// ── Icon Section ──────────────────────────────────────────────────────────────
+.bs-icon-wrap {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.bs-icon-ring {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.bs-icon-ring-3 {
+  inset: -6px;
+  background: rgba(220, 38, 38, 0.08);
+  animation: bs-pulse 2.8s ease-in-out infinite;
+}
+
+.bs-icon-ring-2 {
+  inset: 0px;
+  background: rgba(220, 38, 38, 0.14);
+  animation: bs-pulse 2.8s ease-in-out 0.4s infinite;
+}
+
+.bs-icon-ring-1 {
+  inset: 6px;
+  background: rgba(220, 38, 38, 0.2);
+  animation: bs-pulse 2.8s ease-in-out 0.8s infinite;
+}
+
+.bs-icon-core {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #450a0a 0%, #881337 100%);
+  border: 1.5px solid rgba(248, 113, 113, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 24px rgba(220, 38, 38, 0.45),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.bs-shield-icon {
+  width: 26px;
+  height: 26px;
+  color: #fee2e2;
+}
+
+// ── Regulatory Badge ──────────────────────────────────────────────────────────
+.bs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.14);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  color: #f87171;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bs-badge-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+// ── Header Content ────────────────────────────────────────────────────────────
+.bs-heading-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.bs-title {
+  margin: 0;
+  font-size: clamp(1.4rem, 3.5vw, 1.75rem);
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.bs-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: rgba(252, 165, 165, 0.75);
+  max-width: 460px;
+}
+
+// ── Details Box (Entity, Reason, Timestamp) ───────────────────────────────────
+.bs-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.bs-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  text-align: left;
+  transition: border-color 0.2s ease;
+
+  &--warn {
+    background: rgba(220, 38, 38, 0.08);
+    border-color: rgba(220, 38, 38, 0.25);
+  }
+}
+
+.bs-detail-icon {
+  width: 15px;
+  height: 15px;
+  color: rgba(148, 163, 184, 0.75);
+  flex-shrink: 0;
+  margin-top: 2px;
+
+  &--warn {
+    color: #f87171;
+  }
+}
+
+.bs-detail-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.bs-detail-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(148, 163, 184, 0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bs-detail-value {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: rgba(241, 245, 249, 0.95);
+  line-height: 1.4;
+  word-break: break-word;
+
+  &--warn {
+    color: #fca5a5;
+  }
+}
+
+// ── Next Steps Instructions ───────────────────────────────────────────────────
+.bs-steps {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.bs-steps-title {
+  margin: 0 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(148, 163, 184, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.bs-steps-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: rgba(203, 213, 225, 0.75);
+    line-height: 1.5;
+  }
+}
+
+.bs-step-arrow {
+  width: 13px;
+  height: 13px;
+  color: rgba(239, 68, 68, 0.7);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+// ── Divider ───────────────────────────────────────────────────────────────────
+.bs-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+// ── Action Buttons ────────────────────────────────────────────────────────────
+.bs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.bs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.18s ease;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  box-sizing: border-box;
+
+  &--ghost {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgba(226, 232, 240, 0.85);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+  }
+
+  &--danger {
+    background: linear-gradient(135deg, #b91c1c 0%, #881337 100%);
+    border-color: rgba(239, 68, 68, 0.45);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(185, 28, 28, 0.35);
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, #dc2626 0%, #9f1239 100%);
+      box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5);
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+}
+
+.bs-btn-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.bs-spin {
+  animation: bs-spin 0.8s linear infinite;
+}
+
+// ── Email Support Footer ──────────────────────────────────────────────────────
+.bs-email-note {
+  margin: 0;
+  font-size: 0.73rem;
+  color: rgba(148, 163, 184, 0.6);
+  line-height: 1.4;
+  text-align: center;
+
+  strong {
+    color: rgba(203, 213, 225, 0.85);
+    font-weight: 600;
+  }
+}
+
+// ── Animations ─────────────────────────────────────────────────────────────────
+@keyframes bs-float {
+  from { transform: translateY(0px) scale(1); }
+  to   { transform: translateY(-40px) scale(1.05); }
+}
+
+@keyframes bs-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 0.9; transform: scale(1.1); }
+}
+
+@keyframes bs-appear {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bs-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

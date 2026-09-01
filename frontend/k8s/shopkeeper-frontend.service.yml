@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: shopkeeper-dashboard
+  labels:
+    app: shopkeeper-frontend
+spec:
+  selector:
+    app: shopkeeper-frontend
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: 5175

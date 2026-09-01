@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      port: 5174,
+      port: 5175,
       host: true,
       proxy: {
         '/api/shopkeeper': {

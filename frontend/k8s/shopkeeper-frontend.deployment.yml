@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shopkeeper-frontend-deployment
+  labels:
+    app: shopkeeper-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shopkeeper-frontend
+  template:
+    metadata:
+      labels:
+        app: shopkeeper-frontend
+    spec:
+      containers:
+      - name: shopkeeper-frontend-container
+        image: shopkeeper-dashboard
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        ports:
+        - containerPort: 5175
+          name: shop-ui-http
+        env:
+        - name: VITE_SHOPKEEPER_SERVER_URL
+          value: "http://shopkeeper-service:80"

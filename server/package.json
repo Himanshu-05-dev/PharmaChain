@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "node tests/full_api_system_test.mjs",
+    "test:all": "node tests/comprehensive_live_api_test.mjs",
     "test:full": "node tests/full_api_system_test.mjs",
     "test:s3": "node tests/s3_storage_test.mjs",
     "test:s3-fetch": "node tests/fetch_existing_s3_data_test.mjs",

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaChain — Live QR Code Test Bench</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --emerald: #10b981;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --blue: #38bdf8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    .header {
+      max-width: 1100px;
+      margin: 0 auto 32px auto;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #34d399 0%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+    .grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: #475569;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+    .badge-genuine { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-counterfeit { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-expired { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-schedule { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    
+    .qr-box {
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    .qr-box canvas {
+      display: block;
+    }
+    .title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .meta {
+      font-size: 11px;
+      font-family: monospace;
+      color: #94a3b8;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 8px 10px;
+      border-radius: 8px;
+      width: 100%;
+      word-break: break-all;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>PharmaChain — Live QR Code Test Bench</h1>
+    <p>Scan these real QR codes using your Phone Camera or Customer Mobile App to test full medicine details & live blockchain status.</p>
+  </div>
+
+  <div class="grid">
+    <!-- 1. AUGMENTIN 625 DUO (SCHEDULE H) -->
+    <div class="card">
+      <span class="badge badge-schedule">Schedule H Prescription</span>
+      <div class="qr-box">
+        <canvas id="qr-augmentin"></canvas>
+      </div>
+      <h3 class="title">Augmentin 625 Duo Tablet</h3>
+      <p class="desc">Amoxicillin (500mg) + Potassium Clavulanate (125mg). Cryptographically minted on Fabric.</p>
+      <div class="meta">Batch: PC-BATCH-MFRMFR-20260901-C24D08</div>
+    </div>
+
+    <!-- 2. DOLO 650 TABLET -->
+    <div class="card">
+      <span class="badge badge-genuine">100% Genuine OTC</span>
+      <div class="qr-box">
+        <canvas id="qr-dolo"></canvas>
+      </div>
+      <h3 class="title">Dolo 650 Tablet</h3>
+      <p class="desc">Paracetamol IP 650mg. Verified formulation with active batch metadata.</p>
+      <div class="meta">Batch: PC-BATCH-MFRMFR-20260901-EE0487</div>
+    </div>
+
+    <!-- 3. COUNTERFEIT / TAMPERED QR -->
+    <div class="card">
+      <span class="badge badge-counterfeit">Counterfeit / Invalid Sig</span>
+      <div class="qr-box">
+        <canvas id="qr-counterfeit"></canvas>
+      </div>
+      <h3 class="title">Tampered / Fake QR</h3>
+      <p class="desc">Random QR or tampered token. The app detects invalid ECDSA signature.</p>
+      <div class="meta">Signature: INVALID / UNVERIFIED</div>
+    </div>
+
+    <!-- 4. GENERIC BARCODE / EXTERNAL -->
+    <div class="card">
+      <span class="badge badge-counterfeit">Non-PharmaChain Code</span>
+      <div class="qr-box">
+        <canvas id="qr-external"></canvas>
+      </div>
+      <h3 class="title">External Product Barcode</h3>
+      <p class="desc">Standard commercial barcode (non-PharmaChain). Shows unverified diagnostic.</p>
+      <div class="meta">Payload: 8901234567890 (UPC/EAN)</div>
+    </div>
+  </div>
+
+  <script>
+    const augmentinUrl = 'https://pharmachain.gov.in/verify/e8d1a056d3fdf0fde7527db699ab450de8c682e4434359eef584b002fa8eadb0?token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Im1mci1rZXktbWZyLW1mcjEyODA5OS1mMTQxNTkifQ.eyJiYXRjaElkIjoiUEMtQkFUQ0gtTUZSTUZSLTIwMjYwOTAxLUMyNEQwOCIsInNlcmlhbCI6IjAwMDAxIiwiZXhwaXJ5RGF0ZSI6IjIwMjgtMDktMzAiLCJtYW51ZmFjdHVyZXJJZCI6Ik1GUl9NRlIxMjgwOTlfRjE0MTU5IiwibWVkaWNpbmVOYW1lIjoiQXVnbWVudGluIDYyNSBEdW8gVGFibGV0Iiwibm9uY2UiOiI5YzlhMTZlNiIsInRzIjoiNTUxODM1MjUzMTQ2OSIsImlhdCI6MTc4ODI4NDAzMX0.TUD6XU5GBL-Aop2u-lxLw39mACT-S49vpb5gCbZS-FpKy9c-u7QtR6UpcCGk2Gt6b-3PUP5bBl1HjU31Us1kMw';
+
+    const doloUrl = 'https://pharmachain.gov.in/verify/a44acb2c9ec83d753d79557e98305a501430027eb716bb8b57d873bd28d4775c?token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Im1mci1rZXktbWZyLW1mcjEyODA5OS1mMTQxNTkifQ.eyJiYXRjaElkIjoiUEMtQkFUQ0gtTUZSTUZSLTIwMjYwOTAxLUVFMDQ4NyIsInNlcmlhbCI6IjAwMDAxIiwiZXhwaXJ5RGF0ZSI6IjIwMjgtMTItMzEiLCJtYW51ZmFjdHVyZXJJZCI6Ik1GUl9NRlIxMjgwOTlfRjE0MTU5IiwibWVkaWNpbmVOYW1lIjoiRG9sbyA2NTAgVGFibGV0Iiwibm9uY2UiOiJkMWUzZjc2MyIsInRzIjoiNTUyNjQyNzEzOTU5OCIsImlhdCI6MTc4ODI4NDAzOX0.0g7CWov3aOGuOLTqNT6G0-AR1Y_paEpDKp-gp6w7qMgSR0p8cpap6RMl4Mt99S1iXXP2Nt_YeBNqQUA9xA1jZQ';
+
+    const counterfeitUrl = 'https://pharmachain.gov.in/verify/fakehash12345?token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJiYXRjaElkIjoiRkFLRS1CQVRDSCJ9.invalidSignatureHere';
+    
+    const externalCode = 'https://example.com/product/8901234567890';
+
+    QRCode.toCanvas(document.getElementById('qr-augmentin'), augmentinUrl, { width: 170, margin: 1 });
+    QRCode.toCanvas(document.getElementById('qr-dolo'), doloUrl, { width: 170, margin: 1 });
+    QRCode.toCanvas(document.getElementById('qr-counterfeit'), counterfeitUrl, { width: 170, margin: 1 });
+    QRCode.toCanvas(document.getElementById('qr-external'), externalCode, { width: 170, margin: 1 });
+  </script>
+</body>
+</html>

@@ -51,18 +51,7 @@ export const QRCodeHubView: React.FC = () => {
     }
   }, [selectedBatch?.id, selectedBatch?.mintStatus, fetchBatchPreview]);
 
-  const liveJWT = livePackData?.signedToken;
-  const simulatedJWT = liveJWT || `eyJhbGciOiJFUzI1NiIsImtpZCI6IiR7cHJvZmlsZS5rZXlJZH0iLCJ0eXAiOiJKV1QifQ.${btoa(
-    JSON.stringify({
-      batchId: selectedBatch?.id || 'BATCH-2026-001',
-      serial: sampleSerial,
-      expiryDate: selectedBatch?.expiryDate || '2028-08-21',
-      manufacturerId: profile.id,
-      nonce: 'a3f7b2c1',
-      ts: '3460914344715500',
-    })
-  )}.MEUCIQDxxxx_simulated_es256_signature_p256_curve_78912389_AiEAxxx`;
-
+  const liveJWT = livePackData?.signedToken || null;
   const isMinted = selectedBatch?.mintStatus === 'MINTED' || selectedBatch?.mintStatus === 'RECALLED';
   const qrCodeValue = livePackData?.verifyUrl || (liveJWT ? `https://pharmachain.gov.in/verify/${livePackData?.packHash || 'pack'}?token=${liveJWT}` : '');
 

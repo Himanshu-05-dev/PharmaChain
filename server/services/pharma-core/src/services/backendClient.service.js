@@ -1,10 +1,9 @@
 import axios from 'axios';
 import { signCoreJwt } from './crypto.service.js';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-const PHARMA_BACKEND_URL = process.env.PHARMA_BACKEND_URL || 'http://pharma-backend-service:80';
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+export const getBackendUrl = () => process.env.PHARMA_BACKEND_URL || 'http://host.docker.internal:8080';
 
 /**
  * Creates an axios instance pre-configured for pharma-backend-service.
@@ -19,8 +18,9 @@ const PHARMA_BACKEND_URL = process.env.PHARMA_BACKEND_URL || 'http://pharma-back
  */
 const createBackendClient = () => {
     const bearerJwt = signCoreJwt(); // Fresh RS256 signed token per request
+    const baseURL = getBackendUrl();
     return axios.create({
-        baseURL: PHARMA_BACKEND_URL,
+        baseURL,
         headers: {
             Authorization: `Bearer ${bearerJwt}`,
             'Content-Type': 'application/json',
@@ -31,37 +31,84 @@ const createBackendClient = () => {
     });
 };
 
-// ── Exports ───────────────────────────────────────────────────────────────────
+// ── Error Diagnostic Helper ───────────────────────────────────────────────────
+
+/**
+ * Formats a blockchain error with actionable diagnostics for fast debugging.
+ * @param {Error} err
+ * @param {string} operation
+ * @param {string} [identifier]
+ * @returns {Error}
+ */
+const formatBlockchainError = (err, operation, identifier = '') => {
+    const backendUrl = getBackendUrl();
+    const status  = err.response?.status;
+    const data    = err.response?.data;
+    const rawMsg  = data?.message || data?.error || err.message || 'Unknown blockchain error';
+    const errCode = err.code;
+
+    let errorCategory = 'BLOCKCHAIN_UNKNOWN_ERROR';
+    let diagnosis = 'Inspect pharma-backend logs for detailed stack trace.';
+
+    if (errCode === 'ECONNREFUSED' || errCode === 'ENOTFOUND' || errCode === 'EHOSTUNREACH' || errCode === 'ECONNRESET') {
+        errorCategory = 'BLOCKCHAIN_GATEWAY_OFFLINE';
+        diagnosis = `Cannot connect to Hyperledger Fabric Gateway at ${backendUrl}. Verify that the 'pharma-backend' Docker container and Fabric network (peer0, orderer, couchdb) are running. Command: docker ps`;
+    } else if (errCode === 'ETIMEDOUT' || errCode === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        errorCategory = 'BLOCKCHAIN_CONSENSUS_TIMEOUT';
+        diagnosis = `Hyperledger Fabric transaction timed out (>60s). Check peer node resource usage and Raft orderer consensus status.`;
+    } else if (status === 401 || status === 403) {
+        errorCategory = 'BLOCKCHAIN_AUTH_REJECTED';
+        diagnosis = `Spring Boot rejected the RS256 Bearer JWT. Ensure pharma-core JWKS discovery (/.well-known/jwks.json) is reachable and matches public key.`;
+    } else if (status === 404) {
+        errorCategory = 'RECORD_NOT_FOUND_ON_LEDGER';
+        diagnosis = `The requested pack or batch does not exist in Fabric world state.`;
+    } else if (status >= 500) {
+        errorCategory = 'CHAINCODE_EXECUTION_ERROR';
+        diagnosis = `Hyperledger Fabric smart contract ('pharmacc') threw an exception: "${rawMsg}". Check state transitions and custody chain rules.`;
+    }
+
+    console.error(`
+══════════════════════════════════════════════════════════════════════════════
+🚨 [BLOCKCHAIN ERROR] ${errorCategory} during ${operation}${identifier ? ` [${identifier}]` : ''}
+──────────────────────────────────────────────────────────────────────────────
+  • Target Gateway URL: ${backendUrl}
+  • HTTP Status Code:   ${status || 'N/A (Network/Socket Failure)'}
+  • Socket Error Code:  ${errCode || 'N/A'}
+  • Error Message:      ${rawMsg}
+  • Diagnostic Hint:    ${diagnosis}
+══════════════════════════════════════════════════════════════════════════════
+`);
+
+    const enriched = new Error(`[${errorCategory}] ${rawMsg}`);
+    enriched.code = errorCategory;
+    enriched.status = status;
+    enriched.diagnosis = diagnosis;
+    enriched.targetUrl = backendUrl;
+    enriched.data = data;
+    return enriched;
+};
+
+// ── Real-Time Hyperledger Fabric Gateway Client ─────────────────────────────────
+// No local caching — every transaction and status query is executed live against
+// the Hyperledger Fabric distributed ledger through the Java Spring Boot gateway.
 
 /**
  * Submits a single blockchain transition to pharma-backend-service.
- * @param {Object} transition - { hash, fromId, toId, sellingDate, sellingTime, sellerId }
+ * @param {Object} transition - { hash, fromId, toId, sellingDate, sellingTime, sellerId, packId, eventType }
  * @returns {Promise<Object>} Response data from pharma-backend.
  */
 export const submitTransition = async (transition) => {
     try {
         const response = await createBackendClient().post('/api/transition', transition);
-        console.log(`[pharma-core BackendClient] Transition submitted for hash: ${transition.hash}`);
+        console.log(`[pharma-core BackendClient] ⛓️ Live Fabric transition committed for hash: ${transition.hash}`);
         return response.data;
     } catch (err) {
-        const status = err.response?.status;
-        const data = err.response?.data;
-        const msg = data?.message || data?.error || err.message;
-        console.error(`[pharma-core BackendClient] ❌ Failed to submit transition ${transition.hash} [HTTP ${status || 'NETWORK_ERROR'}]: ${msg}`);
-        const enrichedError = new Error(`Blockchain transition error: [HTTP ${status || 'N/A'}] ${msg}`);
-        enrichedError.status = status;
-        enrichedError.data = data;
-        throw enrichedError;
+        throw formatBlockchainError(err, 'submitTransition', transition.hash || transition.packId);
     }
 };
 
 /**
  * Submits a batch of transitions in one Fabric transaction.
- *
- * ⚠️  CRITICAL FIX (BLOCKCHAIN_TEAM_PLAN Task 2):
- *   Backend RecordBatchRequest.java expects: { "batchId": "...", "transitions": [...] }
- *   The old code sent a bare array → HttpMessageNotReadableException → 500 on every call.
- *   This wrapper object is the agreed shape.
  *
  * @param {string}        batchId     - System batch ID (PC-BATCH-…)
  * @param {Array<Object>} transitions - Array of transition objects.
@@ -69,75 +116,87 @@ export const submitTransition = async (transition) => {
  */
 export const submitTransitionBatch = async (batchId, transitions) => {
     try {
-        // Wrap in the agreed shape — backend owns the deserialization
         const payload = { batchId, transitions };
         const response = await createBackendClient().post('/api/transition/batch', payload);
-        console.log(`[pharma-core BackendClient] Batch of ${transitions.length} transitions submitted for ${batchId}`);
+        console.log(`[pharma-core BackendClient] ⛓️ Live Fabric batch of ${transitions.length} transitions committed for ${batchId}`);
         return response.data;
     } catch (err) {
-        const status = err.response?.status;
-        const data = err.response?.data;
-        const msg = data?.message || data?.error || err.message;
-        console.error(`[pharma-core BackendClient] ❌ Failed to submit batch ${batchId} (${transitions.length} transitions) [HTTP ${status || 'NETWORK_ERROR'}]: ${msg}`);
-        const enrichedError = new Error(`Blockchain batch error: [HTTP ${status || 'N/A'}] ${msg}`);
-        enrichedError.status = status;
-        enrichedError.data = data;
-        throw enrichedError;
+        throw formatBlockchainError(err, 'submitTransitionBatch', `Batch: ${batchId}, Qty: ${transitions.length}`);
     }
 };
 
 /**
  * Submits a batch recall to pharma-backend-service.
  *
- * ⚠️  CRITICAL FIX (BLOCKCHAIN_TEAM_PLAN Task 3):
- *   Backend RecallRequest.java expects:
- *     { systemBatchId, actorId, reason, recallDate, recallTime }
- *   Old code sent: { batchId, fromId } → two null fields → NPE → 500 on every call.
- *
  * @param {Object} params - { systemBatchId, actorId, reason }
  * @returns {Promise<Object>}
  */
 export const submitRecall = async ({ systemBatchId, actorId, reason }) => {
+    const now         = new Date();
+    const recallDate  = now.toISOString().split('T')[0];            // YYYY-MM-DD
+    const recallTime  = now.toTimeString().split(' ')[0];           // HH:MM:SS
+
     try {
-        const now         = new Date();
-        const recallDate  = now.toISOString().split('T')[0];            // YYYY-MM-DD
-        const recallTime  = now.toTimeString().split(' ')[0];           // HH:MM:SS
-
         const payload = { systemBatchId, actorId, reason, recallDate, recallTime };
-
         const response = await createBackendClient().post('/api/transition/recall', payload);
-        console.log(`[pharma-core BackendClient] Recall submitted for batch: ${systemBatchId}`);
+        console.log(`[pharma-core BackendClient] 🚨 Live Fabric batch recall committed for ${systemBatchId}`);
         return response.data;
     } catch (err) {
-        const status = err.response?.status;
-        const data = err.response?.data;
-        const msg = data?.message || data?.error || err.message;
-        console.error(`[pharma-core BackendClient] ❌ Failed to submit recall for ${systemBatchId} [HTTP ${status || 'NETWORK_ERROR'}]: ${msg}`);
-        const enrichedError = new Error(`Blockchain recall error: [HTTP ${status || 'N/A'}] ${msg}`);
-        enrichedError.status = status;
-        enrichedError.data = data;
-        throw enrichedError;
+        throw formatBlockchainError(err, 'submitRecall', `Batch: ${systemBatchId}`);
     }
 };
 
 /**
- * Fetches the live pack status from pharma-backend-service (Hyperledger Fabric world state).
- * Status lookup is a read operation — still requires auth per Spring Security config.
+ * Fetches the live pack status directly from Hyperledger Fabric world state in real-time.
  * @param {string} packHash
  * @param {string} [batchId]
- * @returns {Promise<Object>} { status: 'Sold'|'Recalled'|'AtShop'|'Packaged'|'NOT_FOUND', detail: {} }
+ * @returns {Promise<Object>} { status: 'Sold'|'Recalled'|'AtShop'|'MINTED'|'NOT_FOUND', detail: {} }
  */
 export const getPackStatus = async (packHash, batchId) => {
     try {
         const response = await createBackendClient().get('/api/transition/status', {
-            params: { packHash, batchId },
+            params: { packHash, batchId: batchId || '' },
         });
-        return response.data;
+
+        const data = response.data;
+        let liveStatus = data.status || 'UNKNOWN';
+
+        // Normalize live chaincode eventType to standard status
+        if (data.detail && data.detail.eventType) {
+            const ev = data.detail.eventType.toUpperCase();
+            if (ev === 'MINTED' || ev === 'MFG' || ev === 'PACKAGED') {
+                liveStatus = 'MINTED';
+            } else if (ev === 'INTAKE' || ev === 'AT_SHOP') {
+                liveStatus = 'AtShop';
+            } else if (ev === 'SOLD' || ev === 'SALE') {
+                liveStatus = 'Sold';
+            } else if (ev === 'RECALLED' || ev === 'RECALL') {
+                liveStatus = 'Recalled';
+            }
+        }
+
+        if (liveStatus === 'UNKNOWN' && data.detail) {
+            liveStatus = 'MINTED';
+        }
+
+        console.log(`[pharma-core BackendClient] 🔍 Real-time Fabric query: packHash='${packHash.substring(0, 12)}...', status='${liveStatus}', onChain=true`);
+
+        return {
+            status: liveStatus,
+            custodyState: liveStatus,
+            detail: data.detail || null,
+            liveOnChain: true,
+        };
     } catch (err) {
-        const status = err.response?.status;
-        const data = err.response?.data;
-        console.warn(`[pharma-core BackendClient] getPackStatus notice for ${packHash} [HTTP ${status || 'NETWORK_ERROR'}]: ${data?.message || err.message}`);
-        return { status: 'NOT_FOUND', fabricAvailable: false, error: data?.message || err.message };
+        const parsed = formatBlockchainError(err, 'getPackStatus', `Pack: ${packHash.substring(0, 12)}...`);
+        return {
+            status: 'NOT_FOUND',
+            fabricAvailable: false,
+            error: parsed.message,
+            errorCode: parsed.code,
+            diagnosis: parsed.diagnosis,
+            liveOnChain: false,
+        };
     }
 };
 

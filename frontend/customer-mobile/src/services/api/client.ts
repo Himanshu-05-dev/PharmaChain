@@ -17,18 +17,31 @@ const getHostIp = () => {
   if (Platform.OS === 'android') {
     return '10.0.2.2';
   }
-  return '192.168.1.9';
+  return '10.209.231.191';
 };
 
 const hostIp = getHostIp();
 
-const CONSUMER_API_URL =
-  process.env.EXPO_PUBLIC_CONSUMER_API_URL ||
-  `http://${hostIp}:3003/api/consumer`;
+const resolveApiUrl = (envUrl: string | undefined, defaultPath: string) => {
+  if (envUrl) {
+    // If running on a physical device / mobile, replace localhost/127.0.0.1 with host LAN IP
+    if (Platform.OS !== 'web' && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
+      return envUrl.replace(/localhost|127\.0\.0\.1/g, hostIp);
+    }
+    return envUrl;
+  }
+  return `http://${hostIp}${defaultPath}`;
+};
 
-const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ||
-  `http://${hostIp}:3002/api/v1`;
+const CONSUMER_API_URL = resolveApiUrl(
+  process.env.EXPO_PUBLIC_CONSUMER_API_URL,
+  '/api/consumer'
+);
+
+const API_URL = resolveApiUrl(
+  process.env.EXPO_PUBLIC_API_URL,
+  '/api/v1'
+);
 
 export const consumerApiClient = axios.create({
   baseURL: CONSUMER_API_URL,

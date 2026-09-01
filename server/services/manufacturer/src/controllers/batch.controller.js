@@ -1,4 +1,5 @@
 import Batch, { MINT_STATUS } from '../models/batch.model.js';
+import axios from 'axios';
 import {
     mintBatchViaPharmaCore,
     recallBatchViaPharmaCore,
@@ -623,7 +624,7 @@ export const exportBatchCsvController = async (req, res) => {
             return res.status(404).json({ code: 'BATCH_NOT_FOUND', message: `Batch ${batchId} not found` });
         }
 
-        if (batch.mintStatus !== 'MINTED') {
+        if (batch.mintStatus !== 'MINTED' && batch.mintStatus !== 'RECALLED') {
             return res.status(400).json({
                 code:    'BATCH_NOT_MINTED',
                 message: `Cannot export QR CSV: Batch is currently in "${batch.mintStatus}" status. Batch must be MINTED first.`,
@@ -693,17 +694,29 @@ export const exportBatchCsvController = async (req, res) => {
         }
 
         // ── 3. EXPORT INDIVIDUAL PACKS CSV (Default) ─────────────────────────
-        // S3 Pipeline: Stream the complete signed CSV directly to the caller.
-        if (batch.s3Mode === 'local' || !batch.s3DownloadUrl || batch.s3DownloadUrl.includes(':4000')) {
+        const filename = `${sysBatchId}_PACKS_${batch.totalQuantity}.csv`;
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+
+        // Priority 1: Stream directly from S3 if configured and URL exists
+        if (batch.s3DownloadUrl && batch.s3DownloadUrl.startsWith('http')) {
             try {
-                const coreStream = await fetchBatchCsvStreamViaPharmaCore(batch.batchId, req.authToken);
-                const filename = `${sysBatchId}_PACKS_${batch.totalQuantity}.csv`;
-                res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-                return coreStream.data.pipe(res);
-            } catch (streamErr) {
-                console.warn(`[manufacturer-service Batch] Core CSV stream notice: ${streamErr.message}, falling back to redirect`);
+                console.log(`[manufacturer-service Batch] Streaming S3 CSV directly for ${sysBatchId}`);
+                const s3Response = await axios.get(batch.s3DownloadUrl, { responseType: 'stream', timeout: 30000 });
+                return s3Response.data.pipe(res);
+            } catch (s3Err) {
+                console.warn(`[manufacturer-service Batch] S3 stream notice: ${s3Err.message}, falling back to pharma-core stream`);
             }
+        }
+
+        // Priority 2: Stream from pharma-core
+        try {
+            console.log(`[manufacturer-service Batch] Streaming pharma-core CSV directly for ${sysBatchId}`);
+            const coreStream = await fetchBatchCsvStreamViaPharmaCore(batch.batchId, req.authToken);
+            return coreStream.data.pipe(res);
+        } catch (streamErr) {
+            console.warn(`[manufacturer-service Batch] Core CSV stream notice: ${streamErr.message}`);
         }
 
         if (!batch.s3DownloadUrl) {
@@ -713,12 +726,6 @@ export const exportBatchCsvController = async (req, res) => {
                          `Ensure the batch has been minted (current status: ${batch.mintStatus}).`,
             });
         }
-
-        // Log the redirect for audit trail
-        console.log(
-            `[manufacturer-service Batch] CSV export redirect — ${sysBatchId}` +
-            ` → ${batch.s3Mode === 'aws' ? '☁️ S3' : '💾 local'}: ${batch.s3DownloadUrl.slice(0, 80)}...`,
-        );
 
         return res.redirect(302, batch.s3DownloadUrl);
     } catch (error) {
@@ -899,13 +906,23 @@ export const previewBatchPacksController = async (req, res) => {
 
         // ── 4. Proxy preview request to pharma-core ───────────────────────────
         // pharma-core reads the CSV (local or S3), parses it, paginates, returns JSON.
-        const previewData = await fetchBatchPreviewViaPharmaCore({
-            batchId:   batch.batchId,
-            s3FileKey: batch.s3FileKey,
-            page,
-            limit,
-            search,
-        });
+        let previewData;
+        try {
+            previewData = await fetchBatchPreviewViaPharmaCore({
+                batchId:   batch.batchId,
+                s3FileKey: batch.s3FileKey,
+                page,
+                limit,
+                search,
+            });
+        } catch (previewErr) {
+            console.warn(`[manufacturer-service Batch] Preview fetch warning for ${batchId}: ${previewErr.message}`);
+            previewData = {
+                stats: { totalPacks: batch.totalQuantity || 0, filteredPacks: 0, csvSizeBytes: 0 },
+                meta:  { page, limit, pages: 1, total: 0 },
+                packs: [],
+            };
+        }
 
         // ── 5. Enrich with full batch metadata for dashboard ──────────────────
         return res.status(200).json({

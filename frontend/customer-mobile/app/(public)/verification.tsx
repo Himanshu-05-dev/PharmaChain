@@ -50,8 +50,13 @@ export default function VerificationScreen() {
     const med: SavedMedicine = {
       id: `med-${Date.now()}`,
       name: result.pack.medicineName || 'Verified Formulation',
-      genericName: result.payload?.genericName || result.pack.medicineName,
+      genericName: result.pack.genericName || result.payload?.genericName || result.pack.medicineName,
+      brandName: result.pack.brandName,
       dosage: result.pack.dosage || 'Standard Dosage',
+      composition: result.pack.composition,
+      drugSchedule: result.pack.drugSchedule,
+      storageCondition: result.pack.storageCondition,
+      productionSite: result.manufacturer?.productionSite,
       batchNumber: result.pack.batchId,
       manufacturer: result.manufacturer?.name || 'Verified Manufacturer',
       mfgDate: result.pack.manufacturingDate,
@@ -59,7 +64,7 @@ export default function VerificationScreen() {
       daysToExpiry: 365,
       status: result.status === 'AUTHENTIC' || result.uiState === 'GENUINE' ? 'Verified' : 'Needs Attention',
       packId: result.pack.packId,
-      category: 'General Care',
+      category: result.pack.drugSchedule ? `Schedule ${result.pack.drugSchedule}` : 'General Care',
       verifiedAt: 'Just now',
       safetyScore: result.risk?.score || 98,
     };
@@ -143,30 +148,83 @@ export default function VerificationScreen() {
           <View style={styles.details}>
             <Text style={styles.medicineName}>{result.pack.medicineName}</Text>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Manufacturer</Text>
-              <Text style={styles.value}>{result.manufacturer?.name || 'Verified CDSCO Facility'}</Text>
-            </View>
+            {isPositive || result.pack.batchId !== 'N/A' ? (
+              <>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Manufacturer</Text>
+                  <Text style={styles.value}>{result.manufacturer?.name || 'Verified CDSCO Facility'}</Text>
+                </View>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Batch ID</Text>
-              <Text style={styles.value}>{result.pack.batchId}</Text>
-            </View>
+                {result.manufacturer?.productionSite && (
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Facility Location</Text>
+                    <Text style={styles.value}>{result.manufacturer.productionSite}</Text>
+                  </View>
+                )}
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Expiry Date</Text>
-              <Text style={styles.value}>{result.pack.expiryDate}</Text>
-            </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Batch ID</Text>
+                  <Text style={styles.value}>{result.pack.batchId}</Text>
+                </View>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Manufacturing Date</Text>
-              <Text style={styles.value}>{result.pack.manufacturingDate}</Text>
-            </View>
+                {result.pack.dosage && (
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Dosage / Strength</Text>
+                    <Text style={styles.value}>{result.pack.dosage}</Text>
+                  </View>
+                )}
 
-            {result.pack.serial && (
-              <View style={styles.row}>
-                <Text style={styles.label}>Serial Number</Text>
-                <Text style={styles.value}>{result.pack.serial}</Text>
+                {result.pack.composition && (
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Active Composition</Text>
+                    <Text style={[styles.value, { fontSize: 12 }]}>{result.pack.composition}</Text>
+                  </View>
+                )}
+
+                {result.pack.drugSchedule && (
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Drug Schedule</Text>
+                    <Text style={[styles.value, { color: '#0369a1', fontWeight: '700' }]}>
+                      Schedule {result.pack.drugSchedule}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.row}>
+                  <Text style={styles.label}>Expiry Date</Text>
+                  <Text style={styles.value}>{result.pack.expiryDate}</Text>
+                </View>
+
+                <View style={styles.row}>
+                  <Text style={styles.label}>Manufacturing Date</Text>
+                  <Text style={styles.value}>{result.pack.manufacturingDate}</Text>
+                </View>
+
+                {result.pack.storageCondition && (
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Storage</Text>
+                    <Text style={[styles.value, { fontSize: 11, color: '#4b5563' }]}>
+                      {result.pack.storageCondition}
+                    </Text>
+                  </View>
+                )}
+
+                {result.pack.serial && (
+                  <View style={styles.row}>
+                    <Text style={styles.label}>Serial Number</Text>
+                    <Text style={styles.value}>{result.pack.serial}</Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <View style={styles.unverifiedBox}>
+                <Text style={styles.unverifiedTitle}>Verification Diagnostic</Text>
+                <Text style={styles.unverifiedText}>
+                  • The scanned QR code does not contain a valid ECDSA ES256 cryptographic signature issued by a CDSCO-approved manufacturer.
+                </Text>
+                <Text style={styles.unverifiedText}>
+                  • If this medicine was purchased from a registered pharmacy, report it immediately to initiate a quality audit.
+                </Text>
               </View>
             )}
 
@@ -183,7 +241,7 @@ export default function VerificationScreen() {
             <View style={styles.row}>
               <Text style={styles.label}>Blockchain Ledger</Text>
               <Text style={[styles.value, { color: isPositive ? '#059669' : '#dc2626' }]}>
-                {result.blockchainStatus || (isPositive ? 'COMMITTED' : 'UNVERIFIED')}
+                {isPositive ? (result.blockchainStatus || 'COMMITTED') : 'COUNTERFEIT / UNVERIFIED'}
               </Text>
             </View>
             <View style={styles.row}>
@@ -366,5 +424,25 @@ const styles = StyleSheet.create({
     color: "#374151",
     fontSize: 15,
     fontWeight: "600",
+  },
+  unverifiedBox: {
+    backgroundColor: "#fef2f2",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    padding: 12,
+    marginBottom: 12,
+  },
+  unverifiedTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#b91c1c",
+    marginBottom: 6,
+  },
+  unverifiedText: {
+    fontSize: 12,
+    color: "#7f1d1d",
+    lineHeight: 18,
+    marginBottom: 4,
   },
 });

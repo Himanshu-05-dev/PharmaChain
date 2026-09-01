@@ -56,16 +56,23 @@ export interface VerificationResult {
   pack?: {
     packId: string;
     medicineName: string;
+    genericName?: string;
+    brandName?: string;
     batchId: string;
     manufacturingDate: string;
     expiryDate: string;
     dosage?: string;
+    composition?: string;
+    drugSchedule?: string;
+    storageCondition?: string;
     serial?: string;
   };
 
   manufacturer?: {
     name: string;
     id?: string;
+    productionSite?: string;
+    licenseNumber?: string;
   };
 
   shop?: {
@@ -111,7 +118,12 @@ export interface SavedMedicine {
   id: string;
   name: string;
   genericName: string;
+  brandName?: string;
   dosage: string;
+  composition?: string;
+  drugSchedule?: string;
+  storageCondition?: string;
+  productionSite?: string;
   batchNumber: string;
   manufacturer: string;
   mfgDate: string;

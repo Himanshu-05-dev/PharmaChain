@@ -1,30 +1,182 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
-  Platform,
+  Animated,
+  Easing,
+  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
   ScanLine,
   ShieldCheck,
-  CheckCircle2,
-  Lock,
   ArrowRight,
+  QrCode,
   Sparkles,
 } from "lucide-react-native";
 import { useAuthStore } from "../../src/store/authStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const { setAuth } = useAuthStore();
+
+  // Animations
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const laserAnim = useRef(new Animated.Value(0)).current;
+
+  // Background floating ambient particles & orbs
+  const orb1Anim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const orb2Anim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const orb3Anim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const orbOpacity = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    // Scanner pulse & laser
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.03,
+          duration: 1500,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const laserLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(laserAnim, {
+          toValue: 80,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(laserAnim, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // Floating background ambient orbs
+    const orb1Loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(orb1Anim, {
+          toValue: { x: 30, y: 40 },
+          duration: 6000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(orb1Anim, {
+          toValue: { x: -20, y: -20 },
+          duration: 7000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(orb1Anim, {
+          toValue: { x: 0, y: 0 },
+          duration: 6000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const orb2Loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(orb2Anim, {
+          toValue: { x: -40, y: -30 },
+          duration: 8000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(orb2Anim, {
+          toValue: { x: 20, y: 30 },
+          duration: 7000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(orb2Anim, {
+          toValue: { x: 0, y: 0 },
+          duration: 8000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const orb3Loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(orb3Anim, {
+          toValue: { x: 25, y: -40 },
+          duration: 9000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(orb3Anim, {
+          toValue: { x: -30, y: 20 },
+          duration: 8000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(orb3Anim, {
+          toValue: { x: 0, y: 0 },
+          duration: 9000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const opacityLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(orbOpacity, {
+          toValue: 0.65,
+          duration: 4000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(orbOpacity, {
+          toValue: 0.35,
+          duration: 4000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    pulseLoop.start();
+    laserLoop.start();
+    orb1Loop.start();
+    orb2Loop.start();
+    orb3Loop.start();
+    opacityLoop.start();
+
+    return () => {
+      pulseLoop.stop();
+      laserLoop.stop();
+      orb1Loop.stop();
+      orb2Loop.stop();
+      orb3Loop.stop();
+      opacityLoop.stop();
+    };
+  }, []);
 
   const handlePatientAccess = () => {
     setLoading(true);
@@ -43,112 +195,129 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
+      {/* Dynamic Animated Ambient Background Orbs */}
+      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <Animated.View
+          style={[
+            styles.ambientOrb,
+            styles.orb1,
+            {
+              opacity: orbOpacity,
+              transform: [
+                { translateX: orb1Anim.x },
+                { translateY: orb1Anim.y },
+              ],
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.ambientOrb,
+            styles.orb2,
+            {
+              opacity: orbOpacity,
+              transform: [
+                { translateX: orb2Anim.x },
+                { translateY: orb2Anim.y },
+              ],
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.ambientOrb,
+            styles.orb3,
+            {
+              opacity: orbOpacity,
+              transform: [
+                { translateX: orb3Anim.x },
+                { translateY: orb3Anim.y },
+              ],
+            },
+          ]}
+        />
+
+        {/* Subtle decorative dot grid in background */}
+        <View style={styles.gridDashes} />
+      </View>
+
+      <View
+        style={[
+          styles.contentWrapper,
           {
-            paddingTop: Math.max(insets.top, 24) + 16,
-            paddingBottom: Math.max(insets.bottom, 16) + 24,
+            paddingTop: Math.max(insets.top, 24) + 12,
+            paddingBottom: Math.max(insets.bottom, 16) + 18,
           },
         ]}
-        showsVerticalScrollIndicator={false}
       >
-        {/* Top Brand Hero */}
-        <View style={styles.heroSection}>
-          <View style={styles.logoBadgeContainer}>
-            <View style={styles.logoCircle}>
-              <ShieldCheck size={48} color="#ffffff" strokeWidth={2.4} />
-            </View>
-            <View style={styles.glowRing} />
+        {/* 1. Minimalist Top Brand Header */}
+        <View style={styles.header}>
+          <View style={styles.brandIconWrapper}>
+            <ShieldCheck size={28} color="#ffffff" strokeWidth={2.4} />
           </View>
-
-          <View style={styles.brandTitleRow}>
-            <Text style={styles.brandTitle}>MediaCare</Text>
-            <View style={styles.brandTag}>
-              <Text style={styles.brandTagText}>PharmaChain</Text>
-            </View>
-          </View>
-
+          <Text style={styles.brandTitle}>PharmaChain</Text>
           <Text style={styles.brandSubtitle}>
-            Blockchain-backed medicine verification & patient safety intelligence.
+            Verify genuine medicines in seconds
           </Text>
         </View>
 
-        {/* Value Highlights */}
-        <View style={styles.highlightsCard}>
-          <View style={styles.highlightItem}>
-            <View style={[styles.highlightIconBox, { backgroundColor: '#ecfdf5' }]}>
-              <CheckCircle2 size={16} color="#059669" />
-            </View>
-            <View style={styles.highlightTextBox}>
-              <Text style={styles.highlightTitle}>Cryptographic Batch Verification</Text>
-              <Text style={styles.highlightDesc}>
-                Instantly authenticate 2D DataMatrix codes against CDSCO ledger.
+        {/* 2. Hero Scanner Card (Clean, Simple, Centered) */}
+        <View style={styles.scannerWrapper}>
+          <TouchableOpacity
+            style={styles.scannerCard}
+            onPress={() => router.push("/(public)/scan")}
+            activeOpacity={0.9}
+          >
+            {/* Viewfinder Target */}
+            <Animated.View
+              style={[
+                styles.viewfinder,
+                { transform: [{ scale: pulseAnim }] },
+              ]}
+            >
+              <View style={[styles.corner, styles.tl]} />
+              <View style={[styles.corner, styles.tr]} />
+              <View style={[styles.corner, styles.bl]} />
+              <View style={[styles.corner, styles.br]} />
+
+              <QrCode size={56} color="#ffedd5" strokeWidth={1.4} />
+
+              {/* Glowing Laser Sweep */}
+              <Animated.View
+                style={[
+                  styles.laser,
+                  { transform: [{ translateY: laserAnim }] },
+                ]}
+              />
+            </Animated.View>
+
+            <View style={styles.scannerTextWrap}>
+              <Text style={styles.scannerTitle}>Scan 2D QR on Medicine</Text>
+              <Text style={styles.scannerDesc}>
+                Instant step-by-step supply journey & authenticity check
               </Text>
             </View>
-          </View>
 
-          <View style={styles.highlightDivider} />
-
-          <View style={styles.highlightItem}>
-            <View style={[styles.highlightIconBox, { backgroundColor: '#f5f3ff' }]}>
-              <Sparkles size={16} color="#7c3aed" />
+            <View style={styles.scanButton}>
+              <ScanLine size={18} color="#ffffff" strokeWidth={2.5} />
+              <Text style={styles.scanButtonText}>Tap to Scan Now</Text>
+              <ArrowRight size={16} color="#ffffff" />
             </View>
-            <View style={styles.highlightTextBox}>
-              <Text style={styles.highlightTitle}>Counterfeit & Recall Detection</Text>
-              <Text style={styles.highlightDesc}>
-                Real-time national advisories on tampered packaging & recalls.
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.highlightDivider} />
-
-          <View style={styles.highlightItem}>
-            <View style={[styles.highlightIconBox, { backgroundColor: '#eff6ff' }]}>
-              <Lock size={16} color="#2563eb" />
-            </View>
-            <View style={styles.highlightTextBox}>
-              <Text style={styles.highlightTitle}>Tamper-Proof Supply Provenance</Text>
-              <Text style={styles.highlightDesc}>
-                Verify manufacturer, distributor, and pharmacy chain of custody.
-              </Text>
-            </View>
-          </View>
+          </TouchableOpacity>
         </View>
 
-        {/* Action Panel */}
-        <View style={styles.actionPanel}>
-          {/* Scan Direct CTA */}
-          <TouchableOpacity
-            style={styles.scanButton}
-            onPress={() => router.push("/(public)/scan")}
-            activeOpacity={0.85}
-          >
-            <View style={styles.scanBtnLeft}>
-              <View style={styles.scanIconWrapper}>
-                <ScanLine color="#ffffff" size={22} strokeWidth={2.5} />
-              </View>
-              <View>
-                <Text style={styles.scanButtonTitle}>Scan Medicine Now</Text>
-                <Text style={styles.scanButtonSub}>No login required to verify</Text>
-              </View>
-            </View>
-            <ArrowRight size={20} color="#ffffff" />
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
+        {/* 3. Clean, Uncluttered Bottom Sign-In */}
+        <View style={styles.bottomSection}>
+          <View style={styles.dividerWrap}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}>SECURE PATIENT ACCESS</Text>
+            <Text style={styles.dividerText}>OR SIGN IN</Text>
             <View style={styles.divider} />
           </View>
 
-          {/* Google Sign In CTA */}
           {loading ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator size="small" color="#3b00b9" />
-              <Text style={styles.loadingText}>Authenticating Patient Session...</Text>
+              <ActivityIndicator size="small" color="#FF5342" />
+              <Text style={styles.loadingText}>Signing in...</Text>
             </View>
           ) : (
             <TouchableOpacity
@@ -156,22 +325,18 @@ export default function Home() {
               onPress={handlePatientAccess}
               activeOpacity={0.85}
             >
-              <View style={styles.googleIconBox}>
-                <Text style={styles.googleIconLetter}>G</Text>
+              <View style={styles.googleG}>
+                <Text style={styles.googleGText}>G</Text>
               </View>
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
           )}
 
-          {/* Trust Footer */}
-          <View style={styles.trustFooter}>
-            <ShieldCheck size={14} color="#64748b" />
-            <Text style={styles.trustFooterText}>
-              256-Bit Encrypted • Aligned with CDSCO & Pharmacovigilance Standards
-            </Text>
-          </View>
+          <Text style={styles.footerNote}>
+            End-to-end encrypted • CDSCO Verified Protocol
+          </Text>
         </View>
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -179,243 +344,259 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#ffffff",
   },
-  scrollContent: {
+  contentWrapper: {
+    flex: 1,
     paddingHorizontal: 24,
     justifyContent: "space-between",
-    flexGrow: 1,
   },
-
-  // Hero Section
-  heroSection: {
+  ambientOrb: {
+    position: "absolute",
+    borderRadius: 999,
+  },
+  orb1: {
+    top: -60,
+    right: -40,
+    width: 240,
+    height: 240,
+    backgroundColor: "rgba(255, 83, 66, 0.15)",
+  },
+  orb2: {
+    bottom: 120,
+    left: -80,
+    width: 260,
+    height: 260,
+    backgroundColor: "rgba(251, 191, 36, 0.12)",
+  },
+  orb3: {
+    top: "40%",
+    right: -60,
+    width: 200,
+    height: 200,
+    backgroundColor: "rgba(244, 63, 94, 0.12)",
+  },
+  gridDashes: {
+    position: "absolute",
+    inset: 0,
+    opacity: 0.03,
+    backgroundColor: "transparent",
+  },
+  header: {
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 24,
+    marginTop: 6,
   },
-  logoBadgeContainer: {
-    position: "relative",
-    marginBottom: 16,
-  },
-  logoCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: "#3b00b9",
+  brandIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#FF5342",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#3b00b9",
-    shadowOffset: { width: 0, height: 8 },
+    marginBottom: 12,
+    shadowColor: "#FF5342",
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: 4,
-    borderColor: "#ffffff",
-  },
-  glowRing: {
-    position: "absolute",
-    width: 104,
-    height: 104,
-    borderRadius: 52,
-    borderWidth: 1.5,
-    borderColor: "rgba(59, 0, 185, 0.2)",
-    top: -8,
-    left: -8,
-  },
-  brandTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
+    shadowRadius: 12,
+    elevation: 5,
   },
   brandTitle: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#0f172a",
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#111827",
     letterSpacing: -0.5,
   },
-  brandTag: {
-    backgroundColor: "#ede9fe",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  brandTagText: {
-    color: "#5b21b6",
-    fontSize: 11,
-    fontWeight: "700",
-  },
   brandSubtitle: {
-    fontSize: 14,
-    color: "#64748b",
-    textAlign: "center",
-    lineHeight: 20,
-    maxWidth: 290,
+    fontSize: 13,
+    color: "#6b7280",
+    marginTop: 4,
+    fontWeight: "500",
   },
-
-  // Highlights Card
-  highlightsCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 24,
+  scannerWrapper: {
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  scannerCard: {
+    width: "100%",
+    backgroundColor: "#1c1917", // Clean dark obsidian
+    borderRadius: 28,
+    paddingVertical: 28,
+    paddingHorizontal: 22,
+    alignItems: "center",
+    shadowColor: "#FF5342",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
+    elevation: 8,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
-    gap: 12,
+    borderColor: "rgba(255, 237, 213, 0.2)",
   },
-  highlightItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  highlightIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+  viewfinder: {
+    width: 130,
+    height: 130,
+    borderRadius: 22,
+    backgroundColor: "rgba(255, 83, 66, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 237, 213, 0.2)",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
-    marginTop: 2,
+    position: "relative",
+    marginBottom: 18,
   },
-  highlightTextBox: {
-    flex: 1,
+  corner: {
+    position: "absolute",
+    width: 24,
+    height: 24,
+    borderColor: "#FF5342",
   },
-  highlightTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0f172a",
-    marginBottom: 2,
+  tl: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 3.5,
+    borderLeftWidth: 3.5,
+    borderTopLeftRadius: 14,
   },
-  highlightDesc: {
-    fontSize: 11,
-    color: "#64748b",
-    lineHeight: 16,
+  tr: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderTopRightRadius: 14,
   },
-  highlightDivider: {
-    height: 1,
-    backgroundColor: "#f1f5f9",
+  bl: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 3.5,
+    borderLeftWidth: 3.5,
+    borderBottomLeftRadius: 14,
   },
-
-  // Action Panel
-  actionPanel: {
-    gap: 14,
+  br: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderBottomRightRadius: 14,
+  },
+  laser: {
+    position: "absolute",
+    top: 20,
+    width: "80%",
+    height: 2.5,
+    backgroundColor: "#fbbf24",
+    shadowColor: "#fbbf24",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  scannerTextWrap: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  scannerTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginBottom: 4,
+  },
+  scannerDesc: {
+    fontSize: 12,
+    color: "#9ca3af",
+    textAlign: "center",
+    maxWidth: 240,
+    lineHeight: 17,
   },
   scanButton: {
-    backgroundColor: "#3b00b9",
-    flexDirection: "row",
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: "#3b00b9",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  scanBtnLeft: {
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
-  },
-  scanIconWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
     justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
+    gap: 8,
+    backgroundColor: "#FF5342",
+    paddingVertical: 14,
+    borderRadius: 16,
+    shadowColor: "#FF5342",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  scanButtonTitle: {
-    color: "#ffffff",
+  scanButtonText: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "800",
+    color: "#ffffff",
   },
-  scanButtonSub: {
-    color: "#e0e7ff",
-    fontSize: 11,
-    marginTop: 1,
+  bottomSection: {
+    gap: 12,
+    marginBottom: 4,
   },
-  dividerContainer: {
+  dividerWrap: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 4,
+    marginBottom: 4,
   },
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: "#f3f4f6",
   },
   dividerText: {
     marginHorizontal: 12,
-    color: "#94a3b8",
+    fontSize: 11,
     fontWeight: "700",
-    fontSize: 10,
+    color: "#9ca3af",
     letterSpacing: 0.5,
   },
   googleButton: {
     backgroundColor: "#ffffff",
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "#e5e7eb",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 4,
-    elevation: 2,
-    gap: 12,
+    elevation: 1,
+    gap: 10,
   },
-  googleIconBox: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+  googleG: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: "#ea4335",
     justifyContent: "center",
     alignItems: "center",
   },
-  googleIconLetter: {
-    fontWeight: "800",
+  googleGText: {
+    fontWeight: "900",
     color: "#ffffff",
-    fontSize: 13,
+    fontSize: 12,
   },
   googleButtonText: {
-    color: "#0f172a",
-    fontSize: 15,
+    color: "#1f2937",
+    fontSize: 14,
     fontWeight: "700",
   },
   loadingBox: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: 13,
     gap: 8,
   },
   loadingText: {
     fontSize: 13,
-    color: "#3b00b9",
+    color: "#FF5342",
     fontWeight: "600",
   },
-  trustFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 4,
-  },
-  trustFooterText: {
-    fontSize: 10,
-    color: "#94a3b8",
+  footerNote: {
+    fontSize: 11,
+    color: "#9ca3af",
     textAlign: "center",
-    maxWidth: 280,
-    lineHeight: 14,
+    marginTop: 2,
   },
 });

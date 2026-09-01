@@ -4,17 +4,26 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 dark:bg-[#070d18] text-slate-900 dark:text-slate-100 antialiased selection:bg-blue-600 selection:text-white transition-colors duration-300;
+    @apply bg-[#f8fafc] dark:bg-[#060c18] text-slate-900 dark:text-slate-100 antialiased selection:bg-blue-700 selection:text-white transition-colors duration-200;
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Outfit', 'Plus Jakarta Sans', 'Inter', sans-serif;
     @apply tracking-tight;
   }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
 }
 
-/* Custom Smooth Regulatory Scrollbar */
+/* Custom Smooth Government Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -41,16 +50,40 @@
   background: #334155;
 }
 
-/* Warm Glass & Luxury Backdrop Cards */
-.glass-panel {
-  @apply bg-white/90 dark:bg-[#0c1527]/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-sm transition-all duration-200;
+/* Rich Micro Dot Pattern */
+.bg-gov-pattern {
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
-.glass-panel-hover {
-  @apply hover:border-blue-400/60 dark:hover:border-blue-500/40 hover:shadow-md dark:hover:shadow-glow-blue transition-all duration-300;
+.dark .bg-gov-pattern {
+  background-image: radial-gradient(#1e293b 1px, transparent 1px);
 }
 
-/* Regulatory Card Ambient Top Highlight */
+/* Executive Glass & High-End Card Surfaces */
+@layer components {
+  .gov-card {
+    @apply bg-white/95 dark:bg-[#0b172a]/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800/90 transition-all duration-300 rounded-2xl;
+    box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.06), 0 1px 3px -1px rgba(15, 23, 42, 0.04);
+  }
+
+  .gov-card-hover {
+    @apply hover:border-blue-400/80 dark:hover:border-blue-500/50 hover:-translate-y-0.5;
+  }
+  .gov-card-hover:hover {
+    box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.1), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+  }
+
+  .glass-panel {
+    @apply bg-white/90 dark:bg-[#0b172a]/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-sm transition-all duration-200;
+  }
+
+  .glass-panel-hover {
+    @apply hover:border-blue-500/60 dark:hover:border-blue-500/40 hover:shadow-md transition-all duration-300;
+  }
+}
+
+/* Regulatory Card Official Top Border Gradient Accent */
 .card-highlight {
   position: relative;
 }
@@ -61,10 +94,58 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.4), transparent);
+  height: 3px;
+  background: linear-gradient(90deg, #d97706 0%, #1d4ed8 50%, #059669 100%);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
 }
 
 .dark .card-highlight::before {
-  background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.3), transparent);
+  background: linear-gradient(90deg, #f59e0b 0%, #3b82f6 50%, #10b981 100%);
+}
+
+/* Saffron / Amber Top Highlight */
+.card-amber-highlight::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+/* Blue Top Highlight */
+.card-blue-highlight::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2563eb, #1d4ed8);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+/* Emerald Top Highlight */
+.card-emerald-highlight::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #10b981, #047857);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+/* Indian Tricolor Ribbon */
+.gov-tricolor-bar {
+  background: linear-gradient(90deg, #ff9933 0%, #ffffff 50%, #138808 100%);
+  height: 3px;
+  width: 100%;
 }

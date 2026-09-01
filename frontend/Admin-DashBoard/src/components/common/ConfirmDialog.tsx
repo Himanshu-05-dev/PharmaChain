@@ -38,11 +38,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         {/* Header Icon */}
         <div className="flex items-center gap-3">
           <div
-            className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              isKeyProvisioning
+            className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${isKeyProvisioning
                 ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400'
                 : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
-            }`}
+              }`}
           >
             {isKeyProvisioning ? <Key className="w-6 h-6" /> : <ShieldAlert className="w-6 h-6" />}
           </div>

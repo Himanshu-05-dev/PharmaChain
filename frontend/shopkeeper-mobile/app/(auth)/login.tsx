@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -25,14 +26,17 @@ import {
 import { useAuthStore } from '../../src/store/authStore';
 import { loginShopkeeper } from '../../src/services/api/auth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PharmaTheme } from '../../src/constants/theme';
+import { PharmaChainLogo } from '../../src/components/common/PharmaChainLogo';
+import { AnimatedAuthBackground } from '../../src/components/common/AnimatedAuthBackground';
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { login } = useAuthStore();
 
-  const [identifier, setIdentifier] = useState('test@test.com');
-  const [password, setPassword] = useState('12345678');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -41,7 +45,7 @@ export default function LoginScreen() {
   const validateForm = (): boolean => {
     setErrorMessage('');
     if (!identifier.trim()) {
-      setErrorMessage('Please enter your email or mobile number.');
+      setErrorMessage('Please enter your registered pharmacy email or phone.');
       return false;
     }
     if (!password) {
@@ -76,13 +80,13 @@ export default function LoginScreen() {
           router.replace('/(shopkeeper)/dashboard');
         }
       } else {
-        setErrorMessage(response.message || 'Invalid credentials. Please try again.');
+        setErrorMessage(response.message || 'Invalid credentials. Please verify and try again.');
       }
     } catch (error: any) {
       const msg =
         error.response?.data?.message ||
         error.message ||
-        'Login failed. Please check your network and try again.';
+        'Connection failed. Please check your network and try again.';
       setErrorMessage(msg);
     } finally {
       setIsLoading(false);
@@ -91,6 +95,10 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      {/* Continuous Animated Blockchain & Light Orb Background */}
+      <AnimatedAuthBackground />
+
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -99,33 +107,40 @@ export default function LoginScreen() {
           contentContainerStyle={[
             styles.scrollContent,
             {
-              paddingTop: Math.max(insets.top, 24) + 16,
+              paddingTop: Math.max(insets.top, 24) + 20,
               paddingBottom: Math.max(insets.bottom, 16) + 24,
             },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header Brand Badge */}
-          <View style={styles.header}>
-            <View style={styles.badgePill}>
-              <Building2 size={13} color="#0f766e" />
-              <Text style={styles.badgePillText}>PHARMACY MERCHANT TERMINAL</Text>
+          {/* Header Brand Section */}
+          <View style={styles.brandHeader}>
+            <View style={styles.logoBadgeOuter}>
+              <View style={styles.logoBadgeInner}>
+                <PharmaChainLogo size={54} colorScheme="cobalt" />
+              </View>
             </View>
 
-            <View style={styles.logoBadge}>
-              <Store size={38} color="#0f766e" strokeWidth={2.2} />
+            <Text style={styles.companyName}>PharmaChain</Text>
+            <View style={styles.roleTagPill}>
+              <Building2 size={12} color={PharmaTheme.colors.primary} />
+              <Text style={styles.roleTagText}>PHARMACY TERMINAL</Text>
             </View>
 
-            <Text style={styles.title}>Shopkeeper Login</Text>
-            <Text style={styles.subtitle}>
-              Medicine Forgery Detection & Pharmaceutical Traceability
+            <Text style={styles.headerSubtitle}>
+              Cryptographic Medicine Authentication & Supply Chain Traceability
             </Text>
           </View>
 
-          {/* Form Card */}
+          {/* Form Glass Card */}
           <View style={styles.formCard}>
-            {/* Error Banner */}
+            <Text style={styles.formHeading}>Sign In to Node</Text>
+            <Text style={styles.formSubheading}>
+              Enter your registered store credentials
+            </Text>
+
+            {/* Error Message Banner */}
             {!!errorMessage && (
               <View style={styles.errorBanner}>
                 <AlertCircle size={16} color="#dc2626" style={{ marginRight: 8 }} />
@@ -133,9 +148,9 @@ export default function LoginScreen() {
               </View>
             )}
 
-            {/* Email Input */}
+            {/* Email / Store ID Field */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Registered Email / Store ID</Text>
+              <Text style={styles.inputLabel}>Pharmacy Email or Mobile</Text>
               <View
                 style={[
                   styles.inputContainer,
@@ -144,12 +159,12 @@ export default function LoginScreen() {
               >
                 <Mail
                   size={18}
-                  color={focusedInput === 'identifier' ? '#0f766e' : '#94a3b8'}
+                  color={focusedInput === 'identifier' ? PharmaTheme.colors.primary : '#94a3b8'}
                   style={styles.inputIcon}
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="test@test.com"
+                  placeholder="pharmacy@store.com"
                   placeholderTextColor="#94a3b8"
                   value={identifier}
                   onChangeText={(val) => {
@@ -165,9 +180,9 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Password Input */}
+            {/* Password Field */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
+              <Text style={styles.inputLabel}>Terminal Password</Text>
               <View
                 style={[
                   styles.inputContainer,
@@ -176,12 +191,12 @@ export default function LoginScreen() {
               >
                 <Lock
                   size={18}
-                  color={focusedInput === 'password' ? '#0f766e' : '#94a3b8'}
+                  color={focusedInput === 'password' ? PharmaTheme.colors.primary : '#94a3b8'}
                   style={styles.inputIcon}
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="12345678"
+                  placeholder="Enter your password"
                   placeholderTextColor="#94a3b8"
                   value={password}
                   onChangeText={(val) => {
@@ -207,7 +222,7 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Forgot Password */}
+            {/* Forgot Password Link */}
             <TouchableOpacity
               style={styles.forgotBtn}
               onPress={() => router.push('/(auth)/forgot-password')}
@@ -216,7 +231,7 @@ export default function LoginScreen() {
               <Text style={styles.forgotText}>Forgot password?</Text>
             </TouchableOpacity>
 
-            {/* Submit Button */}
+            {/* Submit Action Button */}
             <TouchableOpacity
               style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
               onPress={handleLogin}
@@ -226,35 +241,35 @@ export default function LoginScreen() {
               {isLoading ? (
                 <View style={styles.loadingRow}>
                   <ActivityIndicator size="small" color="#ffffff" />
-                  <Text style={styles.primaryBtnText}>Authenticating...</Text>
+                  <Text style={styles.primaryBtnText}>Authenticating Node...</Text>
                 </View>
               ) : (
                 <View style={styles.loadingRow}>
-                  <Text style={styles.primaryBtnText}>LOGIN</Text>
+                  <Text style={styles.primaryBtnText}>Sign In</Text>
                   <ArrowRight size={18} color="#ffffff" style={{ marginLeft: 6 }} />
                 </View>
               )}
             </TouchableOpacity>
           </View>
 
-          {/* Registration Section */}
+          {/* Registration Trigger */}
           <View style={styles.registerSection}>
-            <Text style={styles.registerPrompt}>Don't have a pharmacy account?</Text>
+            <Text style={styles.registerPrompt}>Don't have a registered pharmacy terminal?</Text>
             <TouchableOpacity
               style={styles.registerBtn}
               onPress={() => router.push('/(auth)/register')}
               activeOpacity={0.8}
             >
-              <Store size={16} color="#0f766e" style={{ marginRight: 6 }} />
-              <Text style={styles.registerBtnText}>Register Your Pharmacy</Text>
+              <Store size={15} color={PharmaTheme.colors.primary} style={{ marginRight: 6 }} />
+              <Text style={styles.registerBtnText}>Register New Pharmacy</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Compliance Footer */}
-          <View style={styles.footer}>
+          {/* Compliance & Regulatory Seal */}
+          <View style={styles.footerSeal}>
             <ShieldCheck size={14} color="#94a3b8" />
-            <Text style={styles.footerText}>
-              CDSCO Drug Rule 96(5B) Compliant • 256-Bit Encrypted
+            <Text style={styles.footerSealText}>
+              CDSCO Drug Rule 96(5B) Compliant • ES256 Hardware Secured
             </Text>
           </View>
         </ScrollView>
@@ -272,74 +287,92 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     justifyContent: 'center',
     flexGrow: 1,
   },
-  header: {
+  brandHeader: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 22,
   },
-  badgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ccfbf1',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#99f6e4',
-    gap: 6,
-    marginBottom: 16,
+  logoBadgeOuter: {
+    padding: 6,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(219, 234, 254, 0.8)',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 4,
+    marginBottom: 12,
   },
-  badgePillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#0f766e',
-    letterSpacing: 0.8,
-  },
-  logoBadge: {
+  logoBadgeInner: {
     width: 76,
     height: 76,
     borderRadius: 22,
-    backgroundColor: '#f0fdfa',
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 14,
-    borderWidth: 1.5,
-    borderColor: '#99f6e4',
-    shadowColor: '#0f766e',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  title: {
-    fontSize: 26,
+  companyName: {
+    fontSize: 28,
     fontWeight: '800',
     color: '#0f172a',
-    letterSpacing: -0.5,
-    marginBottom: 6,
+    letterSpacing: -0.6,
   },
-  subtitle: {
-    fontSize: 13,
+  roleTagPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 12,
+    paddingVertical: 4.5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+    gap: 5,
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  roleTagText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#2563eb',
+    letterSpacing: 0.8,
+  },
+  headerSubtitle: {
+    fontSize: 12.5,
     color: '#64748b',
     textAlign: 'center',
     lineHeight: 18,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
   },
   formCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
     padding: 22,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(226, 232, 240, 0.9)',
     shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
     marginBottom: 20,
+  },
+  formHeading: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 2,
+  },
+  formSubheading: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 18,
   },
   errorBanner: {
     flexDirection: 'row',
@@ -347,7 +380,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef2f2',
     borderWidth: 1,
     borderColor: '#fecaca',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 12,
     marginBottom: 16,
   },
@@ -372,11 +405,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
     borderWidth: 1.5,
     borderColor: '#e2e8f0',
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 12,
   },
   inputContainerFocused: {
-    borderColor: '#0f766e',
+    borderColor: '#2563eb',
     backgroundColor: '#ffffff',
   },
   inputIcon: {
@@ -398,19 +431,19 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: 12,
-    color: '#0f766e',
+    color: '#2563eb',
     fontWeight: '700',
   },
   primaryBtn: {
-    backgroundColor: '#0f766e',
-    borderRadius: 12,
+    backgroundColor: '#2563eb',
+    borderRadius: 14,
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0f766e',
+    shadowColor: '#2563eb',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowRadius: 10,
     elevation: 4,
   },
   primaryBtnDisabled: {
@@ -425,14 +458,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '800',
-    letterSpacing: 0.5,
   },
   registerSection: {
     alignItems: 'center',
     marginBottom: 18,
   },
   registerPrompt: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#64748b',
     marginBottom: 8,
   },
@@ -442,23 +474,27 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 18,
     borderRadius: 999,
-    backgroundColor: '#f0fdfa',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderWidth: 1,
-    borderColor: '#99f6e4',
+    borderColor: '#bfdbfe',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
   },
   registerBtnText: {
-    color: '#0f766e',
+    color: '#2563eb',
     fontSize: 13,
     fontWeight: '700',
   },
-  footer: {
+  footerSeal: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     paddingHorizontal: 16,
   },
-  footerText: {
+  footerSealText: {
     fontSize: 11,
     color: '#94a3b8',
     textAlign: 'center',

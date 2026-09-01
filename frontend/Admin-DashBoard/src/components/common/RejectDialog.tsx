@@ -64,11 +64,10 @@ export const RejectDialog: React.FC<RejectDialogProps> = ({
         {/* Header */}
         <div className="flex items-center gap-3">
           <div
-            className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              isSuspension
+            className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${isSuspension
                 ? 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400'
                 : 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400'
-            }`}
+              }`}
           >
             {isSuspension ? <ShieldAlert className="w-6 h-6" /> : <XCircle className="w-6 h-6 text-rose-600 dark:text-rose-400" />}
           </div>

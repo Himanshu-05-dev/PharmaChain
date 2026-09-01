@@ -11,7 +11,7 @@ import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
  * @param {string} csvText - Full CSV file content.
  * @returns {Array<Object>}
  */
-const parseCsv = (csvText) => {
+export const parseCsv = (csvText) => {
     const lines = csvText.trim().split('\n');
     if (lines.length < 2) return [];
 
@@ -52,7 +52,7 @@ const parseCsv = (csvText) => {
  * @param {string|null} s3FileKey  - S3 object key (null in local mode)
  * @returns {Promise<string>}       Raw CSV text
  */
-const readCsvContent = async (batchId, s3FileKey) => {
+export const readCsvContent = async (batchId, s3FileKey) => {
     if (isS3Configured() && s3FileKey && !s3FileKey.startsWith('local:')) {
         // ── Fetch from S3 ─────────────────────────────────────────────────────
         const s3 = new S3Client({

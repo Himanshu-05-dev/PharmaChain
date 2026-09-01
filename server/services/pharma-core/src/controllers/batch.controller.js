@@ -112,3 +112,75 @@ export const mintBatchController = async (req, res) => {
         return res.status(500).json({ code: 'MINT_ERROR', message: error.message });
     }
 };
+
+/**
+ * POST /core/batch/:batchId/retry-blockchain
+ *
+ * Reads an existing batch CSV (from S3 or local disk), extracts pack hashes,
+ * and submits the MINTED genesis transitions to Hyperledger Fabric in chunks.
+ *
+ * Used when the initial blockchain submission failed (e.g. gateway down or auth error)
+ * so operators can sync without re-signing or invalidating existing QR codes.
+ */
+export const retryBlockchainSyncController = async (req, res) => {
+    try {
+        const { batchId } = req.params;
+        const { manufacturerId, s3FileKey } = req.body;
+
+        if (!batchId || !manufacturerId) {
+            return res.status(400).json({
+                code: 'MISSING_FIELDS',
+                message: 'batchId and manufacturerId are required',
+            });
+        }
+
+        console.log(`[pharma-core Batch] Retrying blockchain sync for batch ${batchId}...`);
+
+        const { readCsvContent, parseCsv } = await import('./export.controller.js');
+        const csvText = await readCsvContent(batchId, s3FileKey);
+        const rows = parseCsv(csvText);
+
+        if (!rows.length) {
+            return res.status(404).json({
+                code: 'NO_PACKS_FOUND',
+                message: `No pack rows found in CSV for batch ${batchId}`,
+            });
+        }
+
+        const now = new Date();
+        const sellingDate = now.toISOString().split('T')[0];
+        const sellingTime = now.toTimeString().split(' ')[0];
+
+        const transitions = rows.map((r) => ({
+            packId:      r.packHash,
+            eventType:   'MINTED',
+            hash:        `${r.packHash}~MINTED`,
+            fromId:      'GENESIS',
+            toId:        manufacturerId,
+            sellingDate,
+            sellingTime,
+            sellerId:    manufacturerId,
+        }));
+
+        const chunkSize = parseInt(process.env.BATCH_CHUNK_SIZE || '250', 10);
+        const recordedHashes = await submitTransitionBatchChunked(batchId, transitions, chunkSize);
+
+        console.log(`[pharma-core Batch] ✅ Blockchain retry sync complete for ${batchId}: ${recordedHashes.length}/${transitions.length} recorded`);
+
+        return res.status(200).json({
+            status: 'success',
+            batchId,
+            blockchainStatus: 'COMMITTED',
+            blockchainRecorded: recordedHashes.length,
+            totalPacks: transitions.length,
+            syncedAt: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error(`[pharma-core Batch] ❌ retryBlockchainSyncController error:`, error.message);
+        return res.status(500).json({
+            status: 'error',
+            code: 'BLOCKCHAIN_SYNC_ERROR',
+            message: error.message,
+        });
+    }
+};

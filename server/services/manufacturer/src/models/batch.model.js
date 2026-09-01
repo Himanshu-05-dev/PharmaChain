@@ -119,6 +119,16 @@ const BatchSchema = new mongoose.Schema(
 
         // Storage mode reported by pharma-core: "aws" | "local"
         s3Mode:         { type: String, enum: ['aws', 'local', null], default: null },
+
+        // ── Blockchain Ledger Tracking ─────────────────────────────────────────
+        // COMMITTED → All transitions recorded on Hyperledger Fabric
+        // PARTIAL   → Some chunks committed, some failed (can be retried)
+        // FAILED    → Blockchain was unavailable during minting (can be retried)
+        // PENDING   → Awaiting submission
+        blockchainStatus:        { type: String, enum: ['PENDING', 'COMMITTED', 'PARTIAL', 'FAILED'], default: 'PENDING', index: true },
+        blockchainError:         { type: String, default: null },
+        blockchainRecordedCount: { type: Number, default: 0 },
+        blockchainSubmittedAt:   { type: Date, default: null },
     },
     { timestamps: true },
 );

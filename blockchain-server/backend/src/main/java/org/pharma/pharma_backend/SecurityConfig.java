@@ -42,7 +42,27 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .anyRequest().authenticated()
             )
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder())));
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.decoder(jwtDecoder()))
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setContentType("application/json");
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                    java.util.Map<String, Object> body = new java.util.HashMap<>();
+                    body.put("status", "error");
+                    body.put("code", "UNAUTHORIZED");
+                    body.put("message", "JWT Authentication Failed: " + authException.getMessage());
+                    new com.fasterxml.jackson.databind.ObjectMapper().writeValue(response.getOutputStream(), body);
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setContentType("application/json");
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                    java.util.Map<String, Object> body = new java.util.HashMap<>();
+                    body.put("status", "error");
+                    body.put("code", "FORBIDDEN");
+                    body.put("message", "Access Denied: " + accessDeniedException.getMessage());
+                    new com.fasterxml.jackson.databind.ObjectMapper().writeValue(response.getOutputStream(), body);
+                })
+            );
         return http.build();
     }
 

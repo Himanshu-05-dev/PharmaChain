@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
-  Platform,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useAuthRequest } from "expo-auth-session";
+import * as WebBrowser from "expo-web-browser";
+import * as SecureStore from "expo-secure-store";
 import {
   ScanLine,
   ShieldCheck,
@@ -18,7 +21,11 @@ import {
   Sparkles,
 } from "lucide-react-native";
 import { useAuthStore } from "../../src/store/authStore";
+import { signInWithGoogleCode } from "../../src/services/api/auth.api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Required for expo-auth-session to handle the OAuth redirect back to the app
+WebBrowser.maybeCompleteAuthSession();
 
 export default function Home() {
   const router = useRouter();
@@ -26,19 +33,79 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const { setAuth } = useAuthStore();
 
-  const handlePatientAccess = () => {
-    setLoading(true);
-    const patientUser = {
-      uid: `patient-${Date.now()}`,
-      email: "himanshu@pharmachain.gov.in",
-      displayName: "Himanshu",
-    };
+  // ── Stable Redirect URI ────────────────────────────────────────────────
+  // makeRedirectUri() returns exp://IP:port in Expo Go (changes per session).
+  // Google requires a stable HTTPS URI. We hardcode the Expo auth proxy URL
+  // directly — register THIS EXACT URL in Google Cloud Console.
+  const REDIRECT_URI = 'https://auth.expo.io/@sahilsharma30/temp-app';
 
-    setAuth(patientUser as any);
-    setTimeout(() => {
+  // Google OAuth 2.0 discovery document — used instead of expo-auth-session/providers/google
+  // so a single webClientId works on all platforms without requiring separate Android/iOS IDs.
+  const GOOGLE_DISCOVERY = {
+    authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenEndpoint: 'https://oauth2.googleapis.com/token',
+    revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+  };
+
+  // ── Google OAuth hook ─────────────────────────────────────────────────────
+  // usePKCE: false → backend handles the code exchange using the client secret.
+  const [request, response, promptAsync] = useAuthRequest(
+    {
+      clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID!,
+      scopes: ['openid', 'profile', 'email'],
+      redirectUri: REDIRECT_URI,
+      usePKCE: false,
+    },
+    GOOGLE_DISCOVERY
+  );
+
+  // ── Log redirect URI for GCC registration ─────────────────────────────────
+  useEffect(() => {
+    console.log('[MediaCare Auth] Redirect URI → ADD THIS TO GOOGLE CLOUD CONSOLE:');
+    console.log(REDIRECT_URI);
+  }, [REDIRECT_URI]);
+
+  // Watch for OAuth response from the browser session
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { code } = response.params;
+      handleBackendSignIn(code);
+    } else if (response?.type === "error") {
       setLoading(false);
+      Alert.alert("Google Sign-In Error", response.error?.message || "Authentication was cancelled or failed.");
+    } else if (response?.type === "cancel" || response?.type === "dismiss") {
+      setLoading(false);
+    }
+  }, [response]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    console.log('[MediaCare Auth] Using redirect URI:', REDIRECT_URI);
+    try {
+      await promptAsync();
+      // Loading stays true until the response useEffect resolves it
+    } catch (e) {
+      setLoading(false);
+      Alert.alert("Error", "Failed to open Google Sign-In. Please try again.");
+    }
+  };
+
+  const handleBackendSignIn = async (code: string) => {
+    try {
+      const { user, token } = await signInWithGoogleCode(code, REDIRECT_URI);
+      // Persist token securely for session restore across app restarts
+      await SecureStore.setItemAsync("pharmaToken", token);
+      setAuth(user, token);
       router.replace("/(tabs)");
-    }, 300);
+    } catch (e: any) {
+      setLoading(false);
+      Alert.alert(
+        "Authentication Failed",
+        "Could not verify your identity with the PharmaChain server. Please try again."
+      );
+    }
   };
 
   return (
@@ -148,16 +215,24 @@ export default function Home() {
           {loading ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color="#3b00b9" />
-              <Text style={styles.loadingText}>Authenticating Patient Session...</Text>
+              <Text style={styles.loadingText}>Authenticating with Google...</Text>
             </View>
           ) : (
             <TouchableOpacity
-              style={styles.googleButton}
-              onPress={handlePatientAccess}
-              activeOpacity={0.85}
+              style={[styles.googleButton, !request && styles.googleButtonDisabled]}
+              onPress={handleGoogleSignIn}
+              activeOpacity={0.88}
+              disabled={!request}
             >
-              <View style={styles.googleIconBox}>
-                <Text style={styles.googleIconLetter}>G</Text>
+              {/* Official Google G logo using colored squares */}
+              <View style={styles.googleLogoBox}>
+                <View style={styles.googleLogoInner}>
+                  <View style={[styles.gSegment, { backgroundColor: '#4285F4', top: 0, left: 5, width: 8, height: 9, borderTopLeftRadius: 8, borderTopRightRadius: 8 }]} />
+                  <View style={[styles.gSegment, { backgroundColor: '#34A853', bottom: 0, left: 5, width: 8, height: 8, borderBottomLeftRadius: 8 }]} />
+                  <View style={[styles.gSegment, { backgroundColor: '#FBBC05', bottom: 0, left: 0, width: 6, height: 8 }]} />
+                  <View style={[styles.gSegment, { backgroundColor: '#EA4335', top: 0, left: 0, width: 6, height: 9 }]} />
+                  <View style={[styles.gBar, { backgroundColor: '#4285F4' }]} />
+                </View>
               </View>
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
@@ -169,6 +244,13 @@ export default function Home() {
             <Text style={styles.trustFooterText}>
               256-Bit Encrypted • Aligned with CDSCO & Pharmacovigilance Standards
             </Text>
+          </View>
+
+          {/* DEBUG — shows exact redirect URI to register in Google Cloud Console */}
+          <View style={styles.debugBox}>
+            <Text style={styles.debugTitle}>📋 Register this URI in Google Cloud Console:</Text>
+            <Text selectable style={styles.debugUri}>{REDIRECT_URI}</Text>
+            <Text style={styles.debugHint}>GCC → Credentials → Web Client → Authorized Redirect URIs</Text>
           </View>
         </View>
       </ScrollView>
@@ -359,38 +441,60 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   googleButton: {
-    backgroundColor: "#ffffff",
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
+    backgroundColor: '#ffffff',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    gap: 10,
+  },
+  googleButtonDisabled: {
+    opacity: 0.45,
+  },
+  googleLogoBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-    gap: 12,
+    borderColor: '#e2e8f0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  googleIconBox: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "#ea4335",
-    justifyContent: "center",
-    alignItems: "center",
+  googleLogoInner: {
+    width: 20,
+    height: 20,
+    position: 'relative',
   },
-  googleIconLetter: {
-    fontWeight: "800",
-    color: "#ffffff",
-    fontSize: 13,
+  gSegment: {
+    position: 'absolute',
+  },
+  gBar: {
+    position: 'absolute',
+    right: 0,
+    top: 9,
+    width: 9,
+    height: 4,
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
   },
   googleButtonText: {
-    color: "#0f172a",
+    color: '#1f2937',
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: '600',
+    letterSpacing: 0.1,
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 36, // optical balance for the logo on the left
   },
   loadingBox: {
     flexDirection: "row",
@@ -417,5 +521,31 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 280,
     lineHeight: 14,
+  },
+  debugBox: {
+    backgroundColor: '#fefce8',
+    borderWidth: 1,
+    borderColor: '#fde047',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+    gap: 4,
+  },
+  debugTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#854d0e',
+    marginBottom: 4,
+  },
+  debugUri: {
+    fontSize: 11,
+    color: '#1e40af',
+    fontFamily: 'monospace',
+    fontWeight: '600',
+  },
+  debugHint: {
+    fontSize: 10,
+    color: '#92400e',
+    marginTop: 4,
   },
 });

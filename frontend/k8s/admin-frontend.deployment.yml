@@ -29,5 +29,5 @@ spec:
         - containerPort: 5174
           name: admin-ui-http
         env:
-        - name: VITE_API_BASE_URL
+        - name: VITE_BACKEND_SERVER_URL
           value: "http://admin-service:80"

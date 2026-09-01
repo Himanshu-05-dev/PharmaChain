@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import {
   View,
   Text,
@@ -28,8 +29,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [name, setName] = useState((user as any)?.displayName || 'Verified Patient');
-  const [email, setEmail] = useState((user as any)?.email || 'patient@pharmachain.gov.in');
+  const [name, setName] = useState(user?.name || 'Verified Patient');
+  const [email, setEmail] = useState(user?.email || 'patient@pharmachain.gov.in');
   const [phone, setPhone] = useState('+91 98765 43210');
 
   const handleSave = () => {
@@ -40,17 +41,14 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
-      if (typeof logout === 'function') {
-        logout();
-      }
-      if (typeof setAuth === 'function') {
-        setAuth(null);
-      }
+      // Clear persisted JWT so session is not restored on next cold launch
+      await SecureStore.deleteItemAsync('pharmaToken');
     } catch (e) {
-      console.warn('Logout error:', e);
+      console.warn('SecureStore clear error:', e);
     }
+    logout();
     router.replace('/(public)/home');
   };
 

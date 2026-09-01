@@ -25,7 +25,7 @@ export const DEMO_SHOPKEEPERS: Record<
   },
 };
 
-const BASE_URL = import.meta.env.VITE_SHOPKEEPER_SERVER_URL || 'http://localhost:3002';
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 const API_BASE = `${BASE_URL}/api/shopkeeper`;
 
 // Axios instance with token injection

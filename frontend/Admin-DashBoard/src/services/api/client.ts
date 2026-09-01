@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3005';
+// Empty string defaults to relative path (e.g. /api/admin/...) so requests hit Vite's
+// dev proxy (or Ingress) instead of attempting to resolve internal k8s hostnames in the browser.
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,

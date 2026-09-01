@@ -29,5 +29,5 @@ spec:
         - containerPort: 5175
           name: shop-ui-http
         env:
-        - name: VITE_SHOPKEEPER_SERVER_URL
+        - name: VITE_BACKEND_SERVER_URL
           value: "http://shopkeeper-service:80"

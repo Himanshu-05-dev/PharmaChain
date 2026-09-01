@@ -100,6 +100,20 @@ export const mintBatchViaPharmaCore = async ({ batchId, manufacturerId, expiryDa
 };
 
 /**
+ * Retries blockchain submission for an already minted batch.
+ * @param {Object} params - { batchId, manufacturerId, s3FileKey, authToken }
+ * @returns {Promise<Object>}
+ */
+export const retryBlockchainViaPharmaCore = async ({ batchId, manufacturerId, s3FileKey, authToken }) => {
+    const response = await getCoreClient(authToken).post(`/core/batch/${batchId}/retry-blockchain`, {
+        manufacturerId,
+        s3FileKey,
+    });
+    console.log(`[manufacturer-service CoreClient] Blockchain retry complete for batch ${batchId}`);
+    return response.data;
+};
+
+/**
  * Initiates a batch recall through pharma-core.
  * @param {Object} params - { batchId, manufacturerId, reason, authToken }
  * @returns {Promise<Object>}

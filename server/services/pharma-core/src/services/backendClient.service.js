@@ -39,9 +39,20 @@ const createBackendClient = () => {
  * @returns {Promise<Object>} Response data from pharma-backend.
  */
 export const submitTransition = async (transition) => {
-    const response = await createBackendClient().post('/api/transition', transition);
-    console.log(`[pharma-core BackendClient] Transition submitted for hash: ${transition.hash}`);
-    return response.data;
+    try {
+        const response = await createBackendClient().post('/api/transition', transition);
+        console.log(`[pharma-core BackendClient] Transition submitted for hash: ${transition.hash}`);
+        return response.data;
+    } catch (err) {
+        const status = err.response?.status;
+        const data = err.response?.data;
+        const msg = data?.message || data?.error || err.message;
+        console.error(`[pharma-core BackendClient] ❌ Failed to submit transition ${transition.hash} [HTTP ${status || 'NETWORK_ERROR'}]: ${msg}`);
+        const enrichedError = new Error(`Blockchain transition error: [HTTP ${status || 'N/A'}] ${msg}`);
+        enrichedError.status = status;
+        enrichedError.data = data;
+        throw enrichedError;
+    }
 };
 
 /**
@@ -57,11 +68,22 @@ export const submitTransition = async (transition) => {
  * @returns {Promise<Object>}
  */
 export const submitTransitionBatch = async (batchId, transitions) => {
-    // Wrap in the agreed shape — backend owns the deserialization
-    const payload = { batchId, transitions };
-    const response = await createBackendClient().post('/api/transition/batch', payload);
-    console.log(`[pharma-core BackendClient] Batch of ${transitions.length} transitions submitted for ${batchId}`);
-    return response.data;
+    try {
+        // Wrap in the agreed shape — backend owns the deserialization
+        const payload = { batchId, transitions };
+        const response = await createBackendClient().post('/api/transition/batch', payload);
+        console.log(`[pharma-core BackendClient] Batch of ${transitions.length} transitions submitted for ${batchId}`);
+        return response.data;
+    } catch (err) {
+        const status = err.response?.status;
+        const data = err.response?.data;
+        const msg = data?.message || data?.error || err.message;
+        console.error(`[pharma-core BackendClient] ❌ Failed to submit batch ${batchId} (${transitions.length} transitions) [HTTP ${status || 'NETWORK_ERROR'}]: ${msg}`);
+        const enrichedError = new Error(`Blockchain batch error: [HTTP ${status || 'N/A'}] ${msg}`);
+        enrichedError.status = status;
+        enrichedError.data = data;
+        throw enrichedError;
+    }
 };
 
 /**
@@ -76,15 +98,26 @@ export const submitTransitionBatch = async (batchId, transitions) => {
  * @returns {Promise<Object>}
  */
 export const submitRecall = async ({ systemBatchId, actorId, reason }) => {
-    const now         = new Date();
-    const recallDate  = now.toISOString().split('T')[0];            // YYYY-MM-DD
-    const recallTime  = now.toTimeString().split(' ')[0];           // HH:MM:SS
+    try {
+        const now         = new Date();
+        const recallDate  = now.toISOString().split('T')[0];            // YYYY-MM-DD
+        const recallTime  = now.toTimeString().split(' ')[0];           // HH:MM:SS
 
-    const payload = { systemBatchId, actorId, reason, recallDate, recallTime };
+        const payload = { systemBatchId, actorId, reason, recallDate, recallTime };
 
-    const response = await createBackendClient().post('/api/transition/recall', payload);
-    console.log(`[pharma-core BackendClient] Recall submitted for batch: ${systemBatchId}`);
-    return response.data;
+        const response = await createBackendClient().post('/api/transition/recall', payload);
+        console.log(`[pharma-core BackendClient] Recall submitted for batch: ${systemBatchId}`);
+        return response.data;
+    } catch (err) {
+        const status = err.response?.status;
+        const data = err.response?.data;
+        const msg = data?.message || data?.error || err.message;
+        console.error(`[pharma-core BackendClient] ❌ Failed to submit recall for ${systemBatchId} [HTTP ${status || 'NETWORK_ERROR'}]: ${msg}`);
+        const enrichedError = new Error(`Blockchain recall error: [HTTP ${status || 'N/A'}] ${msg}`);
+        enrichedError.status = status;
+        enrichedError.data = data;
+        throw enrichedError;
+    }
 };
 
 /**
@@ -101,12 +134,11 @@ export const getPackStatus = async (packHash, batchId) => {
         });
         return response.data;
     } catch (err) {
-        // If Fabric is unreachable (ECONNREFUSED) or pack doesn't exist (404/400),
-        // return NOT_FOUND gracefully rather than failing Tier-1 verification.
-        console.warn(`[pharma-core BackendClient] getPackStatus notice: ${err.message}`);
-        return { status: 'NOT_FOUND', fabricAvailable: false };
+        const status = err.response?.status;
+        const data = err.response?.data;
+        console.warn(`[pharma-core BackendClient] getPackStatus notice for ${packHash} [HTTP ${status || 'NETWORK_ERROR'}]: ${data?.message || err.message}`);
+        return { status: 'NOT_FOUND', fabricAvailable: false, error: data?.message || err.message };
     }
-
 };
 
 /**
@@ -148,7 +180,7 @@ export const submitTransitionBatchChunked = async (batchId, transitions, chunkSi
 
         console.log(
             `[pharma-core BackendClient] Chunk ${chunkNum}/${totalChunks} committed ✅` +
-            ` (${result?.committedCount ?? '?'} committed, ${result?.failedCount ?? '?'} failed)`,
+            ` (${result?.committedCount ?? chunk.length} committed, ${result?.failedCount ?? 0} failed)`,
         );
     }
 

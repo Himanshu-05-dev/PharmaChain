@@ -502,23 +502,25 @@ export const mintAndUploadBatch = async (
 
     // ── Step 4: Submit MINTED transitions to Hyperledger Fabric ─────────────
     // Non-fatal: packs are signed and CSV is uploaded even if Fabric is temporarily down.
-    const chunkSize      = parseInt(process.env.BATCH_CHUNK_SIZE || '250', 10);
-    let backendSubmitted = false;
-    let partialSubmit    = false;
-    let recordedHashes   = [];
+    const chunkSize       = parseInt(process.env.BATCH_CHUNK_SIZE || '250', 10);
+    let backendSubmitted  = false;
+    let partialSubmit     = false;
+    let recordedHashes    = [];
+    let blockchainError   = null;
 
     if (typeof submitFn === 'function') {
         try {
             recordedHashes   = await submitFn(batchId, transitions, chunkSize);
             backendSubmitted = true;
             console.log(
-                `[pharma-core Crypto] Blockchain: ${recordedHashes.length}/${transitions.length} transitions recorded`,
+                `[pharma-core Crypto] Blockchain: ${recordedHashes.length}/${transitions.length} transitions recorded ✅`,
             );
         } catch (backendErr) {
-            partialSubmit = true;
-            console.warn(
-                `[pharma-core Crypto] ⚠️  Blockchain submission failed: ${backendErr.message}. ` +
-                `CSV is already on ${s3Mode === 'aws' ? 'S3' : 'disk'} — operator can retry blockchain later.`,
+            partialSubmit   = true;
+            blockchainError = backendErr.data?.message || backendErr.message;
+            console.error(
+                `[pharma-core Crypto] ⚠️  Blockchain submission failed for ${batchId}: ${blockchainError}. ` +
+                `CSV is safely stored on ${s3Mode === 'aws' ? 'S3' : 'disk'} — operator can retry blockchain sync.`,
             );
         }
     }
@@ -526,11 +528,11 @@ export const mintAndUploadBatch = async (
     const totalMs = Date.now() - totalStart;
     console.log(
         `[pharma-core Crypto] mintAndUploadBatch complete for ${batchId}` +
-        ` in ${totalMs}ms | mode: ${s3Mode}`,
+        ` in ${totalMs}ms | mode: ${s3Mode} | blockchain: ${backendSubmitted ? 'COMMITTED' : 'FAILED'}`,
     );
 
     return {
-        status:                  'success',
+        status:                  backendSubmitted ? 'success' : (partialSubmit ? 'partial_success' : 'success'),
         batchId,
         totalPacks:              packs.length,
         s3FileKey,
@@ -538,6 +540,8 @@ export const mintAndUploadBatch = async (
         s3UrlExpiresAt,
         s3Mode,
         backendSubmitted,
+        blockchainStatus:        backendSubmitted ? 'COMMITTED' : (partialSubmit ? 'FAILED' : 'PENDING'),
+        blockchainError:         blockchainError,
         partialBlockchainSubmit: partialSubmit,
         blockchainRecorded:      recordedHashes.length,
         mintedAt:                new Date().toISOString(),

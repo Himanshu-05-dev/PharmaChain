@@ -11,6 +11,7 @@ import {
     listBatchPacksController,
     lookupPackGlobalController,
     previewBatchPacksController,
+    retryBlockchainBatchController,
 } from '../controllers/batch.controller.js';
 
 const router = express.Router();
@@ -50,6 +51,9 @@ router.get('/:batchId/export/csv', exportBatchCsvController);
 
 // POST /api/manufacturer/batch/:batchId/mint — trigger asynchronous minting (HTTP 202)
 router.post('/:batchId/mint', mintBatchController);
+
+// POST /api/manufacturer/batch/:batchId/retry-blockchain — retry blockchain commit for already minted batch
+router.post('/:batchId/retry-blockchain', retryBlockchainBatchController);
 
 // POST /api/manufacturer/batch/:batchId/recall — initiate batch recall across supply chain
 router.post('/:batchId/recall', recallBatchController);

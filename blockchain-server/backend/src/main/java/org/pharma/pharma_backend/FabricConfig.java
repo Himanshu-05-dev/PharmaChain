@@ -49,6 +49,16 @@ public final class FabricConfig {
                     .overrideAuthority(overrideAuth)
                     .build();
 
+            if (!Files.exists(certPath) || Files.isDirectory(certPath)) {
+                Path dir = Files.isDirectory(certPath) ? certPath : certPath.getParent();
+                if (dir != null && Files.exists(dir)) {
+                    certPath = Files.list(dir)
+                            .filter(p -> p.toString().endsWith(".pem") || p.toString().endsWith(".crt"))
+                            .findFirst()
+                            .orElseThrow(() -> new IllegalStateException("No cert file found in: " + dir));
+                }
+            }
+
             X509Certificate cert = Identities.readX509Certificate(Files.newBufferedReader(certPath));
             Path keyFile = Files.list(keyDir).findFirst().orElseThrow(
                 () -> new IllegalStateException("No private key file found in keystore directory: " + keyDir));

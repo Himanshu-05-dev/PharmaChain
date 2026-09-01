@@ -244,10 +244,18 @@ export const DashboardOverviewPage: React.FC = () => {
                             Manufacturer KYC
                           </span>
                         </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1">
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-2 mt-1">
                           <span>License: <code className="font-mono font-semibold text-slate-700 dark:text-slate-300">{mfr.licenseNumber}</code></span>
                           <span>•</span>
                           <span>{mfr.state || 'India'}</span>
+                          {mfr.createdAt && (
+                            <>
+                              <span>•</span>
+                              <span className="text-amber-700 dark:text-amber-400 font-medium">
+                                Submitted: {new Date(mfr.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -382,6 +390,10 @@ export const DashboardOverviewPage: React.FC = () => {
         targetName={selectedMfrForApproval?.companyName || ''}
         targetId={selectedMfrForApproval?.manufacturerId}
         licenseNumber={selectedMfrForApproval?.licenseNumber}
+        applicationDate={selectedMfrForApproval?.createdAt}
+        email={selectedMfrForApproval?.email}
+        location={selectedMfrForApproval?.plantAddress || selectedMfrForApproval?.state}
+        issuingAuthority={selectedMfrForApproval?.issuingAuthority}
         isKeyProvisioning={true}
         loading={loadingAction}
       />

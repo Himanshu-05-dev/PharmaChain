@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShieldCheck, Clock, AlertTriangle, XCircle, Lock, Key, ShieldAlert } from 'lucide-react';
 
-export type StatusVariant = 'pending' | 'approved' | 'rejected' | 'suspended' | 'key_active' | 'key_pending' | 'retail' | 'wholesale';
+export type StatusVariant = 'pending' | 'approved' | 'rejected' | 'suspended' | 'blocked' | 'key_active' | 'key_pending' | 'retail' | 'wholesale';
 
 interface BadgeProps {
   variant: StatusVariant | string;
@@ -29,10 +29,10 @@ export const Badge: React.FC<BadgeProps> = ({ variant, label, size = 'sm', class
     bg = 'bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-700/60';
     Icon = XCircle;
     text = label || 'Rejected';
-  } else if (norm === 'suspended') {
-    bg = 'bg-red-100 dark:bg-red-950/70 text-red-900 dark:text-red-200 border-red-400 dark:border-red-600 font-bold';
+  } else if (norm === 'suspended' || norm === 'blocked') {
+    bg = 'bg-rose-100 dark:bg-rose-950/80 text-rose-900 dark:text-rose-200 border-rose-400 dark:border-rose-700 font-bold';
     Icon = ShieldAlert;
-    text = label || 'Suspended';
+    text = label || (norm === 'blocked' ? 'Blocked' : 'Suspended');
   } else if (norm === 'key_active' || norm === 'p-256 provisioned') {
     bg = 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700';
     Icon = Lock;

@@ -4,6 +4,8 @@ import {
     getManufacturerDetailController,
     approveManufacturerController,
     rejectManufacturerController,
+    blockManufacturerController,
+    unblockManufacturerController,
 } from '../controllers/manufacturer.controller.js';
 import { requireAdminAuth } from '../middleware/adminAuth.middleware.js';
 import { requireRoles } from '../middleware/roleCheck.middleware.js';
@@ -23,5 +25,11 @@ router.post('/:id/approve', requireRoles('SUPERADMIN', 'DRUG_INSPECTOR'), approv
 
 // POST /api/admin/manufacturers/:id/reject
 router.post('/:id/reject', requireRoles('SUPERADMIN', 'DRUG_INSPECTOR'), rejectManufacturerController);
+
+// POST /api/admin/manufacturers/:id/block
+router.post('/:id/block', requireRoles('SUPERADMIN', 'DRUG_INSPECTOR'), blockManufacturerController);
+
+// POST /api/admin/manufacturers/:id/unblock
+router.post('/:id/unblock', requireRoles('SUPERADMIN', 'DRUG_INSPECTOR'), unblockManufacturerController);
 
 export default router;

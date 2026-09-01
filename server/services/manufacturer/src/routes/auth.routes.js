@@ -4,8 +4,12 @@ import {
     loginController,
     kycApproveController,
     kycRejectController,
+    kycBlockController,
+    kycUnblockController,
+    getMeController,
     logoutController,
 } from '../controllers/auth.controller.js';
+import { identifyUser } from '../middleware/identifyUser.middleware.js';
 
 const router = express.Router();
 
@@ -25,8 +29,22 @@ router.post('/kyc/approve', kycApproveController);
 // POST /api/manufacturer/auth/kyc/reject → admin-only, X-Admin-Token header required
 router.post('/kyc/reject', kycRejectController);
 
+// POST /api/manufacturer/auth/kyc/block → admin-only, X-Admin-Token header required
+router.post('/kyc/block', kycBlockController);
+
+// POST /api/manufacturer/auth/kyc/unblock → admin-only, X-Admin-Token header required
+router.post('/kyc/unblock', kycUnblockController);
+
 // POST /api/manufacturer/auth/logout → clears mfr_token cookie, returns 204
 // Safe to call unauthenticated.
 router.post('/logout', logoutController);
+
+// ── Protected Auth Routes (JWT required) ─────────────────────────────────────
+
+// GET /api/manufacturer/auth/me → returns current account status
+// Used by frontend polling hook to detect real-time block status changes.
+// identifyUser middleware already returns 403 ACCOUNT_BLOCKED if blocked,
+// so the polling hook's response interceptor catches it even here.
+router.get('/me', identifyUser, getMeController);
 
 export default router;

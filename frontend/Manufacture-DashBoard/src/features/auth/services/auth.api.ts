@@ -8,6 +8,7 @@ import {
 import { ManufacturerProfile } from '../../../types';
 import { parseApiError } from '../../../utils/errorHandler';
 
+// ── Axios instance ─────────────────────────────────────────────────────────────
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/manufacturer',
   timeout: 10000,
@@ -17,7 +18,7 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to attach Bearer token only if valid signed JWT format
+// ── Request interceptor: attach Bearer token ───────────────────────────────────
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('pharma_token') || sessionStorage.getItem('pharma_token');
   if (
@@ -32,15 +33,53 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// ── Response interceptor: catch 403 ACCOUNT_BLOCKED globally ──────────────────
+// When any API call returns 403 with code ACCOUNT_BLOCKED, we dispatch setBlocked
+// to the Redux store immediately — no matter which feature triggered the request.
+// This is the key mechanism for real-time block detection when the backend
+// enforces the block mid-session (e.g. during a batch submission request).
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const data = error?.response?.data;
+    const status = error?.response?.status;
+
+    if (status === 403 && (data?.code === 'ACCOUNT_BLOCKED' || data?.code === 'ACCOUNT_SUSPENDED')) {
+      console.warn('[auth.api] 403 ACCOUNT_BLOCKED intercepted — dispatching setBlocked to Redux store');
+      // Use dynamic import to avoid circular dependency (store → auth.slice → auth.api)
+      // store.ts does NOT import auth.api, so this dynamic import is safe.
+      import('../../../store').then(({ store }) => {
+        import('../slice/auth.slice').then(({ setBlocked }) => {
+          store.dispatch(
+            setBlocked({
+              reason: data?.reason || data?.message,
+              blockedAt: data?.blockedAt,
+            })
+          );
+        });
+      });
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// ── Normalizer ─────────────────────────────────────────────────────────────────
 /**
- * Normalizes backend manufacturer data into standard ManufacturerProfile format
+ * Normalizes backend manufacturer data into standard ManufacturerProfile format.
+ * Preserves BLOCKED/SUSPENDED/REJECTED statuses as-is.
  */
 export const normalizeBackendManufacturer = (raw: any): ManufacturerProfile => {
   const id = raw.id || raw.manufacturerId || raw._id || 'MFR_UNKNOWN';
   const name = raw.companyName || raw.name || 'Pharmaceutical Manufacturer';
   const licenseNumber = raw.licenseNumber || raw.cdscoLicenseNo || 'CDSCO-MFG-PENDING';
   const email = raw.email || '';
-  const kycStatus = (raw.kycStatus === 'APPROVED' ? 'APPROVED' : 'PENDING') as 'APPROVED' | 'PENDING';
+
+  // Preserve ALL statuses — don't force-normalize BLOCKED/SUSPENDED to PENDING
+  const rawStatus = raw.kycStatus || 'PENDING';
+  const kycStatus = (['APPROVED', 'PENDING', 'REJECTED', 'BLOCKED', 'SUSPENDED'].includes(rawStatus)
+    ? rawStatus
+    : 'PENDING') as ManufacturerProfile['kycStatus'];
 
   return {
     id,
@@ -73,12 +112,13 @@ export const normalizeBackendManufacturer = (raw: any): ManufacturerProfile => {
     registeredAt: raw.createdAt ? new Date(raw.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
     gstin: raw.gstin || '',
     cdscoRegistration: raw.cdscoRegistration || licenseNumber,
+    blockedReason: raw.blockedReason || undefined,
+    blockedAt: raw.blockedAt || undefined,
+    cin: raw.cinNumber || raw.cin || undefined,
   };
 };
 
-/**
- * Service API: POST /api/manufacturer/auth/login
- */
+// ── Login ──────────────────────────────────────────────────────────────────────
 export const loginAPI = async (credentials: LoginPayload): Promise<AuthResponse> => {
   try {
     const response = await api.post('/auth/login', {
@@ -114,10 +154,20 @@ export const loginAPI = async (credentials: LoginPayload): Promise<AuthResponse>
     };
   } catch (err: any) {
     const parsed = parseApiError(err, 'Authentication failed. Please check your credentials.');
+    const responseData = err.response?.data;
+
+    // Handle blocked-on-login case
+    if (err.response?.status === 403 && responseData?.code === 'ACCOUNT_BLOCKED') {
+      throw Object.assign(new Error('ACCOUNT_BLOCKED'), {
+        isBlocked: true,
+        reason: responseData?.reason,
+        blockedAt: responseData?.blockedAt,
+      });
+    }
 
     if (parsed.isKycPending) {
       const pendingUser = normalizeBackendManufacturer({
-        ...err.response?.data?.data,
+        ...responseData?.data,
         email: credentials.email,
         kycStatus: 'PENDING',
       });
@@ -133,9 +183,7 @@ export const loginAPI = async (credentials: LoginPayload): Promise<AuthResponse>
   }
 };
 
-/**
- * Service API: POST /api/manufacturer/auth/register
- */
+// ── Register ───────────────────────────────────────────────────────────────────
 export const registerAPI = async (payload: ManufacturerRegisterPayload): Promise<AuthResponse> => {
   try {
     const response = await api.post('/auth/register', {
@@ -167,9 +215,7 @@ export const registerAPI = async (payload: ManufacturerRegisterPayload): Promise
   }
 };
 
-/**
- * Service API: POST /api/manufacturer/auth/kyc/approve
- */
+// ── KYC Approval ───────────────────────────────────────────────────────────────
 export const approveKYCAPI = async (user: ManufacturerProfile): Promise<ManufacturerProfile> => {
   try {
     const adminToken = import.meta.env.VITE_ADMIN_TOKEN || '960e412b2690c03cb83337b91010016a572343f23123feb3';
@@ -208,9 +254,38 @@ export const approveKYCAPI = async (user: ManufacturerProfile): Promise<Manufact
   }
 };
 
+// ── Check Account Status (used by polling hook) ────────────────────────────────
 /**
- * Service API: POST /api/manufacturer/auth/logout
+ * Polls GET /auth/me to fetch the latest account status.
+ * Returns null on network error (don't block UI on transient failure).
+ * Returns the manufacturer profile with current kycStatus on success.
+ * If the account is blocked the response interceptor will have already dispatched setBlocked.
  */
+export const fetchAccountStatusAPI = async (): Promise<{ kycStatus: string; blockedReason?: string; blockedAt?: string } | null> => {
+  try {
+    const token = localStorage.getItem('pharma_token') || sessionStorage.getItem('pharma_token');
+    if (!token || token === 'pending_token' || token.split('.').length !== 3) {
+      return null;
+    }
+    const response = await api.get('/auth/me');
+    const data = response.data?.data || response.data;
+    console.log('[auth.api] fetchAccountStatusAPI response kycStatus:', data?.kycStatus);
+    return {
+      kycStatus: data?.kycStatus || 'APPROVED',
+      blockedReason: data?.blockedReason,
+      blockedAt: data?.blockedAt,
+    };
+  } catch (err: any) {
+    // 403 ACCOUNT_BLOCKED is handled by the response interceptor above
+    // For other errors (network, 5xx), return null — don't disrupt the UI
+    if (err?.response?.status !== 403) {
+      console.warn('[auth.api] fetchAccountStatusAPI non-fatal error:', err?.message);
+    }
+    return null;
+  }
+};
+
+// ── Logout ─────────────────────────────────────────────────────────────────────
 export const logoutAPI = async (): Promise<void> => {
   try {
     await api.post('/auth/logout');

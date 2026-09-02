@@ -84,10 +84,6 @@ export const intakeScanController = async (req, res) => {
                     lastIntakeAt: new Date(),
                 },
                 $setOnInsert: {
-                    shopkeeperId,
-                    batchId,
-                    batchNo: batchId,
-                    medicineName,
                     expiryDate:  expiryAsDate,
                     manufacturer: manufacturerId || null,
                     status:      'AVAILABLE',

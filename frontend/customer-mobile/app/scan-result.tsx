@@ -49,8 +49,13 @@ export default function ScanResultScreen() {
     const med: SavedMedicine = {
       id: `med-${Date.now()}`,
       name: medicineName,
-      genericName: result?.payload?.genericName || medicineName,
+      genericName: result?.pack?.genericName || result?.payload?.genericName || medicineName,
+      brandName: result?.pack?.brandName,
       dosage: result?.pack?.dosage || 'Standard Formulation',
+      composition: result?.pack?.composition,
+      drugSchedule: result?.pack?.drugSchedule,
+      storageCondition: result?.pack?.storageCondition,
+      productionSite: result?.manufacturer?.productionSite,
       batchNumber,
       manufacturer: manufacturerName,
       mfgDate,
@@ -58,7 +63,7 @@ export default function ScanResultScreen() {
       daysToExpiry: 365,
       status: isVerified ? 'Verified' : 'Needs Attention',
       packId,
-      category: 'General Care',
+      category: result?.pack?.drugSchedule ? `Schedule ${result.pack.drugSchedule}` : 'General Care',
       verifiedAt: 'Just now',
       safetyScore: trustScore,
     };
@@ -135,14 +140,46 @@ export default function ScanResultScreen() {
               <Text style={styles.detailLabel}>Medicine</Text>
               <Text style={styles.detailValue}>{medicineName}</Text>
             </View>
+            {result?.pack?.genericName && result?.pack?.genericName !== medicineName && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Generic Name</Text>
+                <Text style={styles.detailValue}>{result.pack.genericName}</Text>
+              </View>
+            )}
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Manufacturer</Text>
               <Text style={styles.detailValue}>{manufacturerName}</Text>
             </View>
+            {result?.manufacturer?.productionSite && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Facility</Text>
+                <Text style={styles.detailValue}>{result.manufacturer.productionSite}</Text>
+              </View>
+            )}
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Batch No.</Text>
               <Text style={styles.detailValue}>{batchNumber}</Text>
             </View>
+            {result?.pack?.dosage && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Dosage</Text>
+                <Text style={styles.detailValue}>{result.pack.dosage}</Text>
+              </View>
+            )}
+            {result?.pack?.composition && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Composition</Text>
+                <Text style={[styles.detailValue, { fontSize: 12 }]}>{result.pack.composition}</Text>
+              </View>
+            )}
+            {result?.pack?.drugSchedule && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Schedule</Text>
+                <Text style={[styles.detailValue, { color: '#0369a1', fontWeight: '700' }]}>
+                  Schedule {result.pack.drugSchedule}
+                </Text>
+              </View>
+            )}
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Mfg. Date</Text>
               <Text style={styles.detailValue}>{mfgDate}</Text>
@@ -151,6 +188,12 @@ export default function ScanResultScreen() {
               <Text style={styles.detailLabel}>Expiry Date</Text>
               <Text style={styles.detailValue}>{expiryDate}</Text>
             </View>
+            {result?.pack?.storageCondition && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Storage</Text>
+                <Text style={[styles.detailValue, { fontSize: 12 }]}>{result.pack.storageCondition}</Text>
+              </View>
+            )}
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Pack ID / Hash</Text>
               <Text style={[styles.detailValue, { fontFamily: 'monospace', fontSize: 13 }]}>

@@ -60,6 +60,27 @@ No client app talks to `pharma-core` directly, and no client app talks to a back
 
 ---
 
+## 3.1 Security Architecture: Why Dual-Mode QR (`:packHash` + `token`) & Anti-Cloning Economics
+
+The dual-mode QR format:
+`https://pharmachain.gov.in/verify/:packHash?token=:signedToken`
+
+### 1. Why both `token` and `packHash` are required:
+- **The Cryptographic `token` (ECDSA ES256)**: Proves **Genesis Authenticity**. A hash alone (e.g. SHA-256) is only a mathematical fingerprint without a secret key; anyone can compute a hash. The `token` is an asymmetric digital signature created using the manufacturer's CDSCO-certified EC P-256 private key. It mathematically proves that a licensed pharmaceutical facility manufactured this exact pack. It also enables **100% offline verification** in rural clinics without internet connectivity.
+- **The Blockchain `packHash` (Hyperledger Fabric Key)**: Proves **Supply Chain Custody & State**. `packHash = SHA-256(signedToken)` acts as the compact 32-byte primary key on the distributed ledger, tracking state transitions (`MINTED` ➔ `AT_SHOP` ➔ `SOLD` ➔ `RECALLED`) without ledger storage bloat.
+
+### 2. The Anti-Cloning & Single-Sale Defense Mechanics:
+- **The Photocopy / Cloning Attack**: If a counterfeiter photographs a legitimate medicine QR in a distribution center and prints 500 fake boxes containing that identical URL:
+  1. The very first box checked out at the pharmacy POS transitions the on-chain ledger state from `AT_SHOP` to `SOLD`.
+  2. The remaining **499 cloned boxes are permanently bricked and flagged**.
+  3. The moment any of the other 499 clones is scanned (by another chemist during intake or a patient at home), the system instantly returns `ALREADY_SOLD` (*"Warning: Pack already registered as sold. Possible reuse/cloning detected."*) and automatically files a CDSCO regulatory counterfeit incident report with location telemetry.
+- **Destruction of Counterfeiting Economics**:
+  - Counterfeiters cannot forge new valid QRs (they lack the manufacturer's private key).
+  - Counterfeiters cannot mass-scale copied QRs (1 copied QR yields exactly 1 sale; all subsequent 499 clones trigger fraud alarms).
+  - This makes commercial drug counterfeiting economically unviable and mathematically detectable.
+
+---
+
 ## 4. System-Wide MVP Priority Stack
 
 Your note about focusing on the anti-fake-medicine mission over general CRUD convenience is the right instinct — here's how that plays out across the whole system, ranked:

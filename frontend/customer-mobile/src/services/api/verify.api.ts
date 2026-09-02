@@ -50,22 +50,37 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
     const uiState: BackendUIState = data.uiState || (data.valid ? 'GENUINE' : 'COUNTERFEIT');
     const status = mapBackendUIStateToStatus(uiState);
     const isValid = data.valid !== false && uiState !== 'COUNTERFEIT' && uiState !== 'NOT_FOUND';
-
     const payload = data.payload || {};
+    const med = data.medicine || {};
+    const batch = data.batch || {};
+    const hasValidPayload = Boolean(payload && Object.keys(payload).length > 0 && (payload.batchId || payload.medicineName || med.medicineName));
+
     const medicineName =
+      med.medicineName ||
+      batch.medicineName ||
       payload.medicineName ||
       payload.name ||
-      (data.packHash ? `Verified Pack (${data.packHash.substring(0, 8)})` : 'Verified Formulation');
+      (hasValidPayload
+        ? (data.packHash ? `Verified Pack (${data.packHash.substring(0, 8)})` : 'Verified Formulation')
+        : 'Unverified QR Code');
 
-    const batchId = payload.batchId || 'BATCH-LIVE-001';
-    const expiryDate = payload.expiryDate || 'N/A';
-    const manufacturingDate = payload.mfgDate || payload.manufacturingDate || '2026-08-01';
+    const genericName = med.genericName || batch.genericName || payload.genericName || medicineName;
+    const brandName = med.brandName || batch.brandName || payload.brandName || null;
+    const dosage = med.dosage || batch.dosage || payload.dosage || 'Standard Formulation';
+    const composition = med.composition || batch.composition || null;
+    const drugSchedule = med.drugSchedule || batch.drugSchedule || null;
+    const storageCondition = med.storageCondition || batch.storageConditions || null;
+    const productionSite = med.productionSite || batch.productionSite || null;
+
+    const batchId = med.batchId || batch.batchId || payload.batchId || (hasValidPayload ? 'BATCH-LIVE-001' : 'N/A');
+    const expiryDate = med.expiryDate || batch.expiryDate || payload.expiryDate || 'N/A';
+    const manufacturingDate = med.manufacturingDate || batch.manufacturingDate || payload.mfgDate || payload.manufacturingDate || (hasValidPayload ? '2026-08-01' : 'N/A');
 
     return {
       success: isValid,
       status,
       uiState,
-      message: data.message || 'Verification complete',
+      message: data.message || (isValid ? 'Verification complete' : 'Invalid or unrecognized QR code'),
       valid: data.valid,
       packHash: data.packHash,
       scannedHash: data.scannedHash,
@@ -73,17 +88,24 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
       detail: data.detail,
       payload,
       pack: {
-        packId: data.packHash || payload.serial || 'PACK-SERIAL',
+        packId: data.packHash || payload.serial || (isValid ? 'PACK-SERIAL' : 'N/A'),
         medicineName,
+        genericName,
+        brandName,
         batchId,
         manufacturingDate,
         expiryDate,
-        dosage: payload.dosage,
+        dosage,
+        composition,
+        drugSchedule,
+        storageCondition,
         serial: payload.serial,
       },
       manufacturer: {
-        name: payload.manufacturerId || 'Verified CDSCO Manufacturer',
-        id: payload.manufacturerId,
+        name: med.manufacturerName || batch.manufacturerName || payload.manufacturerId || (hasValidPayload ? 'Verified CDSCO Manufacturer' : 'Unknown / Unregistered'),
+        id: payload.manufacturerId || null,
+        productionSite,
+        licenseNumber: med.mfgLicenseNumber || batch.manufacturingLicenseNo || null,
       },
       shop: {
         name: data.detail?.shopName || 'Registered Pharmacy Partner',

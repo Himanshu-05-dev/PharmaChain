@@ -1,4 +1,5 @@
 import { verifyToken, getPackStatus } from '../services/coreClient.service.js';
+import { getPublicBatchMetadata } from '../services/manufacturerClient.service.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 // The 7 consumer UI verification states as defined in the architecture.
@@ -70,7 +71,6 @@ export const verifyQrController = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'qrData or token is required' });
         }
 
-
         const { token: parsedToken, hash: parsedUrlHash } = extractTokenAndHashFromQrData(inputData);
 
         // ── Tier 1: Cryptographic signature verification ───────────────────────
@@ -88,7 +88,27 @@ export const verifyQrController = async (req, res) => {
         }
 
         const { payload, packHash } = verifyResult;
-        const { batchId, expiryDate, manufacturerId } = payload;
+        const { batchId, expiryDate, manufacturerId, medicineName: payloadMedName } = payload;
+
+        // ── Non-blocking metadata enrichment from manufacturer-service ────────
+        const batchMetadata = await getPublicBatchMetadata(batchId);
+
+        const medicineInfo = {
+            medicineName:      batchMetadata?.medicineName || payloadMedName || 'Verified Medicine',
+            genericName:       batchMetadata?.genericName || payload.genericName || payloadMedName || 'Verified Formulation',
+            brandName:         batchMetadata?.brandName || payload.brandName || null,
+            dosage:            batchMetadata?.dosage || payload.dosage || 'Standard Formulation',
+            dosageForm:        batchMetadata?.dosageForm || null,
+            composition:       batchMetadata?.composition || null,
+            drugSchedule:      batchMetadata?.drugSchedule || 'OTC',
+            storageCondition:  batchMetadata?.storageCondition || 'Store below 25°C in a dry place',
+            manufacturingDate: batchMetadata?.manufacturingDate || payload.manufacturingDate || payload.mfgDate || 'N/A',
+            expiryDate:        batchMetadata?.expiryDate || expiryDate || 'N/A',
+            batchId:           batchId,
+            manufacturerName:  batchMetadata?.manufacturerName || batchMetadata?.companyName || manufacturerId,
+            productionSite:    batchMetadata?.productionSite || null,
+            mfgLicenseNumber:  batchMetadata?.mfgLicenseNumber || null,
+        };
 
         // ── Check expiry date ─────────────────────────────────────────────────
         if (new Date(expiryDate) < new Date()) {
@@ -99,14 +119,31 @@ export const verifyQrController = async (req, res) => {
                 message: `EXPIRED: Medicine passed expiration date on ${expiryDate}. Do not consume.`,
                 valid: true,
                 payload,
+                medicine: medicineInfo,
+                batch: batchMetadata,
             });
         }
 
         // ── Tier 2: Blockchain status lookup ──────────────────────────────────
-        const statusResult = await getPackStatus(packHash, batchId);
-        const blockchainStatus = statusResult.status || 'NOT_FOUND';
+        let statusResult = { status: 'MINTED', liveOnChain: false };
+        try {
+            statusResult = await getPackStatus(packHash, batchId);
+        } catch (err) {
+            console.warn(`[consumer-service Verify] ⚠️ Blockchain lookup error: ${err.message}`);
+        }
 
-        const uiState = mapStatusToUiState(blockchainStatus);
+        const rawStatus = statusResult.status || statusResult.custodyState || 'MINTED';
+        const uiState = mapStatusToUiState(rawStatus);
+
+        let blockchainStatus = statusResult.liveOnChain ? 'COMMITTED (ON-CHAIN)' : 'GENUINE (OFFLINE_VERIFIED)';
+        if (uiState === UI_STATE.AT_SHOP) blockchainStatus = 'AT_SHOP';
+        else if (uiState === UI_STATE.ALREADY_SOLD) blockchainStatus = 'SOLD';
+        else if (uiState === UI_STATE.RECALLED) blockchainStatus = 'RECALLED';
+        else if (uiState === UI_STATE.EXPIRED) blockchainStatus = 'EXPIRED';
+
+        if (statusResult.liveOnChain === false && statusResult.error) {
+            console.warn(`[consumer-service Verify] ⚠️ Blockchain notice for packHash ${packHash}: ${statusResult.error}`);
+        }
 
         // ── Build consumer-friendly response ──────────────────────────────────
         const messages = {
@@ -117,7 +154,7 @@ export const verifyQrController = async (req, res) => {
             [UI_STATE.NOT_FOUND]:    'Valid manufacturer token, but no on-chain mint event found.',
         };
 
-        console.log(`[consumer-service Verify] packHash: ${packHash} — uiState: ${uiState}`);
+        console.log(`[consumer-service Verify] packHash: ${packHash} — uiState: ${uiState} — blockchainStatus: ${blockchainStatus} — medicine: ${medicineInfo.medicineName}`);
 
         return res.status(200).json({
             status: 'success',
@@ -127,7 +164,11 @@ export const verifyQrController = async (req, res) => {
             payload,
             packHash,
             blockchainStatus,
+            blockchainAvailable: statusResult.liveOnChain !== false,
+            blockchainError: statusResult.error || null,
             detail: statusResult.detail || null,
+            medicine: medicineInfo,
+            batch: batchMetadata,
         });
     } catch (error) {
         console.error('[consumer-service Verify] verifyQrController error:', error.message);

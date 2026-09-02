@@ -54,7 +54,7 @@ services:
     volumes:
       - ./organizations/fabric-ca/ordererOrg:/etc/hyperledger/fabric-ca-server
     ports:
-      - "9254:9054"
+      - "9054:9054"
     networks:
       - pharma-fabric
 

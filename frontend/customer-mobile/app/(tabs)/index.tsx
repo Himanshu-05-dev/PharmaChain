@@ -553,6 +553,22 @@ export default function HomeDashboard() {
                       <Text style={styles.modalFieldValue}>{selectedMedicine.genericName}</Text>
                     </View>
 
+                    {selectedMedicine.composition && (
+                      <View style={styles.modalFieldRow}>
+                        <Text style={styles.modalFieldLabel}>Active Ingredients</Text>
+                        <Text style={[styles.modalFieldValue, { fontSize: 12 }]}>{selectedMedicine.composition}</Text>
+                      </View>
+                    )}
+
+                    {selectedMedicine.drugSchedule && (
+                      <View style={styles.modalFieldRow}>
+                        <Text style={styles.modalFieldLabel}>Drug Schedule</Text>
+                        <Text style={[styles.modalFieldValue, { color: '#0369a1', fontWeight: '700' }]}>
+                          Schedule {selectedMedicine.drugSchedule}
+                        </Text>
+                      </View>
+                    )}
+
                     <View style={styles.modalFieldRow}>
                       <Text style={styles.modalFieldLabel}>Dosage / Strength</Text>
                       <Text style={styles.modalFieldValue}>{selectedMedicine.dosage}</Text>
@@ -562,6 +578,22 @@ export default function HomeDashboard() {
                       <Text style={styles.modalFieldLabel}>Manufacturer</Text>
                       <Text style={styles.modalFieldValue}>{selectedMedicine.manufacturer}</Text>
                     </View>
+
+                    {selectedMedicine.productionSite && (
+                      <View style={styles.modalFieldRow}>
+                        <Text style={styles.modalFieldLabel}>Facility Location</Text>
+                        <Text style={styles.modalFieldValue}>{selectedMedicine.productionSite}</Text>
+                      </View>
+                    )}
+
+                    {selectedMedicine.storageCondition && (
+                      <View style={styles.modalFieldRow}>
+                        <Text style={styles.modalFieldLabel}>Storage</Text>
+                        <Text style={[styles.modalFieldValue, { fontSize: 12, color: '#4b5563' }]}>
+                          {selectedMedicine.storageCondition}
+                        </Text>
+                      </View>
+                    )}
                   </View>
 
                   <View style={styles.modalDetailsGroup}>

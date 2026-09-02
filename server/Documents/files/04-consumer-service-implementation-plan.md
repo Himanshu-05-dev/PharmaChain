@@ -52,6 +52,10 @@ $$\mathbf{\text{https://pharmachain.gov.in/verify/}}\underbrace{\mathbf{:packHas
 
 * **Mode 1 (Native Camera / Google Lens)**: The phone recognizes the HTTPS URL and opens the web verification page directly, passing the full URL into the verification gateway.
 * **Mode 2 (PharmaChain Mobile App)**: The in-app scanner extracts `:packHash` directly from the URL path (`/verify/:packHash`), instantly querying on-chain status.
+* **Why both `:packHash` and `token`?**:
+  * `:signedToken` contains the manufacturer's **ECDSA ES256 (P-256) signature** proving genuine origin and enabling **offline verification**.
+  * `:packHash` ($\text{SHA-256}(\text{signedToken})$) is the **ledger key** on Hyperledger Fabric tracking real-time status (`MINTED` ➔ `AT_SHOP` ➔ `SOLD`).
+* **Anti-Cloning Economics**: If a counterfeiter copies a legitimate QR onto 500 fake boxes, the 1st checkout transitions the ledger to `SOLD`. All remaining 499 clones are permanently bricked and immediately trigger `ALREADY_SOLD` counterfeit alarms upon subsequent scanning.
 
 | Method | Route | Notes |
 |---|---|---|

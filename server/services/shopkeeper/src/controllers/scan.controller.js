@@ -2,6 +2,7 @@ import { extractTokenAndHash } from '../utils/qrParser.util.js';
 import { verifyToken, getPackStatus, recordIntake, recordSale } from '../services/coreClient.service.js';
 import { getPublicBatchMetadata } from '../services/manufacturerClient.service.js';
 import { PackEvent, Inventory } from '../models/inventory.model.js';
+import Shopkeeper from '../models/shopkeeper.model.js';
 
 // ── Intake Scan — POST /api/shopkeeper/scan/intake ────────────────────────────
 export const intakeScanController = async (req, res) => {
@@ -49,9 +50,29 @@ export const intakeScanController = async (req, res) => {
             });
         }
 
+        // Fetch Shopkeeper Profile for Provenance & GPS
+        const shopkeeper = await Shopkeeper.findOne({ shopId: shopkeeperId }).lean().catch(() => null);
+        const shopName = shopkeeper?.shop?.name || `Verified Pharmacy (${shopkeeperId})`;
+        const licenseNumber = shopkeeper?.license?.drugLicenseNumber || 'DL-REGISTERED';
+        const shopAddress = shopkeeper?.shop?.address ? `${shopkeeper.shop.address}, ${shopkeeper.shop.city}, ${shopkeeper.shop.state} - ${shopkeeper.shop.pincode}` : 'Registered CDSCO Pharmacy Location';
+        const latitude = req.body.latitude || req.body.gps?.latitude || '28.6139';
+        const longitude = req.body.longitude || req.body.gps?.longitude || '77.2090';
+        const location = req.body.location || `${latitude}, ${longitude} | ${shopAddress}`;
+        const timestamp = new Date().toISOString();
+
         // Fabric transition MINTED → AT_SHOP (non-fatal)
-        await recordIntake({ packHash, shopId: shopkeeperId, operatorId, manufacturerId })
-            .catch(err => console.warn(`[shopkeeper-service Scan] Fabric intake failed (non-fatal): ${err.message}`));
+        await recordIntake({
+            packHash,
+            shopId: shopkeeperId,
+            operatorId,
+            manufacturerId,
+            shopName,
+            licenseNumber,
+            location,
+            latitude,
+            longitude,
+            timestamp,
+        }).catch(err => console.warn(`[shopkeeper-service Scan] Fabric intake failed (non-fatal): ${err.message}`));
 
         // Fetch medicine name from JWT payload first, fallback to manufacturer-service
         const batchMeta    = await getPublicBatchMetadata(batchId).catch(() => null);
@@ -160,9 +181,28 @@ export const saleScanController = async (req, res) => {
             });
         }
 
+        // Fetch Shopkeeper Profile for Provenance & GPS
+        const shopkeeper = await Shopkeeper.findOne({ shopId: shopkeeperId }).lean().catch(() => null);
+        const shopName = shopkeeper?.shop?.name || `Verified Pharmacy (${shopkeeperId})`;
+        const licenseNumber = shopkeeper?.license?.drugLicenseNumber || 'DL-REGISTERED';
+        const shopAddress = shopkeeper?.shop?.address ? `${shopkeeper.shop.address}, ${shopkeeper.shop.city}, ${shopkeeper.shop.state} - ${shopkeeper.shop.pincode}` : 'Registered CDSCO Pharmacy Location';
+        const latitude = req.body.latitude || req.body.gps?.latitude || '28.6139';
+        const longitude = req.body.longitude || req.body.gps?.longitude || '77.2090';
+        const location = req.body.location || `${latitude}, ${longitude} | ${shopAddress}`;
+        const timestamp = new Date().toISOString();
+
         // Fabric transition AT_SHOP → SOLD (non-fatal)
-        await recordSale({ packHash, shopId: shopkeeperId, operatorId })
-            .catch(err => console.warn(`[shopkeeper-service Scan] Fabric sale failed (non-fatal): ${err.message}`));
+        await recordSale({
+            packHash,
+            shopId: shopkeeperId,
+            operatorId,
+            shopName,
+            licenseNumber,
+            location,
+            latitude,
+            longitude,
+            timestamp,
+        }).catch(err => console.warn(`[shopkeeper-service Scan] Fabric sale failed (non-fatal): ${err.message}`));
 
         // Write audit trail + decrement inventory
         await PackEvent.create({
@@ -180,12 +220,24 @@ export const saleScanController = async (req, res) => {
             { $inc: { currentStock: -1 } },
         );
 
-        console.log(`[shopkeeper-service Scan] Sale confirmed — pack ${packHash} serial ${serial || '?'} → shop ${shopkeeperId}`);
+        console.log(`[shopkeeper-service Scan] Sale confirmed — pack ${packHash} serial ${serial || '?'} → shop ${shopkeeperId} (${shopName})`);
 
         return res.status(200).json({
             status:  'success',
             message: 'Sale confirmed — hand medicine to consumer 🛒',
-            data:    { packHash, batchId, serial: serial || null, soldAt: new Date().toISOString() },
+            data:    {
+                packHash,
+                batchId,
+                serial: serial || null,
+                soldAt: timestamp,
+                shop: {
+                    shopId: shopkeeperId,
+                    name: shopName,
+                    licenseNumber,
+                    location,
+                    address: shopAddress,
+                },
+            },
         });
     } catch (err) {
         console.error('[shopkeeper-service Scan] saleScanController:', err.message);

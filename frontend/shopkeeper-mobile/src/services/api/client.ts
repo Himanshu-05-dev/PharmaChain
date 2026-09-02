@@ -45,7 +45,13 @@ export const apiClient = axios.create({
 // Request Interceptor: Attach Access Token
 apiClient.interceptors.request.use(
   async (config) => {
-    const token = (await getToken(SECURE_KEYS.ACCESS_TOKEN)) || (await getToken(SECURE_KEYS.LEGACY_TOKEN));
+    let token = (await getToken(SECURE_KEYS.ACCESS_TOKEN)) || (await getToken(SECURE_KEYS.LEGACY_TOKEN));
+    if (!token) {
+      try {
+        const { useAuthStore } = await import('../../store/authStore');
+        token = useAuthStore.getState().accessToken;
+      } catch (e) {}
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -102,9 +108,16 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = await getToken(SECURE_KEYS.REFRESH_TOKEN);
+        let refreshToken = await getToken(SECURE_KEYS.REFRESH_TOKEN);
         if (!refreshToken) {
-          throw new Error('No refresh token available');
+          try {
+            const { useAuthStore } = await import('../../store/authStore');
+            refreshToken = useAuthStore.getState().refreshToken;
+          } catch (e) {}
+        }
+
+        if (!refreshToken) {
+          throw new Error('Session expired: No refresh token available');
         }
 
         // Call backend refresh endpoint using a fresh un-intercepted axios instance
@@ -122,13 +135,27 @@ apiClient.interceptors.response.use(
           await saveToken(SECURE_KEYS.REFRESH_TOKEN, response.data.refreshToken);
         }
 
+        try {
+          const { useAuthStore } = await import('../../store/authStore');
+          await useAuthStore.getState().setTokens(newAccessToken, response.data?.refreshToken);
+        } catch (e) {}
+
         processQueue(null, newAccessToken);
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return apiClient(originalRequest);
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         await clearAllAuthData();
-        return Promise.reject(refreshErr);
+        try {
+          const { useAuthStore } = await import('../../store/authStore');
+          await useAuthStore.getState().logout();
+        } catch (e) {}
+        return Promise.reject({
+          isAuthError: true,
+          status: 401,
+          message: 'Your pharmacy session has expired. Please sign in again to continue scanning.',
+          originalError: refreshErr,
+        });
       } finally {
         isRefreshing = false;
       }

@@ -107,12 +107,26 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
         productionSite,
         licenseNumber: med.mfgLicenseNumber || batch.manufacturingLicenseNo || null,
       },
+      dispensingShop: data.dispensingShop || (data.detail ? {
+        shopId: data.detail.sellerId || null,
+        name: data.detail.shopName || null,
+        licenseNumber: data.detail.licenseNumber || null,
+        location: data.detail.location || null,
+        latitude: data.detail.latitude || null,
+        longitude: data.detail.longitude || null,
+        sellingDate: data.detail.sellingDate || null,
+        sellingTime: data.detail.sellingTime || null,
+        timestamp: data.detail.timestamp || null,
+      } : null),
       shop: {
-        name: data.detail?.shopName || 'Registered Pharmacy Partner',
+        name: data.dispensingShop?.name || data.detail?.shopName || 'Registered Pharmacy Partner',
+        licenseNumber: data.dispensingShop?.licenseNumber || data.detail?.licenseNumber || null,
+        location: data.dispensingShop?.location || data.detail?.location || null,
       },
       transaction: {
         status: data.blockchainStatus || uiState,
-        saleTime: data.detail?.timestamp || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        saleTime: data.dispensingShop?.timestamp || data.detail?.timestamp || (data.dispensingShop?.sellingDate ? `${data.dispensingShop.sellingDate} ${data.dispensingShop.sellingTime || ''}` : null) || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        location: data.dispensingShop?.location || data.detail?.location || null,
       },
       risk: {
         level: uiState === 'GENUINE' || uiState === 'AT_SHOP' ? 'Low' : uiState === 'ALREADY_SOLD' ? 'Medium' : 'High',

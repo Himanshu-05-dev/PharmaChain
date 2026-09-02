@@ -22,7 +22,8 @@ import {
   Clock,
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { scanMedicine, intakeMedicine, dispenseMedicine } from '../src/services/api/scan';
+import { scanMedicine, intakeMedicine, dispenseMedicine, scanCustomerMedicine } from '../src/services/api/scan';
+import { useAuthStore } from '../src/store/authStore';
 
 // Mock database to simulate fetching data based on ID
 const mockDatabase: Record<string, any> = {
@@ -106,6 +107,7 @@ export default function VerificationScreen() {
     mode?: 'RECEIVE' | 'DISPENSE' | 'VERIFY';
   }>();
 
+  const { isAuthenticated } = useAuthStore();
   const [loading, setLoading] = useState(Boolean(params.qrData));
   const [apiData, setApiData] = useState<any>(null);
 
@@ -116,6 +118,29 @@ export default function VerificationScreen() {
       setLoading(true);
       try {
         const mode = params.mode || 'VERIFY';
+
+        // Merchant actions require an active, approved pharmacy login
+        if ((mode === 'RECEIVE' || mode === 'DISPENSE') && !isAuthenticated) {
+          setApiData({
+            type: 'AUTH_REQUIRED',
+            name: 'Sign-In Required',
+            mfg: 'PharmaChain POS Terminal',
+            batch: 'N/A',
+            mfgDate: 'N/A',
+            expDate: 'N/A',
+            packId: 'LOGIN-REQUIRED',
+            status: 'Pharmacy Sign-In Required',
+            score: '0/100',
+            color: '#d97706',
+            bg: '#fef3c7',
+            icon: <AlertTriangle color="#ffffff" size={44} />,
+            desc: 'You must be signed in with a registered pharmacy account to perform stock intake or sales. Please log in to continue.',
+            actionText: 'Sign In to Pharmacy Account',
+            onAction: () => router.replace('/(auth)/login'),
+          });
+          setLoading(false);
+          return;
+        }
 
         if (mode === 'RECEIVE') {
           // Inbound Stock Intake
@@ -163,7 +188,24 @@ export default function VerificationScreen() {
           });
         } else {
           // Read-only Verification
-          const res = await scanMedicine(params.qrData!);
+          let res;
+          try {
+            res = await scanMedicine(params.qrData!);
+          } catch (scanErr: any) {
+            const errStatus = scanErr?.response?.status;
+            const errMsg = scanErr?.message || '';
+            if (errStatus === 401 || errMsg.includes('refresh') || errMsg.includes('token') || errMsg.includes('auth')) {
+              console.log('[VerificationScreen] Shopkeeper unauthenticated, falling back to public verification scan...');
+              res = await scanCustomerMedicine(params.qrData!);
+            } else {
+              throw scanErr;
+            }
+          }
+
+          if (res?.status === 'error') {
+            throw { response: { data: res } };
+          }
+
           const payload = res?.payload || {};
           const isAtShop = res?.ledgerStatus === 'AtShop' || res?.ledgerStatus === 'AT_SHOP';
           const isSold = res?.ledgerStatus === 'Sold' || res?.ledgerStatus === 'SOLD';
@@ -213,7 +255,33 @@ export default function VerificationScreen() {
         const errorCode = errorData?.code || '';
         const errorMessage = errorData?.message || err?.message || 'Verification failed';
 
-        if (errorCode === 'DUPLICATE_INTAKE' || err?.response?.status === 409) {
+        const isAuthError =
+          err?.isAuthError ||
+          err?.response?.status === 401 ||
+          errorMessage.toLowerCase().includes('refresh token') ||
+          errorMessage.toLowerCase().includes('unauthorized') ||
+          errorMessage.toLowerCase().includes('no authentication') ||
+          errorMessage.toLowerCase().includes('session expired');
+
+        if (isAuthError) {
+          setApiData({
+            type: 'AUTH_REQUIRED',
+            name: 'Sign-In Required',
+            mfg: 'PharmaChain POS Terminal',
+            batch: 'N/A',
+            mfgDate: 'N/A',
+            expDate: 'N/A',
+            packId: 'SESSION-EXPIRED',
+            status: 'Sign-In Required',
+            score: '0/100',
+            color: '#d97706',
+            bg: '#fef3c7',
+            icon: <AlertTriangle color="#ffffff" size={44} />,
+            desc: 'Your pharmacy session has expired or you are not signed in. Please log in to your approved pharmacy account to intake or dispense stock.',
+            actionText: 'Sign In to Pharmacy Account',
+            onAction: () => router.replace('/(auth)/login'),
+          });
+        } else if (errorCode === 'DUPLICATE_INTAKE' || err?.response?.status === 409) {
           setApiData({
             type: 'DUPLICATE_INTAKE',
             name: 'Scanned Pack Item',
@@ -390,18 +458,29 @@ export default function VerificationScreen() {
         <TouchableOpacity
           style={[styles.actionButton, { borderColor: data.color }]}
           onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace('/(shopkeeper)/dashboard');
+            if (data.onAction) {
+              data.onAction();
+            } else if (data.color === '#dc2626') {
+              if (router.canGoBack()) router.back();
+              else router.replace('/(shopkeeper)/dashboard');
+            } else if (params.mode === 'RECEIVE' || params.mode === 'DISPENSE') {
+              if (router.canGoBack()) router.back();
+              else router.replace('/(shopkeeper)/scan');
+            } else {
+              if (router.canGoBack()) router.back();
+              else router.replace('/(shopkeeper)/dashboard');
+            }
           }}
         >
           <Text style={[styles.actionButtonText, { color: data.color }]}>
-            {data.color === '#dc2626'
-              ? 'Report Suspicious Batch'
-              : params.mode === 'RECEIVE'
-              ? 'Scan Next Inbound Pack'
-              : params.mode === 'DISPENSE'
-              ? 'Scan Next POS Item'
-              : 'Done / Back to Dashboard'}
+            {data.actionText ||
+              (data.color === '#dc2626'
+                ? 'Report Suspicious Batch'
+                : params.mode === 'RECEIVE'
+                ? 'Scan Next Inbound Pack'
+                : params.mode === 'DISPENSE'
+                ? 'Scan Next POS Item'
+                : 'Done / Back to Dashboard')}
           </Text>
         </TouchableOpacity>
       </ScrollView>

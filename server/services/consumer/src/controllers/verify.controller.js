@@ -145,16 +145,41 @@ export const verifyQrController = async (req, res) => {
             console.warn(`[consumer-service Verify] ⚠️ Blockchain notice for packHash ${packHash}: ${statusResult.error}`);
         }
 
+        // ── Provenance & Dispensing Shop Extraction ───────────────────────────
+        const detail = statusResult.detail || {};
+        const isSold = uiState === UI_STATE.ALREADY_SOLD || rawStatus === 'Sold' || detail.eventType === 'SOLD';
+        const isAtShop = uiState === UI_STATE.AT_SHOP || rawStatus === 'AtShop' || detail.eventType === 'INTAKE' || detail.eventType === 'AT_SHOP';
+
+        const dispensingShop = (isSold || isAtShop || detail.shopName || detail.sellerId) ? {
+            shopId:        detail.sellerId || detail.toId || detail.fromId || null,
+            name:          detail.shopName || (detail.sellerId ? `Registered Pharmacy (${detail.sellerId})` : 'Registered Pharmacy'),
+            licenseNumber: detail.licenseNumber || 'CDSCO-APPROVED',
+            location:      detail.location || null,
+            latitude:      detail.latitude || null,
+            longitude:     detail.longitude || null,
+            sellingDate:   detail.sellingDate || null,
+            sellingTime:   detail.sellingTime || null,
+            timestamp:     detail.timestamp || null,
+        } : null;
+
         // ── Build consumer-friendly response ──────────────────────────────────
+        let soldMessage = 'Warning: Pack already registered as sold. Possible reuse detected.';
+        if (dispensingShop && (dispensingShop.name || dispensingShop.sellingDate)) {
+            const shopPart = dispensingShop.name ? ` at ${dispensingShop.name}` : '';
+            const datePart = dispensingShop.sellingDate ? ` on ${dispensingShop.sellingDate}` : '';
+            const locPart = dispensingShop.location ? ` [${dispensingShop.location}]` : '';
+            soldMessage = `Alert: This pack was already sold${shopPart}${datePart}${locPart}. If you are purchasing this now, it is a duplicate clone!`;
+        }
+
         const messages = {
             [UI_STATE.GENUINE]:      '100% Genuine Medicine — Registered & Safe',
-            [UI_STATE.ALREADY_SOLD]: `Warning: Pack already registered as sold. Possible reuse detected.`,
+            [UI_STATE.ALREADY_SOLD]: soldMessage,
             [UI_STATE.RECALLED]:     'CRITICAL: Batch recalled by manufacturer. Do not consume.',
-            [UI_STATE.AT_SHOP]:      'Verified authentic inventory at a registered pharmacy.',
+            [UI_STATE.AT_SHOP]:      dispensingShop?.name ? `Verified authentic stock at ${dispensingShop.name}.` : 'Verified authentic inventory at a registered pharmacy.',
             [UI_STATE.NOT_FOUND]:    'Valid manufacturer token, but no on-chain mint event found.',
         };
 
-        console.log(`[consumer-service Verify] packHash: ${packHash} — uiState: ${uiState} — blockchainStatus: ${blockchainStatus} — medicine: ${medicineInfo.medicineName}`);
+        console.log(`[consumer-service Verify] packHash: ${packHash} — uiState: ${uiState} — blockchainStatus: ${blockchainStatus} — shop: ${dispensingShop?.name || 'N/A'}`);
 
         return res.status(200).json({
             status: 'success',
@@ -167,6 +192,7 @@ export const verifyQrController = async (req, res) => {
             blockchainAvailable: statusResult.liveOnChain !== false,
             blockchainError: statusResult.error || null,
             detail: statusResult.detail || null,
+            dispensingShop,
             medicine: medicineInfo,
             batch: batchMetadata,
         });

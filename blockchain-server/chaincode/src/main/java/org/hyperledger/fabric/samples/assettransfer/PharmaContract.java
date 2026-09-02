@@ -96,9 +96,14 @@ public final class PharmaContract implements ContractInterface {
      * @param sellerId the ID of the seller recording this transition
      * @return the created Transition
      */
+    /**
+     * Records a single transition with rich seller details, CDSCO license, GPS location, and timestamp.
+     */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Transition recordTransition(final Context ctx, final String packId, final String eventType, final String fromId,
-            final String toId, final String sellingDate, final String sellingTime, final String sellerId) {
+    public Transition recordTransitionDetailed(final Context ctx, final String packId, final String eventType, final String fromId,
+            final String toId, final String sellingDate, final String sellingTime, final String sellerId,
+            final String shopName, final String licenseNumber, final String location, final String latitude,
+            final String longitude, final String timestamp) {
 
         String normalizedEventType = normalizeEventType(eventType);
 
@@ -163,13 +168,28 @@ public final class PharmaContract implements ContractInterface {
                 toId,
                 sellingDate,
                 sellingTime,
-                sellerId
+                sellerId,
+                shopName != null ? shopName : "",
+                licenseNumber != null ? licenseNumber : "",
+                location != null ? location : "",
+                latitude != null ? latitude : "",
+                longitude != null ? longitude : "",
+                timestamp != null ? timestamp : ""
         );
         String sortedJson = genson.serialize(transition);
         ctx.getStub().putStringState(eventKey, sortedJson);
         ctx.getStub().putStringState(currentKey, sortedJson);
 
         return transition;
+    }
+
+    /**
+     * Records a single transition (backwards compatible).
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public Transition recordTransition(final Context ctx, final String packId, final String eventType, final String fromId,
+            final String toId, final String sellingDate, final String sellingTime, final String sellerId) {
+        return recordTransitionDetailed(ctx, packId, eventType, fromId, toId, sellingDate, sellingTime, sellerId, "", "", "", "", "", "");
     }
 
     /**
@@ -216,7 +236,13 @@ public final class PharmaContract implements ContractInterface {
                     item.optString("toId", ""),
                     item.optString("sellingDate", ""),
                     item.optString("sellingTime", ""),
-                    item.optString("sellerId", "")
+                    item.optString("sellerId", ""),
+                    item.optString("shopName", ""),
+                    item.optString("licenseNumber", ""),
+                    item.optString("location", ""),
+                    item.optString("latitude", ""),
+                    item.optString("longitude", ""),
+                    item.optString("timestamp", "")
                 );
                 String tJson = genson.serialize(t);
                 ctx.getStub().putStringState(eventKey, tJson);

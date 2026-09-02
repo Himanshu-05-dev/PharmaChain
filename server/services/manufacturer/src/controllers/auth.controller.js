@@ -700,3 +700,45 @@ export const logoutController = (_req, res) => {
     });
     return res.status(204).send();
 };
+
+// ── Public Key Lookup — GET /api/manufacturer/auth/public/key/:id or /public/key/:id ──
+// Resolves the certified CDSCO public key by manufacturerId, keyId, or MongoDB _id.
+export const getManufacturerPublicKeyController = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ status: 'error', message: 'Manufacturer identifier or keyId is required' });
+        }
+
+        const query = {
+            $or: [
+                { manufacturerId: id },
+                { keyId: id },
+                { email: id.toLowerCase() },
+                ...(mongoose.isValidObjectId(id) ? [{ _id: id }] : []),
+            ],
+        };
+
+        const manufacturer = await Manufacturer.findOne(query).select('manufacturerId keyId publicKeyPem companyName kycStatus').lean();
+
+        if (!manufacturer || !manufacturer.publicKeyPem) {
+            return res.status(404).json({
+                status: 'error',
+                code: 'KEY_NOT_FOUND',
+                message: `No active public key found for manufacturer identifier: ${id}`,
+            });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            manufacturerId: manufacturer.manufacturerId,
+            keyId:          manufacturer.keyId,
+            publicKeyPem:   manufacturer.publicKeyPem,
+            companyName:    manufacturer.companyName,
+            kycStatus:      manufacturer.kycStatus,
+        });
+    } catch (error) {
+        console.error('[manufacturer-service Auth] getManufacturerPublicKeyController error:', error.message);
+        return res.status(500).json({ status: 'error', message: error.message });
+    }
+};

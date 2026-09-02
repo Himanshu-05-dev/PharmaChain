@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { CheckCircle, AlertTriangle, XCircle, Info, ShieldCheck, ShieldAlert, ArrowLeft, BookmarkCheck } from "lucide-react-native";
+import { CheckCircle, AlertTriangle, XCircle, Info, ShieldCheck, ShieldAlert, ArrowLeft, BookmarkCheck, Store, MapPin } from "lucide-react-native";
 import { verifyMedicineQR } from "../../src/services/api/verify.api";
 import { useCustomerStore } from "../../src/store/customerStore";
 import { VerificationResult, SavedMedicine } from "../../src/types";
@@ -248,6 +248,53 @@ export default function VerificationScreen() {
               <Text style={styles.label}>Signature Protocol</Text>
               <Text style={styles.value}>ECDSA ES256 (P-256)</Text>
             </View>
+
+            {/* Dispensing Pharmacy & Geolocation Provenance Card */}
+            {(result.shop?.name || result.dispensingShop?.name || result.transaction?.location) && (
+              <View style={styles.provenanceBox}>
+                <View style={styles.provenanceHeader}>
+                  <Store size={16} color="#0284c7" style={{ marginRight: 6 }} />
+                  <Text style={styles.provenanceTitle}>Verified Dispensing Pharmacy</Text>
+                </View>
+
+                <View style={styles.provenanceRow}>
+                  <Text style={styles.provenanceLabel}>Pharmacy</Text>
+                  <Text style={styles.provenanceValue}>
+                    {result.shop?.name || result.dispensingShop?.name || 'Registered CDSCO Pharmacy'}
+                  </Text>
+                </View>
+
+                {(result.shop?.licenseNumber || result.dispensingShop?.licenseNumber) ? (
+                  <View style={styles.provenanceRow}>
+                    <Text style={styles.provenanceLabel}>Drug License</Text>
+                    <Text style={[styles.provenanceValue, { color: '#0369a1', fontWeight: '700' }]}>
+                      {result.shop?.licenseNumber || result.dispensingShop?.licenseNumber}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {(result.transaction?.location || result.dispensingShop?.location) ? (
+                  <View style={styles.provenanceRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MapPin size={12} color="#059669" style={{ marginRight: 3 }} />
+                      <Text style={styles.provenanceLabel}>Dispense GPS</Text>
+                    </View>
+                    <Text style={[styles.provenanceValue, { fontSize: 11, color: '#047857' }]}>
+                      {result.transaction?.location || result.dispensingShop?.location}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {(result.transaction?.saleTime || result.dispensingShop?.sellingDate) ? (
+                  <View style={styles.provenanceRow}>
+                    <Text style={styles.provenanceLabel}>Dispense Time</Text>
+                    <Text style={styles.provenanceValue}>
+                      {result.transaction?.saleTime || result.dispensingShop?.sellingDate}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
           </View>
         )}
 
@@ -444,5 +491,44 @@ const styles = StyleSheet.create({
     color: "#7f1d1d",
     lineHeight: 18,
     marginBottom: 4,
+  },
+  provenanceBox: {
+    marginTop: 12,
+    backgroundColor: "#f0f9ff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+    padding: 12,
+  },
+  provenanceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0f2fe",
+  },
+  provenanceTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0369a1",
+  },
+  provenanceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  provenanceLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#64748b",
+  },
+  provenanceValue: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0f172a",
+    flexShrink: 1,
+    textAlign: "right",
   },
 });

@@ -1,4 +1,5 @@
 import Batch, { MINT_STATUS } from '../models/batch.model.js';
+import Manufacturer from '../models/manufacturer.model.js';
 import axios from 'axios';
 import {
     mintBatchViaPharmaCore,
@@ -458,7 +459,21 @@ export const getPublicBatchDetailsController = async (req, res) => {
             return res.status(404).json({ code: 'BATCH_NOT_FOUND', message: `No batch found for ID: ${batchId}` });
         }
 
-        return res.status(200).json({ status: 'success', data: batch });
+        const batchData = batch.toObject ? batch.toObject() : { ...batch };
+        try {
+            const mfr = await Manufacturer.findOne({ manufacturerId: batch.manufacturerId })
+                .select('publicKeyPem keyId companyName')
+                .lean();
+            if (mfr) {
+                batchData.manufacturerPublicKeyPem = mfr.publicKeyPem || null;
+                batchData.manufacturerKeyId = mfr.keyId || null;
+                batchData.manufacturerName = mfr.companyName || batch.manufacturerId;
+            }
+        } catch {
+            // non-fatal enrichment
+        }
+
+        return res.status(200).json({ status: 'success', data: batchData });
     } catch (error) {
         console.error('[manufacturer-service Batch] getPublicBatchDetailsController error:', error.message);
         return res.status(500).json({ code: 'GET_ERROR', message: error.message });

@@ -1,4 +1,5 @@
-import { apiClient } from './client';
+import axios from 'axios';
+import { apiClient, API_URL } from './client';
 
 /**
  * 1. Authenticated Medicine Scan (Pre-sale verification)
@@ -38,10 +39,10 @@ export const dispenseMedicine = async (payload: {
 };
 
 /**
- * 4. Public Consumer / Walk-in Scan
+ * 4. Public Consumer / Walk-in Scan (unauthenticated safe)
  * POST /api/v1/scan/customer
  */
 export const scanCustomerMedicine = async (qrData: string) => {
-  const response = await apiClient.post('/api/v1/scan/customer', { qrData });
+  const response = await axios.post(`${API_URL}/api/v1/scan/customer`, { qrData }, { timeout: 10000 });
   return response.data;
 };

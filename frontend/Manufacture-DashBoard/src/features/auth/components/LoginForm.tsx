@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/auth.hooks';
+import { PharmaChainLogo } from '../../../components/common/PharmaChainLogo';
 import {
   Mail,
   Lock,
@@ -8,6 +9,7 @@ import {
   ArrowRight,
   ShieldCheck,
   AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 
 export const LoginForm: React.FC = () => {
@@ -68,23 +70,26 @@ export const LoginForm: React.FC = () => {
 
   return (
     <div className="w-full max-w-[420px] mx-auto">
-      {/* Sleek Minimalist Linear / Stripe Card */}
+      {/* Sleek Modern Card */}
       <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-3xl p-7 sm:p-9 shadow-2xl relative overflow-hidden backdrop-blur-xl transition-colors">
-        {/* Top subtle glow halo */}
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+        {/* Top subtle amber halo */}
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-amber-500/15 rounded-full blur-2xl pointer-events-none" />
 
-        {/* Card Header */}
+        {/* Card Header with PharmaChain Logo */}
         <div className="text-center mb-7 relative z-10">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-black text-sm shadow-md shadow-emerald-600/25 mx-auto mb-4 ring-1 ring-white/20">
-            PC
+          <div className="mb-3 flex items-center justify-center gap-2.5">
+            <PharmaChainLogo size={44} withGlow={true} />
+            <span className="font-black text-2xl tracking-tight text-[var(--text-primary)]">
+              PharmaChain
+            </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-            {requires2FA ? 'Two-Factor Authentication' : 'Sign in to PharmaChain'}
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--text-primary)]">
+            {requires2FA ? 'Two-Factor Authentication' : 'Manufacturer Portal Sign In'}
           </h1>
           <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">
             {requires2FA
-              ? `Enter the 6-digit cryptographic security code sent to ${pendingLoginEmail}`
-              : 'Enter your verified manufacturer credentials to access portal'}
+              ? `Enter the 6-digit security code sent to ${pendingLoginEmail}`
+              : 'Enter your authorized CDSCO manufacturing credentials'}
           </p>
         </div>
 
@@ -103,7 +108,7 @@ export const LoginForm: React.FC = () => {
               {/* Corporate Email Field */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-[var(--text-primary)]">
-                  Corporate Email
+                  Corporate Email / Plant ID
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--text-muted)]">
@@ -126,8 +131,8 @@ export const LoginForm: React.FC = () => {
                     className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[var(--bg-element)] border ${
                       fieldErrors.email
                         ? 'border-rose-500 focus:border-rose-500'
-                        : 'border-[var(--border)] focus:border-emerald-500'
-                    } text-xs sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]/60 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all font-medium`}
+                        : 'border-[var(--border)] focus:border-amber-500'
+                    } text-xs sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]/60 focus:outline-none focus:ring-4 focus:ring-amber-500/10 transition-all font-medium`}
                   />
                 </div>
                 {fieldErrors.email && (
@@ -144,7 +149,7 @@ export const LoginForm: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setAuthView('forgot-password')}
-                    className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium transition-colors cursor-pointer"
+                    className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-semibold transition-colors cursor-pointer"
                   >
                     Forgot?
                   </button>
@@ -170,8 +175,8 @@ export const LoginForm: React.FC = () => {
                     className={`w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--bg-element)] border ${
                       fieldErrors.password
                         ? 'border-rose-500 focus:border-rose-500'
-                        : 'border-[var(--border)] focus:border-emerald-500'
-                    } text-xs sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]/60 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all font-medium`}
+                        : 'border-[var(--border)] focus:border-amber-500'
+                    } text-xs sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]/60 focus:outline-none focus:ring-4 focus:ring-amber-500/10 transition-all font-medium`}
                   />
                   <button
                     type="button"
@@ -193,12 +198,12 @@ export const LoginForm: React.FC = () => {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded border-[var(--border)] text-emerald-600 focus:ring-emerald-500 bg-[var(--bg-element)] cursor-pointer"
+                    className="w-3.5 h-3.5 rounded border-[var(--border)] text-amber-500 focus:ring-amber-500 bg-[var(--bg-element)] cursor-pointer"
                   />
                   <span className="text-xs text-[var(--text-muted)]">Remember me</span>
                 </label>
                 <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1 font-mono">
-                  <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                  <ShieldCheck className="w-3 h-3 text-amber-500" />
                   <span>256-bit TLS</span>
                 </span>
               </div>
@@ -215,7 +220,7 @@ export const LoginForm: React.FC = () => {
                 value={twoFactorCode}
                 onChange={(e) => setTwoFactorCode(e.target.value.replace(/[^0-9]/g, ''))}
                 placeholder="123456"
-                className="w-full text-center tracking-[0.5em] text-lg font-mono py-2.5 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] focus:border-emerald-500 text-[var(--text-primary)] focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all font-bold"
+                className="w-full text-center tracking-[0.5em] text-lg font-mono py-2.5 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] focus:border-amber-500 text-[var(--text-primary)] focus:outline-none focus:ring-4 focus:ring-amber-500/10 transition-all font-bold"
                 autoFocus
               />
               {fieldErrors.twoFactorCode && (
@@ -226,11 +231,11 @@ export const LoginForm: React.FC = () => {
             </div>
           )}
 
-          {/* Primary Action Button (Stripe / Linear style) */}
+          {/* Primary Action Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="w-full mt-2 py-2.5 px-4 rounded-xl text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? (
               <>
@@ -241,25 +246,22 @@ export const LoginForm: React.FC = () => {
               <span>Verify & Continue</span>
             ) : (
               <>
-                <span>Sign in</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>Sign In to Portal</span>
+                <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
         </form>
 
-        {/* Register Footnote */}
-        <div className="mt-5 text-center">
-          <p className="text-xs text-[var(--text-muted)]">
-            Don't have an account?{' '}
-            <button
-              type="button"
-              onClick={() => setAuthView('register')}
-              className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors cursor-pointer"
-            >
-              Register entity →
-            </button>
-          </p>
+        {/* Footer Prompt */}
+        <div className="mt-6 pt-5 border-t border-[var(--border)] text-center text-xs text-[var(--text-muted)] relative z-10">
+          <span>New manufacturing unit? </span>
+          <button
+            onClick={() => setAuthView('register')}
+            className="text-amber-600 dark:text-amber-400 font-bold hover:underline transition-colors cursor-pointer"
+          >
+            Register Unit (KYC)
+          </button>
         </div>
       </div>
     </div>

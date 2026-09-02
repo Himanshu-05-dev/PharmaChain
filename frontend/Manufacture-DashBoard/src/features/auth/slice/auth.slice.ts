@@ -58,7 +58,7 @@ const initialState: AuthState = {
   user: initialSession.user,
   token: initialSession.token,
   kycStatus: initialSession.kycStatus,
-  authView: 'login',
+  authView: initialSession.isAuthenticated ? 'login' : 'landing',
   requires2FA: false,
   pendingLoginEmail: null,
   loading: false,
@@ -151,7 +151,7 @@ export const authSlice = createSlice({
       state.user = null;
       state.token = null;
       state.kycStatus = 'PENDING';
-      state.authView = 'login';
+      state.authView = 'landing';
       state.requires2FA = false;
       state.pendingLoginEmail = null;
       state.loading = false;

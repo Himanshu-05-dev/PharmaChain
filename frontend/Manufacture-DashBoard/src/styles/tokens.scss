@@ -20,11 +20,16 @@ $color-border:        var(--border);
 $color-border-strong: var(--border-strong);
 $color-border-glow:   var(--border-glow);
 
-$color-primary:       var(--brand-primary);
-$color-primary-hover: var(--brand-hover);
-$color-primary-glow:  var(--brand-subtle);
-$color-accent:        var(--accent-primary);
-$color-accent-hover:  var(--accent-hover);
+/* Warm Vibrant Yellow-Red Brand Palette */
+$gov-gold:            var(--gov-gold, #F59E0B);
+$gov-amber:           var(--gov-amber, #D97706);
+$gov-crimson:         var(--gov-crimson, #E11D48);
+$gov-red:             var(--gov-red, #DC2626);
+$color-primary:       var(--brand-primary, #F59E0B);
+$color-primary-hover: var(--brand-hover, #D97706);
+$color-primary-glow:  var(--brand-subtle, rgba(245, 158, 11, 0.15));
+$color-accent:        var(--accent-primary, #E11D48);
+$color-accent-hover:  var(--accent-hover, #F43F5E);
 
 $color-text:          var(--text-primary);
 $color-text-muted:    var(--text-secondary);
@@ -33,6 +38,7 @@ $color-text-disabled: var(--text-disabled);
 
 $font-sans:           var(--font-sans, 'Inter', system-ui, -apple-system, sans-serif);
 $font-mono:           var(--font-mono, 'JetBrains Mono', monospace);
+
 
 // RGB opacity helper variables
 $color-rgb-text:      var(--color-rgb-text);
@@ -63,16 +69,17 @@ $color-bg-card-hover: rgba(var(--color-rgb-text), 0.06);
 // Monochromatic High-Fidelity Container Card
 @mixin card {
   background: var(--bg-surface);
-  border: 1px solid $color-border;
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: $space-6;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 
   &:hover {
     background: var(--bg-overlay);
-    border-color: $color-border-strong;
+    border-color: var(--border-strong);
     transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   }
 }
 

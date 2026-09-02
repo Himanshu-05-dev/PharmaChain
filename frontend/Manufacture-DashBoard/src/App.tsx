@@ -122,7 +122,7 @@ const AppOrchestrator: React.FC = () => {
           </div>
           <button
             onClick={simulateKYCApproval}
-            className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer"
+            className="px-3 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-xs transition-all shrink-0 cursor-pointer"
           >
             <Zap className="w-3 h-3" />
             <span>Simulate CDSCO Approval</span>

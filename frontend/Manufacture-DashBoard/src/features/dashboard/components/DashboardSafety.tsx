@@ -19,25 +19,25 @@ export const DashboardSafety: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 1. Active Recall Banner */}
-      <div className="rounded-2xl border border-[var(--alert-danger-border)] bg-[var(--alert-danger-bg)] p-5 sm:p-6 shadow-subtle relative overflow-hidden">
+      {/* 1. Active Recall Command Center */}
+      <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-5 sm:p-6 shadow-xs relative overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="p-3 rounded-2xl bg-[var(--alert-danger-badge-bg)] text-[var(--alert-danger-icon)] border border-[var(--alert-danger-border)] shrink-0">
+            <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
               <AlertOctagon className="w-6 h-6" />
             </div>
 
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base font-bold text-[var(--alert-danger-heading)]">
+                <h3 className="text-base font-black text-[var(--text-primary)]">
                   Active Supply Chain Recalls ({activeRecalls.length})
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--alert-danger-badge-bg)] text-[var(--alert-danger-badge-text)] border border-[var(--alert-danger-border)]">
-                  CDSCO Form 28-A Enforced
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-mono">
+                  GSR 1337(E) Statutory Isolation
                 </span>
               </div>
-              <p className="text-xs text-[var(--alert-danger-text)] max-w-2xl font-medium">
-                Batch quarantine is synchronized across all pharmacy terminals. Retail POS checkouts for recalled serials are rejected.
+              <p className="text-xs text-[var(--text-muted)] max-w-2xl">
+                Batch quarantine is synchronized across all pharmacy terminals. Retail POS checkouts for recalled serials are rejected in real-time.
               </p>
             </div>
           </div>
@@ -45,15 +45,15 @@ export const DashboardSafety: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setIsRecallModalOpen(true)}
-              className="btn-danger text-xs cursor-pointer shadow-sm"
+              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-rose-600/20 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Initiate Recall</span>
+              <span>+ Issue Recall Notice</span>
             </button>
 
             <button
               onClick={() => navigateTo('recalls')}
-              className="btn-secondary text-xs cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-element)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] transition-all cursor-pointer flex items-center gap-1.5"
             >
               <span>Recall Center</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -62,52 +62,56 @@ export const DashboardSafety: React.FC = () => {
         </div>
 
         {/* Recalled Cards Mini Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-[var(--alert-danger-border)]">
-          {activeRecalls.map((recall) => (
-            <div
-              key={recall.id}
-              onClick={() => navigateTo('recalls')}
-              className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--alert-danger-border)] hover:border-rose-500 transition-colors cursor-pointer shadow-xs"
-            >
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="font-mono font-bold text-[var(--alert-danger-text)]">{recall.batchId}</span>
-                <span className="text-[10px] text-[var(--text-muted)]">
-                  {recall.affectedPacks.toLocaleString()} units
-                </span>
+        {activeRecalls.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-rose-500/20">
+            {activeRecalls.map((recall) => (
+              <div
+                key={recall.id}
+                onClick={() => navigateTo('recalls')}
+                className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-rose-500/30 hover:border-rose-500 transition-colors cursor-pointer shadow-xs group"
+              >
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400 group-hover:underline">
+                    {recall.batchId}
+                  </span>
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-element)] px-1.5 py-0.2 rounded border border-[var(--border)]">
+                    {recall.affectedPacks.toLocaleString()} units
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                  {recall.medicineName}
+                </p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5 line-clamp-1">
+                  {recall.reason}
+                </p>
               </div>
-              <p className="text-xs font-semibold text-[var(--text-primary)] truncate">
-                {recall.medicineName}
-              </p>
-              <p className="text-[11px] text-[var(--text-muted)] mt-0.5 line-clamp-1">
-                {recall.reason}
-              </p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* 2. Quality Alerts & Fraud Interception */}
-      <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-5 shadow-subtle space-y-4">
+      {/* 2. Quality Alerts & Fraud Interception Telemetry */}
+      <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-5 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-[var(--bg-element)] text-[var(--brand-primary)]">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-[var(--bg-element)] text-amber-500 border border-[var(--border)]">
               <BellRing className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">
+              <h3 className="text-sm font-black text-[var(--text-primary)]">
                 Security & Fraud Interception Telemetry
               </h3>
               <p className="text-[11px] text-[var(--text-muted)]">
-                Live verification logs from consumer mobile and retail POS terminals
+                Live cryptographic verification anomalies and cold-chain temperature telemetry
               </p>
             </div>
           </div>
 
           <button
             onClick={() => navigateTo('alerts')}
-            className="text-xs font-semibold text-[var(--brand-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+            className="text-xs font-bold text-amber-500 hover:text-amber-400 flex items-center gap-1 cursor-pointer transition-colors"
           >
-            <span>View All ({alerts.length})</span>
+            <span>View All Alerts ({alerts.length})</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -117,25 +121,27 @@ export const DashboardSafety: React.FC = () => {
             const isCritical = alert.type === 'CRITICAL';
             const isWarning = alert.type === 'WARNING';
 
-            const bgClass = isCritical
-              ? 'bg-[var(--alert-danger-bg)] border-[var(--alert-danger-border)]'
-              : isWarning
-              ? 'bg-[var(--alert-warning-bg)] border-[var(--alert-warning-border)]'
-              : 'bg-[var(--alert-success-bg)] border-[var(--alert-success-border)]';
-
-            const badgeBg = isCritical
-              ? 'bg-[var(--alert-danger-badge-bg)] text-[var(--alert-danger-icon)]'
-              : isWarning
-              ? 'bg-[var(--alert-warning-badge-bg)] text-[var(--alert-warning-icon)]'
-              : 'bg-[var(--alert-success-badge-bg)] text-[var(--alert-success-icon)]';
-
             return (
               <div
                 key={alert.id}
-                className={`p-3.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${bgClass}`}
+                className={`p-3.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                  isCritical
+                    ? 'bg-rose-500/5 border-rose-500/20'
+                    : isWarning
+                    ? 'bg-amber-500/5 border-amber-500/20'
+                    : 'bg-emerald-500/5 border-emerald-500/20'
+                }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${badgeBg}`}>
+                  <div
+                    className={`p-2 rounded-xl shrink-0 mt-0.5 ${
+                      isCritical
+                        ? 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+                        : isWarning
+                        ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+                        : 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
+                    }`}
+                  >
                     {isCritical ? (
                       <ShieldAlert className="w-4 h-4" />
                     ) : isWarning ? (
@@ -153,7 +159,7 @@ export const DashboardSafety: React.FC = () => {
                       {alert.description}
                     </p>
                     {alert.location && (
-                      <div className="flex items-center gap-1 text-[10px] text-[var(--text-muted)] mt-1">
+                      <div className="flex items-center gap-1 text-[10px] text-[var(--text-muted)] mt-1 font-medium">
                         <MapPin className="w-3 h-3 text-rose-500" />
                         <span>{alert.location}</span>
                       </div>
@@ -165,9 +171,9 @@ export const DashboardSafety: React.FC = () => {
                   {!alert.resolved ? (
                     <button
                       onClick={() => resolveAlert(alert.id)}
-                      className="px-2.5 py-1 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-active)] text-xs font-semibold text-[var(--text-primary)] border border-[var(--border)] transition-colors cursor-pointer shadow-xs"
+                      className="px-3 py-1 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-element)] text-xs font-bold text-[var(--text-primary)] border border-[var(--border)] transition-colors cursor-pointer shadow-xs"
                     >
-                      Resolve
+                      Acknowledge
                     </button>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
@@ -183,3 +189,5 @@ export const DashboardSafety: React.FC = () => {
     </div>
   );
 };
+
+export default DashboardSafety;

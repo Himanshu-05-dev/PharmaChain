@@ -1,5 +1,6 @@
 export type BackendUIState =
   | "GENUINE"
+  | "PURCHASED_RECENTLY"
   | "ALREADY_SOLD"
   | "RECALLED"
   | "EXPIRED"
@@ -20,6 +21,7 @@ export type VerificationStatus =
   | "RECALLED"
   | "COUNTERFEIT"
   | "GENUINE"
+  | "PURCHASED_RECENTLY"
   | "AT_SHOP"
   | "ALREADY_SOLD"
   | "NOT_FOUND";
@@ -40,6 +42,25 @@ export interface VerificationPayload {
   [key: string]: any;
 }
 
+export interface DispensingShop {
+  shopId?: string | null;
+  name?: string | null;
+  licenseNumber?: string | null;
+  location?: string | null;
+  latitude?: string | number | null;
+  longitude?: string | number | null;
+  address?: string | null;
+  phone?: string | null;
+  sellingDate?: string | null;
+  sellingTime?: string | null;
+  timestamp?: string | null;
+  formattedSaleTime?: string | null;
+  relativeSaleTime?: string | null;
+  hoursSinceSale?: number | null;
+  daysSinceSale?: number | null;
+  isRecentSale?: boolean;
+}
+
 export interface VerificationResult {
   success: boolean;
   status: VerificationStatus;
@@ -50,6 +71,11 @@ export interface VerificationResult {
   scannedHash?: string;
   blockchainStatus?: string;
   detail?: any;
+
+  isRecentlySold?: boolean;
+  hoursSinceSale?: number | null;
+  daysSinceSale?: number | null;
+  dispensingShop?: DispensingShop | null;
 
   payload?: VerificationPayload;
 
@@ -78,11 +104,14 @@ export interface VerificationResult {
   shop?: {
     name: string;
     id?: string;
+    licenseNumber?: string;
+    location?: string;
   };
 
   transaction?: {
     status: string;
     saleTime?: string;
+    location?: string;
   };
 
   risk?: {

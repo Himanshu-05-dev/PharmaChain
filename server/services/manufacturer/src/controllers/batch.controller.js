@@ -1,4 +1,4 @@
-import Batch, { MINT_STATUS } from '../models/batch.model.js';
+ import Batch, { MINT_STATUS } from '../models/batch.model.js';
 import Manufacturer from '../models/manufacturer.model.js';
 import axios from 'axios';
 import {
@@ -715,7 +715,12 @@ export const exportBatchCsvController = async (req, res) => {
         res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
 
         // Priority 1: Stream directly from S3 if configured and URL exists
-        if (batch.s3DownloadUrl && batch.s3DownloadUrl.startsWith('http')) {
+        const isExternalS3 = batch.s3DownloadUrl &&
+                             batch.s3DownloadUrl.startsWith('http') &&
+                             !batch.s3DownloadUrl.includes('localhost') &&
+                             !batch.s3DownloadUrl.includes('127.0.0.1');
+
+        if (isExternalS3) {
             try {
                 console.log(`[manufacturer-service Batch] Streaming S3 CSV directly for ${sysBatchId}`);
                 const s3Response = await axios.get(batch.s3DownloadUrl, { responseType: 'stream', timeout: 30000 });
@@ -728,21 +733,17 @@ export const exportBatchCsvController = async (req, res) => {
         // Priority 2: Stream from pharma-core
         try {
             console.log(`[manufacturer-service Batch] Streaming pharma-core CSV directly for ${sysBatchId}`);
-            const coreStream = await fetchBatchCsvStreamViaPharmaCore(batch.batchId, req.authToken);
+            const coreStream = await fetchBatchCsvStreamViaPharmaCore(batch.batchId, req.authToken, batch.s3FileKey);
             return coreStream.data.pipe(res);
         } catch (streamErr) {
             console.warn(`[manufacturer-service Batch] Core CSV stream notice: ${streamErr.message}`);
         }
 
-        if (!batch.s3DownloadUrl) {
-            return res.status(404).json({
-                code:    'CSV_NOT_AVAILABLE',
-                message: `Pack CSV is not yet available for batch ${batchId}. ` +
-                         `Ensure the batch has been minted (current status: ${batch.mintStatus}).`,
-            });
-        }
-
-        return res.redirect(302, batch.s3DownloadUrl);
+        return res.status(404).json({
+            code:    'CSV_NOT_AVAILABLE',
+            message: `Pack CSV is not available for batch ${batchId}. ` +
+                     `Ensure the batch has been minted (current status: ${batch.mintStatus}).`,
+        });
     } catch (error) {
         console.error('[manufacturer-service Batch] exportBatchCsvController error:', error.message);
         if (!res.headersSent) {

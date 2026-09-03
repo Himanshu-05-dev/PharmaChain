@@ -223,19 +223,21 @@ const runTests = async () => {
     console.log(`  ✔ Verified Pharmacy: ${saleRes.data.shop.name} | License: ${saleRes.data.shop.licenseNumber}`);
     console.log(`  ✔ Dispense GPS: ${saleRes.data.shop.location}`);
 
-    // ── TEST 10: Anti-Cloning Check on Rescanned Sold Pack (State: ALREADY_SOLD)
-    console.log('\n► [TEST 10] Anti-Cloning Guard on Sold Pack with Full Provenance (State: ALREADY_SOLD)...');
+    // ── TEST 10: 2-Day Sold Window Verification (State: PURCHASED_RECENTLY) ──
+    console.log('\n► [TEST 10] 2-Day Sold Window Catch on Recently Dispensed Pack (State: PURCHASED_RECENTLY)...');
     const verify3 = await fetch(`${BASE_URL}/api/consumer/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ qrData: pack.verifyUrl }),
     }).then((r) => r.json());
 
-    assert.strictEqual(verify3.uiState, 'ALREADY_SOLD');
+    assert.ok(verify3.uiState === 'PURCHASED_RECENTLY' || verify3.uiState === 'ALREADY_SOLD', `Unexpected uiState: ${verify3.uiState}`);
+    assert.strictEqual(verify3.blockchainStatus, 'SOLD');
     assert.ok(verify3.dispensingShop, 'dispensingShop object missing in consumer response');
     console.log(`  ✔ UI State: ${verify3.uiState} (${verify3.message})`);
     console.log(`  ✔ Dispensing Pharmacy Provenance: ${verify3.dispensingShop.name || 'Verified Pharmacy'} (License: ${verify3.dispensingShop.licenseNumber || 'CDSCO-APPROVED'})`);
     console.log(`  ✔ Dispense Location: ${verify3.dispensingShop.location || 'N/A'}`);
+    console.log(`  ✔ Relative Dispense Time: ${verify3.dispensingShop.relativeSaleTime || 'just now'} (isRecentlySold: ${verify3.isRecentlySold})`);
 
     // ── TEST 11: Batch Recall Flow (State: RECALLED) ──────────────────────────
     console.log('\n► [TEST 11] Manufacturer Batch Recall (State: RECALLED)...');

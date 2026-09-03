@@ -31,12 +31,21 @@ export default function ScanResultScreen() {
     }
   }, [qrData]);
 
+  const isRecentlySold = result?.uiState === 'PURCHASED_RECENTLY' || Boolean(result?.isRecentlySold);
+  const isPreviouslySold = result?.uiState === 'ALREADY_SOLD';
+  const isAtShop = result?.uiState === 'AT_SHOP';
+  const isGenuine = result?.uiState === 'GENUINE';
+  const isRecalled = result?.uiState === 'RECALLED';
+  const isExpired = result?.uiState === 'EXPIRED';
+  const isCounterfeit = result?.uiState === 'COUNTERFEIT';
+
   const isAuthentic = result
-    ? result.uiState === 'GENUINE' || result.uiState === 'AT_SHOP' || result.status === 'AUTHENTIC'
+    ? isGenuine || isRecentlySold || isAtShop || result.status === 'AUTHENTIC'
     : status === 'authentic' || status === 'verified';
 
-  const isVerified = isAuthentic;
-  const trustScore = result?.risk?.score ?? (isVerified ? 98 : 0);
+  // Even if sold previously (> 2 days), the medicine specification and batch details are valid and should be visible
+  const hasValidMetadata = isAuthentic || isPreviouslySold;
+  const trustScore = result?.risk?.score ?? (isAuthentic ? 98 : isPreviouslySold ? 60 : 0);
 
   const medicineName = result?.pack?.medicineName || (qrData ? 'Verified Formulation' : 'No Active Scan');
   const manufacturerName = result?.manufacturer?.name || (qrData ? 'Verified Facility' : 'Unknown Manufacturer');
@@ -44,6 +53,7 @@ export default function ScanResultScreen() {
   const mfgDate = result?.pack?.manufacturingDate || 'N/A';
   const expiryDate = result?.pack?.expiryDate || 'N/A';
   const packId = result?.pack?.packId || result?.packHash || qrData || 'N/A';
+  const dispensingShop = result?.dispensingShop;
 
   const handleSaveToCabinet = () => {
     const med: SavedMedicine = {
@@ -61,7 +71,7 @@ export default function ScanResultScreen() {
       mfgDate,
       expiryDate,
       daysToExpiry: 365,
-      status: isVerified ? 'Verified' : 'Needs Attention',
+      status: isAuthentic ? 'Verified' : 'Needs Attention',
       packId,
       category: result?.pack?.drugSchedule ? `Schedule ${result.pack.drugSchedule}` : 'General Care',
       verifiedAt: 'Just now',
@@ -69,6 +79,36 @@ export default function ScanResultScreen() {
     };
     addSavedMedicine(med);
     setSaved(true);
+  };
+
+  const getStatusCardBg = () => {
+    if (isGenuine) return '#10b981';
+    if (isRecentlySold) return '#059669';
+    if (isAtShop) return '#2563eb';
+    if (isPreviouslySold) return '#d97706';
+    if (isRecalled) return '#dc2626';
+    if (isExpired) return '#e11d48';
+    if (isCounterfeit) return '#991b1b';
+    return isAuthentic ? '#10b981' : '#f97316';
+  };
+
+  const getStatusTitle = () => {
+    if (isGenuine) return '100% Genuine Medicine';
+    if (isRecentlySold) return 'Verified — Recently Purchased';
+    if (isAtShop) return 'Verified at Pharmacy';
+    if (isPreviouslySold) return 'Notice: Dispensed Previously';
+    if (isRecalled) return 'CRITICAL: Batch Recalled';
+    if (isExpired) return 'Medicine Expired';
+    if (isCounterfeit) return 'Counterfeit Warning';
+    return isAuthentic ? 'Authentic Medicine' : 'Suspicious / Unverified';
+  };
+
+  const renderStatusIcon = () => {
+    if (isGenuine || isRecentlySold) return <CheckCircle2 size={44} color="#fff" />;
+    if (isAtShop) return <ShieldCheck size={44} color="#fff" />;
+    if (isPreviouslySold || isExpired) return <AlertTriangle size={44} color="#fff" />;
+    if (isCounterfeit || isRecalled) return <ShieldAlert size={44} color="#fff" />;
+    return isAuthentic ? <CheckCircle2 size={44} color="#fff" /> : <AlertTriangle size={44} color="#fff" />;
   };
 
   if (loading) {
@@ -96,30 +136,14 @@ export default function ScanResultScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Status Card */}
-        <View style={[styles.statusCard, { backgroundColor: isVerified ? '#10b981' : '#f97316' }]}>
+        <View style={[styles.statusCard, { backgroundColor: getStatusCardBg() }]}>
           <View style={styles.statusHeader}>
-            {isVerified ? (
-              <CheckCircle2 size={48} color="#fff" />
-            ) : (
-              <AlertTriangle size={48} color="#fff" />
-            )}
+            {renderStatusIcon()}
             <View style={styles.statusTextContainer}>
-              <Text style={styles.statusTitle}>
-                {result?.uiState === 'GENUINE'
-                  ? '100% Genuine'
-                  : result?.uiState === 'AT_SHOP'
-                  ? 'Verified at Pharmacy'
-                  : result?.uiState === 'ALREADY_SOLD'
-                  ? 'Previously Sold'
-                  : result?.uiState === 'COUNTERFEIT'
-                  ? 'Counterfeit Warning'
-                  : isVerified
-                  ? 'Authentic Medicine'
-                  : 'Suspicious / Unverified'}
-              </Text>
+              <Text style={styles.statusTitle}>{getStatusTitle()}</Text>
               <Text style={styles.statusDesc}>
                 {result?.message ||
-                  (isVerified
+                  (isAuthentic
                     ? 'Cryptographically verified on Hyperledger Fabric. Safe for consumption.'
                     : 'Digital signature mismatch or invalid batch records detected.')}
               </Text>
@@ -131,8 +155,78 @@ export default function ScanResultScreen() {
           </View>
         </View>
 
-        {/* Content based on status */}
-        {isVerified ? (
+        {/* Dispensing Pharmacy & Provenance Card */}
+        {(dispensingShop || result?.shop?.name) && (
+          <View style={styles.provenanceCard}>
+            <View style={styles.provenanceHeader}>
+              <Text style={styles.provenanceHeaderTitle}>Dispensing Pharmacy & Purchase Info</Text>
+            </View>
+
+            <View style={styles.provenanceRow}>
+              <Text style={styles.provenanceLabel}>Pharmacy</Text>
+              <Text style={styles.provenanceValue}>
+                {dispensingShop?.name || result?.shop?.name || 'Registered CDSCO Pharmacy'}
+              </Text>
+            </View>
+
+            {(dispensingShop?.licenseNumber || result?.shop?.licenseNumber) ? (
+              <View style={styles.provenanceRow}>
+                <Text style={styles.provenanceLabel}>CDSCO License</Text>
+                <Text style={[styles.provenanceValue, { color: '#0369a1', fontWeight: '700' }]}>
+                  {dispensingShop?.licenseNumber || result?.shop?.licenseNumber}
+                </Text>
+              </View>
+            ) : null}
+
+            {(dispensingShop?.formattedSaleTime || result?.transaction?.saleTime) ? (
+              <View style={styles.provenanceRow}>
+                <Text style={styles.provenanceLabel}>Dispense Time</Text>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.provenanceValue}>
+                    {dispensingShop?.formattedSaleTime || result?.transaction?.saleTime}
+                  </Text>
+                  {dispensingShop?.relativeSaleTime && (
+                    <Text style={styles.relativeTimeBadge}>
+                      {dispensingShop.relativeSaleTime}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            ) : null}
+
+            {(dispensingShop?.address || dispensingShop?.location || result?.transaction?.location) ? (
+              <View style={styles.provenanceRow}>
+                <Text style={styles.provenanceLabel}>Location / GPS</Text>
+                <Text style={[styles.provenanceValue, { fontSize: 13, color: '#047857' }]}>
+                  {dispensingShop?.address || dispensingShop?.location || result?.transaction?.location}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Contextual Guidance Box */}
+            {isRecentlySold ? (
+              <View style={styles.guidanceBoxSuccess}>
+                <Text style={styles.guidanceTitleSuccess}>✓ Recent Purchase Verified</Text>
+                <Text style={styles.guidanceTextSuccess}>
+                  This medicine was dispensed from this verified pharmacy within the last 48 hours. If you just bought this medicine from this pharmacy, it is 100% genuine and your purchase was recorded on the blockchain.
+                </Text>
+              </View>
+            ) : isPreviouslySold ? (
+              <View style={styles.guidanceBoxWarning}>
+                <Text style={styles.guidanceTitleWarning}>⚖️ Buyer Verification Advisory</Text>
+                <Text style={styles.guidanceTextWarning}>
+                  • Checking Your Personal Medicine? If you previously purchased this medicine from this pharmacy and are checking it in your home cabinet, this is genuine and matches your purchase history.
+                </Text>
+                <Text style={[styles.guidanceTextWarning, { marginTop: 6 }]}>
+                  • Buying New in a Shop Now? If a store is attempting to sell you this pack today as brand-new stock, do not accept it — this pack was already sold on {dispensingShop?.formattedSaleTime || 'a prior date'} and could be a refilled duplicate clone.
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        )}
+
+        {/* Medicine Details */}
+        {hasValidMetadata ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Medicine Details</Text>
 
@@ -210,20 +304,36 @@ export default function ScanResultScreen() {
                 {saved ? '✓ Saved in My Medicine Cabinet' : 'Save to Medicine Cabinet'}
               </Text>
             </TouchableOpacity>
+
+            {isPreviouslySold && (
+              <TouchableOpacity
+                style={[styles.actionBtnOutline, { borderColor: '#f97316', marginTop: 12 }]}
+                onPress={() =>
+                  router.push({
+                    pathname: '/report',
+                    params: { qrToken: qrData || packId, medicineName },
+                  })
+                }
+              >
+                <Text style={[styles.actionBtnOutlineText, { color: '#ea580c' }]}>
+                  Report Suspicious Resale to CDSCO
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Risk Indicators</Text>
 
             <View style={styles.riskItem}>
-              <AlertTriangle size={20} color="#f97316" style={styles.riskIcon} />
+              <AlertTriangle size={20} color="#dc2626" style={styles.riskIcon} />
               <Text style={styles.riskText}>
                 {result?.message || 'Cryptographic ES256 signature verification failed or pack state unverified.'}
               </Text>
             </View>
             <View style={styles.riskItem}>
-              <AlertTriangle size={20} color="#f97316" style={styles.riskIcon} />
-              <Text style={styles.riskText}>Possible duplicate QR packaging or unauthorized distribution channel.</Text>
+              <AlertTriangle size={20} color="#dc2626" style={styles.riskIcon} />
+              <Text style={styles.riskText}>Possible counterfeit packaging, altered QR label, or unauthorized distribution channel.</Text>
             </View>
 
             <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Recommended Action</Text>
@@ -411,5 +521,88 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  provenanceCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 24,
+  },
+  provenanceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  provenanceHeaderTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  provenanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  provenanceLabel: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  provenanceValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0f172a',
+    maxWidth: '65%',
+    textAlign: 'right',
+  },
+  relativeTimeBadge: {
+    fontSize: 11,
+    color: '#059669',
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  guidanceBoxSuccess: {
+    backgroundColor: '#ecfdf5',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    padding: 12,
+    marginTop: 14,
+  },
+  guidanceTitleSuccess: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#065f46',
+    marginBottom: 4,
+  },
+  guidanceTextSuccess: {
+    fontSize: 13,
+    color: '#047857',
+    lineHeight: 18,
+  },
+  guidanceBoxWarning: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    padding: 12,
+    marginTop: 14,
+  },
+  guidanceTitleWarning: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#92400e',
+    marginBottom: 4,
+  },
+  guidanceTextWarning: {
+    fontSize: 13,
+    color: '#78350f',
+    lineHeight: 18,
   },
 });

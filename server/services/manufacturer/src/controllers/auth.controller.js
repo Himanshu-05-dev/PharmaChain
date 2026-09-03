@@ -266,7 +266,7 @@ export const kycApproveController = async (req, res) => {
         let keyGenerated = false;
         try {
             console.log(`[manufacturer-service Auth] Requesting EC P-256 key generation from pharma-core for ${manufacturer.manufacturerId}...`);
-            await axios.post(
+            const keyRes = await axios.post(
                 `${PHARMA_CORE_URL}/core/keys/generate`,
                 { manufacturerId: manufacturer.manufacturerId },
                 {
@@ -279,10 +279,26 @@ export const kycApproveController = async (req, res) => {
                 },
             );
             keyGenerated = true;
+            if (keyRes.data?.publicKeyPem) {
+                manufacturer.publicKeyPem = keyRes.data.publicKeyPem;
+                manufacturer.keyId = keyRes.data.keyId;
+            }
             console.log(`[manufacturer-service Auth] EC P-256 key generated successfully for ${manufacturer.manufacturerId}`);
         } catch (keyErr) {
             if (keyErr.response?.status === 409) {
                 console.log(`[manufacturer-service Auth] EC key already exists in pharma-core for ${manufacturer.manufacturerId}`);
+                try {
+                    const existingRes = await axios.get(`${PHARMA_CORE_URL}/core/keys/${encodeURIComponent(manufacturer.manufacturerId)}`, {
+                        headers: { 'X-Service-Token': SERVICE_TOKEN },
+                        timeout: 5000,
+                    });
+                    if (existingRes.data?.publicKeyPem) {
+                        manufacturer.publicKeyPem = existingRes.data.publicKeyPem;
+                        manufacturer.keyId = existingRes.data.keyId;
+                    }
+                } catch {
+                    // non-fatal
+                }
             } else {
                 console.error(`[manufacturer-service Auth] Key generation failed in pharma-core (non-fatal): ${keyErr.message}`);
             }

@@ -272,3 +272,48 @@ export const updateProfileController = async (req, res) => {
         return res.status(500).json({ status: 'error', message: err.message });
     }
 };
+
+// ── 5.3 Public Shop Profile Lookup ───────────────────────────────────────────
+export const getPublicShopProfileController = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ status: 'error', message: 'Shop identifier is required' });
+        }
+
+        const query = {
+            $or: [
+                { shopId: id },
+                { 'license.drugLicenseNumber': id },
+                ...(id.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: id }] : []),
+            ],
+        };
+
+        const shopkeeper = await Shopkeeper.findOne(query).lean();
+        if (!shopkeeper) {
+            return res.status(404).json({ status: 'error', message: 'Pharmacy not found' });
+        }
+
+        const shop = shopkeeper.shop || {};
+        const license = shopkeeper.license || {};
+
+        return res.status(200).json({
+            status: 'success',
+            data: {
+                shopId:        shopkeeper.shopId,
+                name:          shop.name || 'Registered Pharmacy',
+                phone:         shop.phone || null,
+                licenseNumber: license.drugLicenseNumber || 'CDSCO-APPROVED',
+                address:       shop.address ? `${shop.address}, ${shop.city || ''}, ${shop.state || ''} - ${shop.pincode || ''}`.replace(/,\s*,/g, ',') : null,
+                city:          shop.city || null,
+                state:         shop.state || null,
+                pincode:       shop.pincode || null,
+                verificationStatus: shopkeeper.verificationStatus,
+            },
+        });
+    } catch (err) {
+        console.error('[shopkeeper-service] getPublicShopProfileController:', err.message);
+        return res.status(500).json({ status: 'error', message: err.message });
+    }
+};
+

@@ -77,11 +77,20 @@ export const generateManufacturerKey = async (manufacturerId) => {
 
     const keyId = `mfr-key-${manufacturerId.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
 
-    // ── Persist to keystore ───────────────────────────────────────────────────
+    // ── Persist to keystore (retain previous public keys for signature continuity) ──
     const keystore = await readKeystore();
+    const existing = keystore[manufacturerId];
+    const publicKeysList = existing
+        ? [existing.publicKeyPem, ...(existing.publicKeys || [])].filter(Boolean)
+        : [];
+    if (!publicKeysList.includes(publicKey)) {
+        publicKeysList.unshift(publicKey);
+    }
+
     keystore[manufacturerId] = {
         encryptedPrivKey,
         publicKeyPem: publicKey,
+        publicKeys: publicKeysList,
         algorithm: ES256_ALGORITHM,
         keyId,
         createdAt: new Date().toISOString(),

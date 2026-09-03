@@ -328,19 +328,102 @@ export const customerScanController = async (req, res) => {
 
         const statusResult = await getPackStatus(packHash, batchId);
         const ledgerStatus = statusResult.status || 'NOT_FOUND';
+        const detail = statusResult.detail || {};
 
         let uiState = 'GENUINE';
         if (ledgerStatus === 'Recalled' || ledgerStatus === 'RECALLED') uiState = 'RECALLED';
         else if (ledgerStatus === 'Sold' || ledgerStatus === 'SOLD') uiState = 'ALREADY_SOLD';
         else if (ledgerStatus === 'AtShop' || ledgerStatus === 'AT_SHOP') uiState = 'AT_SHOP';
 
+        const isSold = uiState === 'ALREADY_SOLD' || ledgerStatus === 'Sold' || ledgerStatus === 'SOLD' || detail.eventType === 'SOLD';
+        const isAtShop = uiState === 'AT_SHOP' || ledgerStatus === 'AtShop' || ledgerStatus === 'AT_SHOP' || detail.eventType === 'INTAKE';
+
+        let dispensingShop = (isSold || isAtShop || detail.shopName || detail.sellerId) ? {
+            shopId:        detail.sellerId || detail.toId || detail.fromId || null,
+            name:          detail.shopName || (detail.sellerId ? `Registered Pharmacy (${detail.sellerId})` : 'Registered Pharmacy'),
+            licenseNumber: detail.licenseNumber || 'CDSCO-APPROVED',
+            location:      detail.location || null,
+            latitude:      detail.latitude || null,
+            longitude:     detail.longitude || null,
+            address:       null,
+            phone:         null,
+            sellingDate:   detail.sellingDate || null,
+            sellingTime:   detail.sellingTime || null,
+            timestamp:     detail.timestamp || null,
+        } : null;
+
+        if (dispensingShop?.shopId) {
+            try {
+                const sk = await Shopkeeper.findOne({
+                    $or: [
+                        { shopId: dispensingShop.shopId },
+                        { 'license.drugLicenseNumber': dispensingShop.shopId },
+                    ],
+                }).lean();
+                if (sk) {
+                    if (sk.shop?.name) dispensingShop.name = sk.shop.name;
+                    if (sk.license?.drugLicenseNumber) dispensingShop.licenseNumber = sk.license.drugLicenseNumber;
+                    if (sk.shop?.address) dispensingShop.address = `${sk.shop.address}, ${sk.shop.city || ''}, ${sk.shop.state || ''} - ${sk.shop.pincode || ''}`.replace(/,\s*,/g, ',');
+                    if (sk.shop?.phone) dispensingShop.phone = sk.shop.phone;
+                }
+            } catch {}
+        }
+
+        let isRecentlySold = false;
+        let hoursSinceSale = null;
+        let daysSinceSale = null;
+
+        if (isSold) {
+            let soldDate = null;
+            if (detail.timestamp) soldDate = new Date(detail.timestamp);
+            else if (detail.sellingDate) {
+                const ds = detail.sellingDate;
+                const ts = detail.sellingTime || '00:00:00';
+                if (/^\d{8}$/.test(ds)) {
+                    soldDate = new Date(`${ds.slice(4, 8)}-${ds.slice(2, 4)}-${ds.slice(0, 2)}T${ts}Z`);
+                } else {
+                    soldDate = new Date(`${ds} ${ts}`);
+                }
+            }
+
+            if (soldDate && !isNaN(soldDate.getTime())) {
+                const diffMs = Math.max(0, Date.now() - soldDate.getTime());
+                hoursSinceSale = Number((diffMs / (1000 * 60 * 60)).toFixed(1));
+                daysSinceSale = Math.floor(hoursSinceSale / 24);
+
+                if (dispensingShop) {
+                    dispensingShop.formattedSaleTime = soldDate.toLocaleDateString('en-IN', {
+                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+                    const mins = Math.floor(diffMs / (1000 * 60));
+                    dispensingShop.relativeSaleTime = mins < 1 ? 'just now' : mins < 60 ? `${mins} mins ago` : `${Math.floor(mins / 60)} hours ago`;
+                    dispensingShop.hoursSinceSale = hoursSinceSale;
+                    dispensingShop.daysSinceSale = daysSinceSale;
+                }
+
+                if (hoursSinceSale <= 48) {
+                    isRecentlySold = true;
+                    uiState = 'PURCHASED_RECENTLY';
+                    if (dispensingShop) dispensingShop.isRecentSale = true;
+                } else {
+                    isRecentlySold = false;
+                    uiState = 'ALREADY_SOLD';
+                    if (dispensingShop) dispensingShop.isRecentSale = false;
+                }
+            }
+        }
+
         return res.status(200).json({
             status: 'success',
             valid:  true,
             uiState,
+            isRecentlySold: isSold ? isRecentlySold : false,
+            hoursSinceSale: isSold ? hoursSinceSale : null,
+            daysSinceSale: isSold ? daysSinceSale : null,
             packHash,
             payload,
             ledgerStatus,
+            dispensingShop,
             detail: statusResult.detail || null,
         });
     } catch (err) {

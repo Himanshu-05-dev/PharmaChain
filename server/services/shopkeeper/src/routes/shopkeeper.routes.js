@@ -7,9 +7,13 @@ import {
     inventoryController,
     getProfileController,
     updateProfileController,
+    getPublicShopProfileController,
 } from '../controllers/shopkeeper.controller.js';
 
 const router = express.Router();
+
+// ── Public Pharmacy Profile Lookup (no auth required) ────────────────────────
+router.get('/public/profile/:id', getPublicShopProfileController);
 
 // All shopkeeper dashboard/profile routes require auth
 router.use(identifyUser);

@@ -82,9 +82,15 @@ export default function VerificationScreen() {
     );
   }
 
+  const isRecentlySold = result?.uiState === "PURCHASED_RECENTLY" || Boolean(result?.isRecentlySold);
+  const isPreviouslySold = result?.uiState === "ALREADY_SOLD";
+  const isPositive = result?.uiState === "GENUINE" || isRecentlySold || result?.uiState === "AT_SHOP" || (result?.success && !result?.uiState);
+  const isCritical = result?.uiState === "COUNTERFEIT" || result?.uiState === "RECALLED";
+
   const renderIcon = () => {
     switch (result?.uiState) {
       case "GENUINE":
+      case "PURCHASED_RECENTLY":
       case "AT_SHOP":
         return <CheckCircle color="#10b981" size={64} />;
       case "ALREADY_SOLD":
@@ -106,10 +112,12 @@ export default function VerificationScreen() {
     switch (result?.uiState) {
       case "GENUINE":
         return "100% Genuine Medicine";
+      case "PURCHASED_RECENTLY":
+        return "Verified — Recently Purchased";
       case "AT_SHOP":
         return "Verified Pharmacy Stock";
       case "ALREADY_SOLD":
-        return "Warning: Pack Already Sold";
+        return "Notice: Pack Dispensed Previously";
       case "RECALLED":
         return "CRITICAL: Batch Recalled";
       case "EXPIRED":
@@ -122,9 +130,6 @@ export default function VerificationScreen() {
         return result?.message || (result?.success ? "Authentic Medicine" : "Verification Failed");
     }
   };
-
-  const isPositive = result?.uiState === "GENUINE" || result?.uiState === "AT_SHOP" || (result?.success && !result?.uiState);
-  const isCritical = result?.uiState === "COUNTERFEIT" || result?.uiState === "RECALLED";
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -289,7 +294,27 @@ export default function VerificationScreen() {
                   <View style={styles.provenanceRow}>
                     <Text style={styles.provenanceLabel}>Dispense Time</Text>
                     <Text style={styles.provenanceValue}>
-                      {result.transaction?.saleTime || result.dispensingShop?.sellingDate}
+                      {result.dispensingShop?.formattedSaleTime || result.transaction?.saleTime || result.dispensingShop?.sellingDate}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {/* Contextual Guidance Box */}
+                {isRecentlySold ? (
+                  <View style={styles.guidanceBoxSuccess}>
+                    <Text style={styles.guidanceTitleSuccess}>✓ Recent Purchase Verified</Text>
+                    <Text style={styles.guidanceTextSuccess}>
+                      This medicine was dispensed from this verified pharmacy within the last 48 hours. If you just bought this pack, it is 100% authentic and registered on the blockchain.
+                    </Text>
+                  </View>
+                ) : isPreviouslySold ? (
+                  <View style={styles.guidanceBoxWarning}>
+                    <Text style={styles.guidanceTitleWarning}>⚖️ Buyer Verification Advisory</Text>
+                    <Text style={styles.guidanceTextWarning}>
+                      • Checking Personal Medicine? If you bought this medicine previously from this pharmacy and are checking it at home, it is genuine and matches your purchase history.
+                    </Text>
+                    <Text style={[styles.guidanceTextWarning, { marginTop: 4 }]}>
+                      • Buying New in a Shop Now? If a store is attempting to sell you this pack today as brand-new stock, do not accept it — this pack was already sold on {result.dispensingShop?.formattedSaleTime || 'a prior date'} and could be a refilled duplicate clone.
                     </Text>
                   </View>
                 ) : null}
@@ -530,5 +555,43 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     flexShrink: 1,
     textAlign: "right",
+  },
+  guidanceBoxSuccess: {
+    backgroundColor: "#ecfdf5",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#a7f3d0",
+    padding: 10,
+    marginTop: 8,
+  },
+  guidanceTitleSuccess: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#065f46",
+    marginBottom: 2,
+  },
+  guidanceTextSuccess: {
+    fontSize: 11,
+    color: "#047857",
+    lineHeight: 16,
+  },
+  guidanceBoxWarning: {
+    backgroundColor: "#fffbeb",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#fde68a",
+    padding: 10,
+    marginTop: 8,
+  },
+  guidanceTitleWarning: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#92400e",
+    marginBottom: 2,
+  },
+  guidanceTextWarning: {
+    fontSize: 11,
+    color: "#78350f",
+    lineHeight: 16,
   },
 });

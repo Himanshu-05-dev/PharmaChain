@@ -35,6 +35,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { scanMedicine, intakeMedicine, dispenseMedicine, scanCustomerMedicine } from '../src/services/api/scan';
 import { useAuthStore } from '../src/store/authStore';
+import { PharmaTheme } from '../src/constants/theme';
+import { Skeleton } from '../src/components/common/Skeleton';
 
 // Mock database to simulate fetching data based on ID
 const mockDatabase: Record<string, any> = {
@@ -120,7 +122,8 @@ export default function VerificationScreen() {
 
   const { isAuthenticated } = useAuthStore();
   const [loading, setLoading] = useState(Boolean(params.qrData));
-  const [apiData, setApiData] = useState<any>(null);
+  const [data, setData] = useState<any>(null);
+  const setApiData = setData;
 
   useEffect(() => {
     const rawQr = params.qrData || params.id || '';
@@ -591,8 +594,9 @@ export default function VerificationScreen() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
-  );
+    ) : null}
+  </SafeAreaView>
+);
 }
 
 const styles = StyleSheet.create({
@@ -860,6 +864,18 @@ const styles = StyleSheet.create({
   primaryActionBtnText: {
     color: '#ffffff',
     fontWeight: '800',
+    fontSize: 15,
+  },
+  actionButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  actionButtonText: {
+    fontWeight: 'bold',
     fontSize: 15,
   },
 });

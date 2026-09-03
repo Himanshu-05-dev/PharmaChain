@@ -22,6 +22,8 @@ import {
   ShieldAlert,
   ScanLine,
   Award,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { verifyMedicineQR } from '../src/services/api/verify.api';
@@ -79,6 +81,14 @@ export default function ScanResultScreen() {
         .finally(() => setLoading(false));
     }
   }, [qrData]);
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `[PharmaChain Verification]\nMedicine: ${medicineName}\nBatch: ${batchNumber}\nStatus: ${getStatusTitle()}\nTrust Score: ${trustScore}/100`,
+      });
+    } catch (e) {}
+  };
 
   const isRecentlySold = result?.uiState === 'PURCHASED_RECENTLY' || Boolean(result?.isRecentlySold);
   const isPreviouslySold = result?.uiState === 'ALREADY_SOLD';
@@ -501,6 +511,49 @@ const styles = StyleSheet.create({
   resultContainer: {
     paddingTop: 6,
   },
+  statusCard: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+  },
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  statusTextContainer: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  statusTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  statusDesc: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    lineHeight: 18,
+  },
+  scoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+    paddingTop: 14,
+  },
+  scoreLabel: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  scoreValue: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
   resultCard: {
     borderRadius: 22,
     padding: 20,
@@ -583,12 +636,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  scoreLabel: {
+  scoreRowLabel: {
     fontSize: 11,
     fontWeight: '700',
     color: '#5B5F63',
   },
-  scoreValue: {
+  scoreRowValue: {
     fontSize: 14,
     fontWeight: '900',
   },
@@ -643,10 +696,30 @@ const styles = StyleSheet.create({
     color: '#5B5F63',
     fontWeight: '600',
   },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#64748b',
+  },
   detailValue: {
     color: '#111827',
     fontWeight: '500',
     fontSize: 15,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 16,
   },
   viewFullDetailsBtn: {
     paddingVertical: 16,

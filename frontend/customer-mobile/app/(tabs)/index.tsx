@@ -22,6 +22,8 @@ import {
   ScanLine,
   BookmarkCheck,
   Zap,
+  Clock,
+  AlertCircle,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCustomerStore } from '../../src/store/customerStore';
@@ -43,6 +45,44 @@ export default function CustomerHomeDashboard() {
 
   const [selectedAlert, setSelectedAlert] = useState<SafetyAlert | null>(null);
   const [selectedInsight, setSelectedInsight] = useState<HealthInsight | null>(null);
+  const [selectedMedicine, setSelectedMedicine] = useState<SavedMedicine | null>(null);
+
+  const getStatusBadgeConfig = (status?: string) => {
+    switch (status) {
+      case 'Verified':
+        return {
+          bg: '#ecfdf5',
+          text: '#065f46',
+          border: '#a7f3d0',
+          dot: '#10b981',
+          icon: <ShieldCheck size={14} color="#059669" />,
+        };
+      case 'Expiring Soon':
+        return {
+          bg: '#fffbeb',
+          text: '#92400e',
+          border: '#fde68a',
+          dot: '#f59e0b',
+          icon: <Clock size={14} color="#d97706" />,
+        };
+      case 'Needs Attention':
+        return {
+          bg: '#fff7ed',
+          text: '#9a3412',
+          border: '#fed7aa',
+          dot: '#ea580c',
+          icon: <AlertCircle size={14} color="#ea580c" />,
+        };
+      default:
+        return {
+          bg: '#f3f4f6',
+          text: '#4b5563',
+          border: '#e5e7eb',
+          dot: '#9ca3af',
+          icon: <ShieldCheck size={14} color="#6b7280" />,
+        };
+    }
+  };
 
   const verifiedCount = savedMedicines.filter((m) => m.status === 'Verified').length;
   const overallSafetyScore =
@@ -1132,5 +1172,149 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: '#ffffff',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    maxHeight: '88%',
+  },
+  modalHeaderTitleBox: {
+    flex: 1,
+  },
+  modalSheetTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#111827',
+  },
+  modalSheetSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  modalScroll: {
+    marginTop: 16,
+  },
+  modalStatusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  modalStatusIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalStatusTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalStatusDesc: {
+    fontSize: 11,
+    color: '#475569',
+    marginTop: 2,
+  },
+  modalDetailsGroup: {
+    marginBottom: 18,
+    backgroundColor: '#f8fafc',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  modalGroupName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  modalFieldRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  modalFieldLabel: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  modalFieldValue: {
+    fontSize: 13,
+    color: '#0f172a',
+    fontWeight: '500',
+    maxWidth: '60%',
+    textAlign: 'right',
+  },
+  modalFieldValueBold: {
+    fontSize: 13,
+    color: '#0f172a',
+    fontWeight: '700',
+    maxWidth: '60%',
+    textAlign: 'right',
+  },
+  modalInstructionText: {
+    fontSize: 13,
+    color: '#334155',
+    lineHeight: 18,
+  },
+  modalDoctorText: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 6,
+    fontStyle: 'italic',
+  },
+  modalActionButtons: {
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 20,
+  },
+  modalPrimaryBtn: {
+    backgroundColor: '#3b00b9',
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#3b00b9',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  modalPrimaryBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalSecondaryBtn: {
+    backgroundColor: '#fff7ed',
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+  },
+  modalSecondaryBtnText: {
+    color: '#ea580c',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

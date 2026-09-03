@@ -8,6 +8,7 @@ import {
   Animated,
   Easing,
   Dimensions,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuthRequest } from "expo-auth-session";
@@ -26,11 +27,44 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
+WebBrowser.maybeCompleteAuthSession();
+
+// Stable Redirect URI
+const REDIRECT_URI = 'https://auth.expo.io/@sahilsharma30/temp-app';
+
+const GOOGLE_DISCOVERY = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenEndpoint: 'https://oauth2.googleapis.com/token',
+  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+};
+
 export default function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const { setAuth } = useAuthStore();
+
+  const [request, response, promptAsync] = useAuthRequest(
+    {
+      clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'dummy-client-id',
+      scopes: ['openid', 'profile', 'email'],
+      redirectUri: REDIRECT_URI,
+      usePKCE: false,
+    },
+    GOOGLE_DISCOVERY
+  );
+
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { code } = response.params;
+      handleBackendSignIn(code);
+    } else if (response?.type === "error") {
+      setLoading(false);
+      Alert.alert("Google Sign-In Error", response.error?.message || "Authentication was cancelled or failed.");
+    } else if (response?.type === "cancel" || response?.type === "dismiss") {
+      setLoading(false);
+    }
+  }, [response]);
 
   // Animations
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -182,7 +216,7 @@ export default function Home() {
     };
   }, []);
 
-  const handlePatientAccess = () => {
+  const handleGoogleSignIn = async () => {
     setLoading(true);
     console.log('[MediaCare Auth] Using redirect URI:', REDIRECT_URI);
     try {
@@ -193,6 +227,8 @@ export default function Home() {
       Alert.alert("Error", "Failed to open Google Sign-In. Please try again.");
     }
   };
+
+  const handlePatientAccess = handleGoogleSignIn;
 
   const handleBackendSignIn = async (code: string) => {
     try {
@@ -580,6 +616,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
     gap: 10,
+  },
+  googleButtonDisabled: {
+    opacity: 0.5,
   },
   googleG: {
     width: 24,

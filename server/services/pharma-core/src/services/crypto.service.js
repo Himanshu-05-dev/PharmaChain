@@ -211,51 +211,70 @@ export const verifyPackJwt = async (signedToken) => {
             }
         }
 
-        // ── Fallback: Query manufacturer-service for certified public key ───────
-        if (!verifiedPayload && (manufacturerId || kid)) {
+        // ── Fallback: Query manufacturer-service for certified public keys ─────
+        if (!verifiedPayload && (manufacturerId || kid || decoded.payload.batchId)) {
             try {
                 const mfrServiceUrl = process.env.MANUFACTURER_SERVICE_URL || 'http://manufacturer-service:80';
-                const targetId = manufacturerId || kid;
-                const mfrRes = await axios.get(`${mfrServiceUrl}/api/manufacturer/public/key/${encodeURIComponent(targetId)}`, {
-                    timeout: 4000,
-                });
-                const fetchedKey = mfrRes.data?.publicKeyPem;
+                const searchIds = [
+                    manufacturerId,
+                    decoded.payload.batchId,
+                    kid,
+                ].filter(Boolean);
 
-                if (fetchedKey && !candidateKeys.includes(fetchedKey)) {
+                for (const targetId of searchIds) {
+                    if (verifiedPayload) break;
                     try {
-                        verifiedPayload = jwt.verify(signedToken, fetchedKey, {
-                            algorithms: [ES256_ALGORITHM],
+                        const mfrRes = await axios.get(`${mfrServiceUrl}/api/manufacturer/public/key/${encodeURIComponent(targetId)}`, {
+                            timeout: 4000,
                         });
 
-                        if (verifiedPayload) {
-                            console.log(`[pharma-core Crypto] Successfully verified token with certified public key from manufacturer-service for ${targetId}`);
-                            // Cache the verified public key in keystore for instant future hits
+                        const remoteKeys = Array.from(new Set([
+                            mfrRes.data?.publicKeyPem,
+                            ...(Array.isArray(mfrRes.data?.publicKeys) ? mfrRes.data.publicKeys : []),
+                        ].filter(Boolean)));
+
+                        for (const fetchedKey of remoteKeys) {
                             try {
-                                const mfrKey = manufacturerId || targetId;
-                                if (keystore[mfrKey]) {
-                                    if (!Array.isArray(keystore[mfrKey].publicKeys)) {
-                                        keystore[mfrKey].publicKeys = [keystore[mfrKey].publicKeyPem].filter(Boolean);
+                                verifiedPayload = jwt.verify(signedToken, fetchedKey, {
+                                    algorithms: [ES256_ALGORITHM],
+                                });
+
+                                if (verifiedPayload) {
+                                    console.log(`[pharma-core Crypto] Successfully verified token with certified public key from manufacturer-service for ${targetId}`);
+                                    // Cache all verified public keys into keystore for instant future hits
+                                    try {
+                                        const mfrKey = manufacturerId || targetId;
+                                        if (keystore[mfrKey]) {
+                                            if (!Array.isArray(keystore[mfrKey].publicKeys)) {
+                                                keystore[mfrKey].publicKeys = [keystore[mfrKey].publicKeyPem].filter(Boolean);
+                                            }
+                                            for (const rk of remoteKeys) {
+                                                if (!keystore[mfrKey].publicKeys.includes(rk)) {
+                                                    keystore[mfrKey].publicKeys.push(rk);
+                                                }
+                                            }
+                                            keystore[mfrKey].publicKeyPem = fetchedKey;
+                                        } else {
+                                            keystore[mfrKey] = {
+                                                publicKeyPem: fetchedKey,
+                                                publicKeys: remoteKeys,
+                                                algorithm: ES256_ALGORITHM,
+                                                keyId: kid || `mfr-key-${mfrKey.toLowerCase()}`,
+                                                createdAt: new Date().toISOString(),
+                                            };
+                                        }
+                                        await writeKeystore(keystore);
+                                    } catch (cacheErr) {
+                                        console.warn('[pharma-core Crypto] Non-fatal keystore cache write notice:', cacheErr.message);
                                     }
-                                    if (!keystore[mfrKey].publicKeys.includes(fetchedKey)) {
-                                        keystore[mfrKey].publicKeys.push(fetchedKey);
-                                    }
-                                    keystore[mfrKey].publicKeyPem = fetchedKey;
-                                } else {
-                                    keystore[mfrKey] = {
-                                        publicKeyPem: fetchedKey,
-                                        publicKeys: [fetchedKey],
-                                        algorithm: ES256_ALGORITHM,
-                                        keyId: kid || `mfr-key-${mfrKey.toLowerCase()}`,
-                                        createdAt: new Date().toISOString(),
-                                    };
+                                    break;
                                 }
-                                await writeKeystore(keystore);
-                            } catch (cacheErr) {
-                                console.warn('[pharma-core Crypto] Non-fatal keystore cache write notice:', cacheErr.message);
+                            } catch {
+                                // Try next key in remoteKeys
                             }
                         }
-                    } catch (verifyErr) {
-                        console.warn(`[pharma-core Crypto] Fetched key verification failed for ${targetId}:`, verifyErr.message);
+                    } catch {
+                        // Try next searchId
                     }
                 }
             } catch (fetchErr) {
@@ -483,7 +502,7 @@ export const mintPacksBatch = async (batchId, manufacturerId, expiryDate, quanti
         ` (1 scrypt + ${packs.length} EC signs)`,
     );
 
-    return { packs, transitions };
+    return { packs, transitions, publicKeyPem: entry.publicKeyPem, keyId: entry.keyId };
 };
 
 // ── MINT + S3 UPLOAD ORCHESTRATOR ─────────────────────────────────────────────
@@ -535,7 +554,7 @@ export const mintAndUploadBatch = async (
     const totalStart = Date.now();
 
     // ── Step 1: Sign all packs in memory (1 scrypt + N EC signs) ─────────────
-    const { packs, transitions } = await mintPacksBatch(
+    const { packs, transitions, publicKeyPem, keyId } = await mintPacksBatch(
         batchId,
         manufacturerId,
         expiryDate,
@@ -648,6 +667,8 @@ export const mintAndUploadBatch = async (
         blockchainError:         blockchainError,
         partialBlockchainSubmit: partialSubmit,
         blockchainRecorded:      recordedHashes.length,
+        publicKeyPem:            publicKeyPem || null,
+        keyId:                   keyId || null,
         mintedAt:                new Date().toISOString(),
         timingMs: {
             signing: signMs,

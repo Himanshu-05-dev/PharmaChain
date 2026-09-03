@@ -102,3 +102,62 @@ export const PharmaTheme = {
     full: 9999,
   },
 };
+
+export const Colors = {
+  light: {
+    text: '#0f172a',
+    textSecondary: '#475569',
+    textMuted: '#94a3b8',
+    background: '#f8fafc',
+    backgroundSelected: '#e2e8f0',
+    backgroundElement: '#f1f5f9',
+    card: '#ffffff',
+    primary: '#2563eb',
+    tint: '#2563eb',
+    icon: '#64748b',
+    tabIconDefault: '#64748b',
+    tabIconSelected: '#2563eb',
+    border: '#e2e8f0',
+  },
+  dark: {
+    text: '#f8fafc',
+    textSecondary: '#cbd5e1',
+    textMuted: '#64748b',
+    background: '#0b0f17',
+    backgroundSelected: '#334155',
+    backgroundElement: '#1e293b',
+    card: '#1e293b',
+    primary: '#3b82f6',
+    tint: '#3b82f6',
+    icon: '#94a3b8',
+    tabIconDefault: '#94a3b8',
+    tabIconSelected: '#3b82f6',
+    border: '#334155',
+  },
+};
+
+export type ThemeColor = keyof typeof Colors.light;
+
+export const Spacing = {
+  half: 2,
+  one: 4,
+  two: 8,
+  three: 12,
+  four: 16,
+  five: 20,
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 40,
+};
+
+export const Fonts = {
+  regular: { fontWeight: '400' as const },
+  medium: { fontWeight: '500' as const },
+  semibold: { fontWeight: '600' as const },
+  bold: { fontWeight: '700' as const },
+  mono: 'monospace',
+};
+

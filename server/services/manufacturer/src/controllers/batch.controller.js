@@ -110,7 +110,19 @@ const runMintJob = async (batchId, manufacturerId, expiryDate, totalQuantity, me
             blockchainError:         bError,
             blockchainRecordedCount: mintResult.blockchainRecorded || 0,
             blockchainSubmittedAt:   mintResult.backendSubmitted ? new Date() : null,
+            publicKeyPem:            mintResult.publicKeyPem || null,
+            keyId:                   mintResult.keyId || null,
         });
+
+        if (mintResult.publicKeyPem) {
+            await Manufacturer.updateOne(
+                { manufacturerId },
+                {
+                    $addToSet: { publicKeys: mintResult.publicKeyPem },
+                    $set: { publicKeyPem: mintResult.publicKeyPem },
+                }
+            );
+        }
 
         job.status   = 'DONE';
         job.progress = 100;
@@ -294,7 +306,8 @@ export const createBatchController = async (req, res) => {
             batch.blockchainStatus        = bStatus;
             batch.blockchainError         = bError;
             batch.blockchainRecordedCount = mintResult.blockchainRecorded || 0;
-            batch.blockchainSubmittedAt   = mintResult.backendSubmitted ? new Date() : null;
+            batch.publicKeyPem            = mintResult.publicKeyPem || null;
+            batch.keyId                   = mintResult.keyId || null;
 
             if (bStatus === 'FAILED') {
                 batch.mintError = bError;
@@ -302,6 +315,16 @@ export const createBatchController = async (req, res) => {
             }
 
             await batch.save();
+
+            if (mintResult.publicKeyPem) {
+                await Manufacturer.updateOne(
+                    { manufacturerId: batch.manufacturerId },
+                    {
+                        $addToSet: { publicKeys: mintResult.publicKeyPem },
+                        $set: { publicKeyPem: mintResult.publicKeyPem },
+                    }
+                );
+            }
 
             console.log(`[manufacturer-service Batch] Batch ${systemBatchId} auto-minted: status ${bStatus} (${mintResult.totalPacks} packs).`);
         } catch (mintErr) {

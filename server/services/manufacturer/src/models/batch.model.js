@@ -129,6 +129,10 @@ const BatchSchema = new mongoose.Schema(
         blockchainError:         { type: String, default: null },
         blockchainRecordedCount: { type: Number, default: 0 },
         blockchainSubmittedAt:   { type: Date, default: null },
+
+        // ── Cryptographic Signing Key Reference ────────────────────────────────
+        publicKeyPem: { type: String, default: null },
+        keyId:        { type: String, default: null },
     },
     { timestamps: true },
 );

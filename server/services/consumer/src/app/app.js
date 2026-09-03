@@ -4,6 +4,7 @@ import morgan from 'morgan';
 
 import verifyRouter from '../routes/verify.routes.js';
 import reportRouter from '../routes/report.routes.js';
+import authRouter from '../routes/auth.routes.js';
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(morgan('dev'));
 // Consumer service is a stateless verification proxy.
 app.use('/api/consumer/verify', verifyRouter);
 app.use('/api/consumer/report', reportRouter);
+app.use('/api/consumer/auth', authRouter);
 
 // ── Health Probes ─────────────────────────────────────────────────────────────
 app.get('/healthz', (_req, res) => {

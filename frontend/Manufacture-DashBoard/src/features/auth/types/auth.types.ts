@@ -1,8 +1,8 @@
 import { ManufacturerProfile } from '../../../types';
 
-export type KYCStatus = 'APPROVED' | 'PENDING' | 'REJECTED';
+export type KYCStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'BLOCKED' | 'SUSPENDED';
 
-export type AuthViewMode = 'login' | 'register' | 'pending-kyc' | 'forgot-password';
+export type AuthViewMode = 'landing' | 'login' | 'register' | 'pending-kyc' | 'forgot-password';
 
 export interface KYCDocumentItem {
   id: string;
@@ -83,4 +83,6 @@ export interface AuthState {
   pendingLoginEmail: string | null;
   loading: boolean;
   error: string | null;
+  blockedReason?: string;
+  blockedAt?: string;
 }

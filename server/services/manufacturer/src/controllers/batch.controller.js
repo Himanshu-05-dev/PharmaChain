@@ -1,5 +1,13 @@
-import Batch, { MINT_STATUS } from '../models/batch.model.js';
-import { mintBatchViaPharmaCore, recallBatchViaPharmaCore, fetchBatchPreviewViaPharmaCore, fetchBatchCsvStreamViaPharmaCore } from '../services/coreClient.service.js';
+ import Batch, { MINT_STATUS } from '../models/batch.model.js';
+import Manufacturer from '../models/manufacturer.model.js';
+import axios from 'axios';
+import {
+    mintBatchViaPharmaCore,
+    recallBatchViaPharmaCore,
+    fetchBatchPreviewViaPharmaCore,
+    fetchBatchCsvStreamViaPharmaCore,
+    retryBlockchainViaPharmaCore,
+} from '../services/coreClient.service.js';
 import crypto from 'crypto';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -78,24 +86,43 @@ const runMintJob = async (batchId, manufacturerId, expiryDate, totalQuantity, me
         job.status   = 'UPLOADING';
         job.progress = 90;
 
+        const bStatus = mintResult.blockchainStatus || (mintResult.backendSubmitted ? 'COMMITTED' : 'FAILED');
+        const bError  = mintResult.blockchainError || (mintResult.backendSubmitted ? null : 'Blockchain submission failed or deferred');
+
         console.log(
             `[manufacturer-service Batch] pharma-core completed mint for ${batchId}:` +
             ` ${mintResult.totalPacks} packs | s3Mode: ${mintResult.s3Mode}` +
-            ` | blockchain: ${mintResult.backendSubmitted ? 'submitted' : 'deferred'}`,
+            ` | blockchain: ${bStatus}`,
         );
 
         // ── Step 2: Persist S3 artifact metadata on Batch document ────────────
         // This is the ONLY database write for the entire minting flow.
         // No Pack documents are inserted. MongoDB stays lean.
         await Batch.updateOne({ batchId }, {
-            mintStatus:       'MINTED',
-            mintedPacksCount: mintResult.totalPacks,
-            s3FileKey:        mintResult.s3FileKey,
-            s3DownloadUrl:    mintResult.s3DownloadUrl,
-            s3UrlExpiresAt:   mintResult.s3UrlExpiresAt || null,
-            s3Mode:           mintResult.s3Mode,
-            mintError:        null,
+            mintStatus:              'MINTED',
+            mintedPacksCount:        mintResult.totalPacks,
+            s3FileKey:               mintResult.s3FileKey,
+            s3DownloadUrl:           mintResult.s3DownloadUrl,
+            s3UrlExpiresAt:          mintResult.s3UrlExpiresAt || null,
+            s3Mode:                  mintResult.s3Mode,
+            mintError:               bStatus === 'FAILED' ? bError : null,
+            blockchainStatus:        bStatus,
+            blockchainError:         bError,
+            blockchainRecordedCount: mintResult.blockchainRecorded || 0,
+            blockchainSubmittedAt:   mintResult.backendSubmitted ? new Date() : null,
+            publicKeyPem:            mintResult.publicKeyPem || null,
+            keyId:                   mintResult.keyId || null,
         });
+
+        if (mintResult.publicKeyPem) {
+            await Manufacturer.updateOne(
+                { manufacturerId },
+                {
+                    $addToSet: { publicKeys: mintResult.publicKeyPem },
+                    $set: { publicKeyPem: mintResult.publicKeyPem },
+                }
+            );
+        }
 
         job.status   = 'DONE';
         job.progress = 100;
@@ -103,7 +130,7 @@ const runMintJob = async (batchId, manufacturerId, expiryDate, totalQuantity, me
         console.log(
             `[manufacturer-service Batch] ✅ S3 Mint complete — ${batchId}` +
             ` | ${mintResult.totalPacks} packs | ${mintResult.s3Mode === 'aws' ? '☁️  S3' : '💾 local'}` +
-            ` | blockchain: ${mintResult.backendSubmitted ? 'submitted' : 'deferred'}` +
+            ` | blockchain: ${bStatus}` +
             (mintResult.partialBlockchainSubmit ? ' (partial)' : ''),
         );
     } catch (err) {
@@ -113,6 +140,8 @@ const runMintJob = async (batchId, manufacturerId, expiryDate, totalQuantity, me
         await Batch.updateOne({ batchId }, {
             mintStatus: 'PENDING', // Reset to PENDING so operator can retry
             mintError:  err.message,
+            blockchainStatus: 'FAILED',
+            blockchainError: err.message,
         });
 
         console.error(`[manufacturer-service Batch] ❌ Mint job FAILED for ${batchId}:`, err.message);
@@ -263,17 +292,41 @@ export const createBatchController = async (req, res) => {
                 authToken: req.authToken,
             });
 
-            batch.mintStatus     = 'MINTED';
-            batch.s3FileKey      = mintResult.s3FileKey;
-            batch.s3DownloadUrl  = mintResult.s3DownloadUrl;
-            batch.s3UrlExpiresAt = mintResult.s3UrlExpiresAt || null;
-            batch.s3Mode         = mintResult.s3Mode || 'local';
-            batch.merkleRoot     = mintResult.merkleRoot || null;
-            batch.txHash         = mintResult.txHash || null;
-            batch.blockNumber    = mintResult.blockNumber || null;
+            const bStatus = mintResult.blockchainStatus || (mintResult.backendSubmitted ? 'COMMITTED' : 'FAILED');
+            const bError  = mintResult.blockchainError || (mintResult.backendSubmitted ? null : 'Blockchain submission failed or deferred');
+
+            batch.mintStatus              = 'MINTED';
+            batch.s3FileKey               = mintResult.s3FileKey;
+            batch.s3DownloadUrl           = mintResult.s3DownloadUrl;
+            batch.s3UrlExpiresAt          = mintResult.s3UrlExpiresAt || null;
+            batch.s3Mode                  = mintResult.s3Mode || 'local';
+            batch.merkleRoot              = mintResult.merkleRoot || null;
+            batch.txHash                  = mintResult.txHash || null;
+            batch.blockNumber             = mintResult.blockNumber || null;
+            batch.blockchainStatus        = bStatus;
+            batch.blockchainError         = bError;
+            batch.blockchainRecordedCount = mintResult.blockchainRecorded || 0;
+            batch.publicKeyPem            = mintResult.publicKeyPem || null;
+            batch.keyId                   = mintResult.keyId || null;
+
+            if (bStatus === 'FAILED') {
+                batch.mintError = bError;
+                console.warn(`[manufacturer-service Batch] ⚠️ Batch ${systemBatchId} minted with Blockchain status FAILED: ${bError}`);
+            }
+
             await batch.save();
 
-            console.log(`[manufacturer-service Batch] Batch ${systemBatchId} auto-minted to MINTED state successfully.`);
+            if (mintResult.publicKeyPem) {
+                await Manufacturer.updateOne(
+                    { manufacturerId: batch.manufacturerId },
+                    {
+                        $addToSet: { publicKeys: mintResult.publicKeyPem },
+                        $set: { publicKeyPem: mintResult.publicKeyPem },
+                    }
+                );
+            }
+
+            console.log(`[manufacturer-service Batch] Batch ${systemBatchId} auto-minted: status ${bStatus} (${mintResult.totalPacks} packs).`);
         } catch (mintErr) {
             console.warn(`[manufacturer-service Batch] Auto-mint direct notice: ${mintErr.message}, running background mint`);
             try {
@@ -429,7 +482,21 @@ export const getPublicBatchDetailsController = async (req, res) => {
             return res.status(404).json({ code: 'BATCH_NOT_FOUND', message: `No batch found for ID: ${batchId}` });
         }
 
-        return res.status(200).json({ status: 'success', data: batch });
+        const batchData = batch.toObject ? batch.toObject() : { ...batch };
+        try {
+            const mfr = await Manufacturer.findOne({ manufacturerId: batch.manufacturerId })
+                .select('publicKeyPem keyId companyName')
+                .lean();
+            if (mfr) {
+                batchData.manufacturerPublicKeyPem = mfr.publicKeyPem || null;
+                batchData.manufacturerKeyId = mfr.keyId || null;
+                batchData.manufacturerName = mfr.companyName || batch.manufacturerId;
+            }
+        } catch {
+            // non-fatal enrichment
+        }
+
+        return res.status(200).json({ status: 'success', data: batchData });
     } catch (error) {
         console.error('[manufacturer-service Batch] getPublicBatchDetailsController error:', error.message);
         return res.status(500).json({ code: 'GET_ERROR', message: error.message });
@@ -595,7 +662,7 @@ export const exportBatchCsvController = async (req, res) => {
             return res.status(404).json({ code: 'BATCH_NOT_FOUND', message: `Batch ${batchId} not found` });
         }
 
-        if (batch.mintStatus !== 'MINTED') {
+        if (batch.mintStatus !== 'MINTED' && batch.mintStatus !== 'RECALLED') {
             return res.status(400).json({
                 code:    'BATCH_NOT_MINTED',
                 message: `Cannot export QR CSV: Batch is currently in "${batch.mintStatus}" status. Batch must be MINTED first.`,
@@ -665,34 +732,41 @@ export const exportBatchCsvController = async (req, res) => {
         }
 
         // ── 3. EXPORT INDIVIDUAL PACKS CSV (Default) ─────────────────────────
-        // S3 Pipeline: Stream the complete signed CSV directly to the caller.
-        if (batch.s3Mode === 'local' || !batch.s3DownloadUrl || batch.s3DownloadUrl.includes(':4000')) {
+        const filename = `${sysBatchId}_PACKS_${batch.totalQuantity}.csv`;
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+
+        // Priority 1: Stream directly from S3 if configured and URL exists
+        const isExternalS3 = batch.s3DownloadUrl &&
+                             batch.s3DownloadUrl.startsWith('http') &&
+                             !batch.s3DownloadUrl.includes('localhost') &&
+                             !batch.s3DownloadUrl.includes('127.0.0.1');
+
+        if (isExternalS3) {
             try {
-                const coreStream = await fetchBatchCsvStreamViaPharmaCore(batch.batchId, req.authToken);
-                const filename = `${sysBatchId}_PACKS_${batch.totalQuantity}.csv`;
-                res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-                return coreStream.data.pipe(res);
-            } catch (streamErr) {
-                console.warn(`[manufacturer-service Batch] Core CSV stream notice: ${streamErr.message}, falling back to redirect`);
+                console.log(`[manufacturer-service Batch] Streaming S3 CSV directly for ${sysBatchId}`);
+                const s3Response = await axios.get(batch.s3DownloadUrl, { responseType: 'stream', timeout: 30000 });
+                return s3Response.data.pipe(res);
+            } catch (s3Err) {
+                console.warn(`[manufacturer-service Batch] S3 stream notice: ${s3Err.message}, falling back to pharma-core stream`);
             }
         }
 
-        if (!batch.s3DownloadUrl) {
-            return res.status(404).json({
-                code:    'CSV_NOT_AVAILABLE',
-                message: `Pack CSV is not yet available for batch ${batchId}. ` +
-                         `Ensure the batch has been minted (current status: ${batch.mintStatus}).`,
-            });
+        // Priority 2: Stream from pharma-core
+        try {
+            console.log(`[manufacturer-service Batch] Streaming pharma-core CSV directly for ${sysBatchId}`);
+            const coreStream = await fetchBatchCsvStreamViaPharmaCore(batch.batchId, req.authToken, batch.s3FileKey);
+            return coreStream.data.pipe(res);
+        } catch (streamErr) {
+            console.warn(`[manufacturer-service Batch] Core CSV stream notice: ${streamErr.message}`);
         }
 
-        // Log the redirect for audit trail
-        console.log(
-            `[manufacturer-service Batch] CSV export redirect — ${sysBatchId}` +
-            ` → ${batch.s3Mode === 'aws' ? '☁️ S3' : '💾 local'}: ${batch.s3DownloadUrl.slice(0, 80)}...`,
-        );
-
-        return res.redirect(302, batch.s3DownloadUrl);
+        return res.status(404).json({
+            code:    'CSV_NOT_AVAILABLE',
+            message: `Pack CSV is not available for batch ${batchId}. ` +
+                     `Ensure the batch has been minted (current status: ${batch.mintStatus}).`,
+        });
     } catch (error) {
         console.error('[manufacturer-service Batch] exportBatchCsvController error:', error.message);
         if (!res.headersSent) {
@@ -871,13 +945,23 @@ export const previewBatchPacksController = async (req, res) => {
 
         // ── 4. Proxy preview request to pharma-core ───────────────────────────
         // pharma-core reads the CSV (local or S3), parses it, paginates, returns JSON.
-        const previewData = await fetchBatchPreviewViaPharmaCore({
-            batchId:   batch.batchId,
-            s3FileKey: batch.s3FileKey,
-            page,
-            limit,
-            search,
-        });
+        let previewData;
+        try {
+            previewData = await fetchBatchPreviewViaPharmaCore({
+                batchId:   batch.batchId,
+                s3FileKey: batch.s3FileKey,
+                page,
+                limit,
+                search,
+            });
+        } catch (previewErr) {
+            console.warn(`[manufacturer-service Batch] Preview fetch warning for ${batchId}: ${previewErr.message}`);
+            previewData = {
+                stats: { totalPacks: batch.totalQuantity || 0, filteredPacks: 0, csvSizeBytes: 0 },
+                meta:  { page, limit, pages: 1, total: 0 },
+                packs: [],
+            };
+        }
 
         // ── 5. Enrich with full batch metadata for dashboard ──────────────────
         return res.status(200).json({
@@ -934,5 +1018,77 @@ export const previewBatchPacksController = async (req, res) => {
         }
 
         return res.status(500).json({ code: 'PREVIEW_ERROR', message: error.message });
+    }
+};
+
+/**
+ * POST /api/manufacturer/batch/:batchId/retry-blockchain
+ *
+ * Allows a manufacturer to re-trigger blockchain submission for an already minted batch
+ * without modifying or invalidating existing cryptographic signatures or CSV files.
+ */
+export const retryBlockchainBatchController = async (req, res) => {
+    try {
+        const { batchId } = req.params;
+        const manufacturerId = req.user.id;
+
+        const batch = await Batch.findOne({
+            manufacturerId,
+            $or: [
+                { batchId },
+                { systemBatchId: batchId },
+                { manufacturerBatchNumber: batchId },
+            ],
+        });
+
+        if (!batch) {
+            return res.status(404).json({
+                code: 'BATCH_NOT_FOUND',
+                message: `Batch ${batchId} not found`,
+            });
+        }
+
+        if (batch.mintStatus !== 'MINTED') {
+            return res.status(400).json({
+                code: 'BATCH_NOT_MINTED',
+                message: `Batch ${batchId} has not been minted yet (status: ${batch.mintStatus})`,
+            });
+        }
+
+        console.log(`[manufacturer-service Batch] Retrying blockchain commit for batch ${batch.systemBatchId}...`);
+
+        const result = await retryBlockchainViaPharmaCore({
+            batchId: batch.batchId,
+            manufacturerId: batch.manufacturerId,
+            s3FileKey: batch.s3FileKey,
+            authToken: req.authToken,
+        });
+
+        batch.blockchainStatus        = 'COMMITTED';
+        batch.blockchainError         = null;
+        batch.mintError               = null;
+        batch.blockchainRecordedCount = result.blockchainRecorded || batch.totalQuantity;
+        batch.blockchainSubmittedAt   = new Date();
+        await batch.save();
+
+        console.log(`[manufacturer-service Batch] ✅ Blockchain retry successful for ${batch.systemBatchId}`);
+
+        return res.status(200).json({
+            status: 'success',
+            message: `Batch ${batch.systemBatchId} successfully committed to Hyperledger Fabric.`,
+            data: {
+                batchId:                 batch.batchId,
+                systemBatchId:           batch.systemBatchId,
+                blockchainStatus:        batch.blockchainStatus,
+                blockchainRecordedCount: batch.blockchainRecordedCount,
+                syncedAt:                batch.blockchainSubmittedAt,
+            },
+        });
+    } catch (error) {
+        console.error('[manufacturer-service Batch] retryBlockchainBatchController error:', error.message);
+        return res.status(500).json({
+            code: 'RETRY_BLOCKCHAIN_FAILED',
+            message: error.response?.data?.message || error.message,
+        });
     }
 };

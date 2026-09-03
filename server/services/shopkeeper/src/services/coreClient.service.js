@@ -55,16 +55,22 @@ export const getPackStatus = async (packHash, batchId, authToken) => {
 
 /**
  * Records an INTAKE transition on Fabric via pharma-core.
- * @param {Object} params - { packHash, shopId, operatorId, manufacturerId, authToken }
+ * @param {Object} params - { packHash, shopId, operatorId, manufacturerId, shopName, licenseNumber, location, latitude, longitude, timestamp, authToken }
  * @returns {Promise<Object>}
  */
-export const recordIntake = async ({ packHash, shopId, operatorId, manufacturerId, authToken }) => {
+export const recordIntake = async ({ packHash, shopId, operatorId, manufacturerId, shopName, licenseNumber, location, latitude, longitude, timestamp, authToken }) => {
     try {
         const response = await getCoreClient(authToken).post('/core/chain/intake', {
             packHash,
             shopId,
             operatorId,
             manufacturerId,
+            shopName,
+            licenseNumber,
+            location,
+            latitude,
+            longitude,
+            timestamp,
         });
         console.log(`[shopkeeper-service CoreClient] Intake recorded on chain for packHash: ${packHash}`);
         return response.data;
@@ -76,17 +82,23 @@ export const recordIntake = async ({ packHash, shopId, operatorId, manufacturerI
 
 /**
  * Records a SALE transition on Fabric via pharma-core.
- * @param {Object} params - { packHash, shopId, operatorId, authToken }
+ * @param {Object} params - { packHash, shopId, operatorId, shopName, licenseNumber, location, latitude, longitude, timestamp, authToken }
  * @returns {Promise<Object>}
  */
-export const recordSale = async ({ packHash, shopId, operatorId, authToken }) => {
+export const recordSale = async ({ packHash, shopId, operatorId, shopName, licenseNumber, location, latitude, longitude, timestamp, authToken }) => {
     try {
         const response = await getCoreClient(authToken).post('/core/chain/sale', {
             packHash,
             shopId,
             operatorId,
+            shopName,
+            licenseNumber,
+            location,
+            latitude,
+            longitude,
+            timestamp,
         });
-        console.log(`[shopkeeper-service CoreClient] Sale recorded on chain for packHash: ${packHash}`);
+        console.log(`[shopkeeper-service CoreClient] Sale recorded on chain for packHash: ${packHash} (Shop: ${shopName || shopId})`);
         return response.data;
     } catch (err) {
         console.warn(`[shopkeeper-service CoreClient] Fabric sale call deferred: ${err.message}`);

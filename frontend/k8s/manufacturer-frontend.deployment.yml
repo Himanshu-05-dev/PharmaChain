@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: manufacturer-frontend-deployment
+  labels:
+    app: manufacturer-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: manufacturer-frontend
+  template:
+    metadata:
+      labels:
+        app: manufacturer-frontend
+    spec:
+      containers:
+      - name: manufacturer-frontend-container
+        image: manufacturer-dashboard
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        ports:
+        - containerPort: 5173
+          name: mfr-ui-http
+        env:
+        - name: VITE_BACKEND_SERVER_URL
+          value: "http://manufacturer-service:80"
+        - name: VITE_CORE_SERVER_URL
+          value: "http://pharma-core-service:80"

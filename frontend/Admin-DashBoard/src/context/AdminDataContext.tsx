@@ -16,8 +16,11 @@ interface AdminDataContextType {
   auditLogs: AuditLogEntry[];
   isLoading: boolean;
   refreshData: () => Promise<void>;
+  getManufacturerById: (id: string) => Promise<ManufacturerRecord>;
   approveManufacturer: (id: string) => Promise<{ publicKeyPem: string }>;
   rejectManufacturer: (id: string, reason: string) => Promise<void>;
+  blockManufacturer: (id: string, reason: string) => Promise<void>;
+  unblockManufacturer: (id: string) => Promise<void>;
   approveShopkeeper: (id: string) => Promise<void>;
   rejectShopkeeper: (id: string, reason: string) => Promise<void>;
   suspendShopkeeper: (id: string, reason: string) => Promise<void>;
@@ -59,6 +62,13 @@ export const AdminDataProvider: React.FC<{ children: ReactNode }> = ({ children 
     refreshData();
   }, [refreshData]);
 
+  // ── Manufacturer Live API Lookup ──────────────────────────────────────────
+  const getManufacturerById = async (id: string): Promise<ManufacturerRecord> => {
+    console.log(`[AdminDataContext] Fetching live manufacturer details via API for ID: ${id}`);
+    const data = await api.getManufacturerById(id);
+    return data;
+  };
+
   // ── Approvals & Rejections ──────────────────────────────────────────────────
   const approveManufacturer = async (id: string): Promise<{ publicKeyPem: string }> => {
     if (!user) throw new Error('Not authenticated');
@@ -96,6 +106,46 @@ export const AdminDataProvider: React.FC<{ children: ReactNode }> = ({ children 
         type: 'error',
         title: 'Rejection Failed',
         message: err.message || 'Could not update status.',
+      });
+      throw err;
+    }
+  };
+
+  const blockManufacturer = async (id: string, reason: string) => {
+    if (!user) throw new Error('Not authenticated');
+    try {
+      const res = await api.blockManufacturer(id, reason, user);
+      showToast({
+        type: 'error',
+        title: 'Manufacturer Account Blocked',
+        message: `${res.manufacturer.companyName} has been blocked and restricted from batch operations.`,
+      });
+      await refreshData();
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        title: 'Block Action Failed',
+        message: err.message || 'Could not block manufacturer account.',
+      });
+      throw err;
+    }
+  };
+
+  const unblockManufacturer = async (id: string) => {
+    if (!user) throw new Error('Not authenticated');
+    try {
+      const res = await api.unblockManufacturer(id, user);
+      showToast({
+        type: 'success',
+        title: 'Manufacturer Account Unblocked',
+        message: `${res.manufacturer.companyName} access and signing capabilities have been restored.`,
+      });
+      await refreshData();
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        title: 'Unblock Failed',
+        message: err.message || 'Could not restore manufacturer account access.',
       });
       throw err;
     }
@@ -170,8 +220,11 @@ export const AdminDataProvider: React.FC<{ children: ReactNode }> = ({ children 
         auditLogs,
         isLoading,
         refreshData,
+        getManufacturerById,
         approveManufacturer,
         rejectManufacturer,
+        blockManufacturer,
+        unblockManufacturer,
         approveShopkeeper,
         rejectShopkeeper,
         suspendShopkeeper,

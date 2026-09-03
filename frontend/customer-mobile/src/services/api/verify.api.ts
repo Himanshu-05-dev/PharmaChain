@@ -8,6 +8,8 @@ export const mapBackendUIStateToStatus = (uiState: BackendUIState): Verification
   switch (uiState) {
     case 'GENUINE':
       return 'AUTHENTIC';
+    case 'PURCHASED_RECENTLY':
+      return 'AUTHENTIC_SOLD';
     case 'AT_SHOP':
       return 'AUTHENTIC_AVAILABLE';
     case 'ALREADY_SOLD':
@@ -50,22 +52,37 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
     const uiState: BackendUIState = data.uiState || (data.valid ? 'GENUINE' : 'COUNTERFEIT');
     const status = mapBackendUIStateToStatus(uiState);
     const isValid = data.valid !== false && uiState !== 'COUNTERFEIT' && uiState !== 'NOT_FOUND';
-
     const payload = data.payload || {};
+    const med = data.medicine || {};
+    const batch = data.batch || {};
+    const hasValidPayload = Boolean(payload && Object.keys(payload).length > 0 && (payload.batchId || payload.medicineName || med.medicineName));
+
     const medicineName =
+      med.medicineName ||
+      batch.medicineName ||
       payload.medicineName ||
       payload.name ||
-      (data.packHash ? `Verified Pack (${data.packHash.substring(0, 8)})` : 'Verified Formulation');
+      (hasValidPayload
+        ? (data.packHash ? `Verified Pack (${data.packHash.substring(0, 8)})` : 'Verified Formulation')
+        : 'Unverified QR Code');
 
-    const batchId = payload.batchId || 'BATCH-LIVE-001';
-    const expiryDate = payload.expiryDate || 'N/A';
-    const manufacturingDate = payload.mfgDate || payload.manufacturingDate || '2026-08-01';
+    const genericName = med.genericName || batch.genericName || payload.genericName || medicineName;
+    const brandName = med.brandName || batch.brandName || payload.brandName || null;
+    const dosage = med.dosage || batch.dosage || payload.dosage || 'Standard Formulation';
+    const composition = med.composition || batch.composition || null;
+    const drugSchedule = med.drugSchedule || batch.drugSchedule || null;
+    const storageCondition = med.storageCondition || batch.storageConditions || null;
+    const productionSite = med.productionSite || batch.productionSite || null;
+
+    const batchId = med.batchId || batch.batchId || payload.batchId || (hasValidPayload ? 'BATCH-LIVE-001' : 'N/A');
+    const expiryDate = med.expiryDate || batch.expiryDate || payload.expiryDate || 'N/A';
+    const manufacturingDate = med.manufacturingDate || batch.manufacturingDate || payload.mfgDate || payload.manufacturingDate || (hasValidPayload ? '2026-08-01' : 'N/A');
 
     return {
       success: isValid,
       status,
       uiState,
-      message: data.message || 'Verification complete',
+      message: data.message || (isValid ? 'Verification complete' : 'Invalid or unrecognized QR code'),
       valid: data.valid,
       packHash: data.packHash,
       scannedHash: data.scannedHash,
@@ -73,29 +90,58 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
       detail: data.detail,
       payload,
       pack: {
-        packId: data.packHash || payload.serial || 'PACK-SERIAL',
+        packId: data.packHash || payload.serial || (isValid ? 'PACK-SERIAL' : 'N/A'),
         medicineName,
+        genericName,
+        brandName,
         batchId,
         manufacturingDate,
         expiryDate,
-        dosage: payload.dosage,
+        dosage,
+        composition,
+        drugSchedule,
+        storageCondition,
         serial: payload.serial,
       },
       manufacturer: {
-        name: payload.manufacturerId || 'Verified CDSCO Manufacturer',
-        id: payload.manufacturerId,
+        name: med.manufacturerName || batch.manufacturerName || payload.manufacturerId || (hasValidPayload ? 'Verified CDSCO Manufacturer' : 'Unknown / Unregistered'),
+        id: payload.manufacturerId || null,
+        productionSite,
+        licenseNumber: med.mfgLicenseNumber || batch.manufacturingLicenseNo || null,
       },
+      isRecentlySold: data.isRecentlySold ?? (uiState === 'PURCHASED_RECENTLY'),
+      hoursSinceSale: data.hoursSinceSale ?? null,
+      daysSinceSale: data.daysSinceSale ?? null,
+      dispensingShop: data.dispensingShop || (data.detail ? {
+        shopId: data.detail.sellerId || null,
+        name: data.detail.shopName || null,
+        licenseNumber: data.detail.licenseNumber || null,
+        location: data.detail.location || null,
+        latitude: data.detail.latitude || null,
+        longitude: data.detail.longitude || null,
+        address: data.detail.address || null,
+        phone: data.detail.phone || null,
+        sellingDate: data.detail.sellingDate || null,
+        sellingTime: data.detail.sellingTime || null,
+        timestamp: data.detail.timestamp || null,
+        formattedSaleTime: data.detail.formattedSaleTime || null,
+        relativeSaleTime: data.detail.relativeSaleTime || null,
+        isRecentSale: uiState === 'PURCHASED_RECENTLY',
+      } : null),
       shop: {
-        name: data.detail?.shopName || 'Registered Pharmacy Partner',
+        name: data.dispensingShop?.name || data.detail?.shopName || 'Registered Pharmacy Partner',
+        licenseNumber: data.dispensingShop?.licenseNumber || data.detail?.licenseNumber || null,
+        location: data.dispensingShop?.location || data.detail?.location || null,
       },
       transaction: {
         status: data.blockchainStatus || uiState,
-        saleTime: data.detail?.timestamp || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        saleTime: data.dispensingShop?.formattedSaleTime || data.dispensingShop?.relativeSaleTime || data.dispensingShop?.timestamp || data.detail?.timestamp || (data.dispensingShop?.sellingDate ? `${data.dispensingShop.sellingDate} ${data.dispensingShop.sellingTime || ''}` : null) || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        location: data.dispensingShop?.location || data.detail?.location || null,
       },
       risk: {
-        level: uiState === 'GENUINE' || uiState === 'AT_SHOP' ? 'Low' : uiState === 'ALREADY_SOLD' ? 'Medium' : 'High',
-        score: uiState === 'GENUINE' ? 98 : uiState === 'AT_SHOP' ? 95 : uiState === 'ALREADY_SOLD' ? 60 : 15,
-        qrDuplicationSuspected: uiState === 'ALREADY_SOLD' || uiState === 'COUNTERFEIT',
+        level: uiState === 'GENUINE' || uiState === 'PURCHASED_RECENTLY' || uiState === 'AT_SHOP' ? 'Low' : uiState === 'ALREADY_SOLD' ? 'Medium' : 'High',
+        score: uiState === 'GENUINE' ? 98 : uiState === 'PURCHASED_RECENTLY' ? 96 : uiState === 'AT_SHOP' ? 95 : uiState === 'ALREADY_SOLD' ? 60 : 15,
+        qrDuplicationSuspected: uiState === 'COUNTERFEIT',
       },
     };
   } catch (error: any) {
@@ -114,7 +160,11 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
         success: fbData.valid !== false,
         status,
         uiState,
-        message: fbData.message || 'Verification complete',
+        isRecentlySold: fbData.isRecentlySold ?? (uiState === 'PURCHASED_RECENTLY'),
+        hoursSinceSale: fbData.hoursSinceSale ?? null,
+        daysSinceSale: fbData.daysSinceSale ?? null,
+        dispensingShop: fbData.dispensingShop || null,
+        message: fbData.message || (fbData.valid ? 'Verification complete' : 'Verification failed'),
         valid: fbData.valid,
         packHash: fbData.packHash,
         blockchainStatus: fbData.ledgerStatus || uiState,
@@ -130,10 +180,20 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
           name: payload.manufacturerId || 'Verified Manufacturer',
           id: payload.manufacturerId,
         },
+        shop: {
+          name: fbData.dispensingShop?.name || 'Registered Pharmacy Partner',
+          licenseNumber: fbData.dispensingShop?.licenseNumber || null,
+          location: fbData.dispensingShop?.location || null,
+        },
+        transaction: {
+          status: fbData.ledgerStatus || uiState,
+          saleTime: fbData.dispensingShop?.formattedSaleTime || fbData.dispensingShop?.relativeSaleTime || null,
+          location: fbData.dispensingShop?.location || null,
+        },
         risk: {
-          level: uiState === 'GENUINE' ? 'Low' : 'High',
-          score: uiState === 'GENUINE' ? 96 : 30,
-          qrDuplicationSuspected: uiState === 'ALREADY_SOLD' || uiState === 'COUNTERFEIT',
+          level: uiState === 'GENUINE' || uiState === 'PURCHASED_RECENTLY' || uiState === 'AT_SHOP' ? 'Low' : uiState === 'ALREADY_SOLD' ? 'Medium' : 'High',
+          score: uiState === 'GENUINE' ? 98 : uiState === 'PURCHASED_RECENTLY' ? 96 : uiState === 'AT_SHOP' ? 95 : uiState === 'ALREADY_SOLD' ? 60 : 15,
+          qrDuplicationSuspected: uiState === 'COUNTERFEIT',
         },
       };
     } catch (fallbackError: any) {

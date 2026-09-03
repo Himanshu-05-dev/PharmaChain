@@ -9,7 +9,6 @@ import {
   StatusBar,
   FlatList,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -17,9 +16,18 @@ import {
   AlertTriangle,
   ShieldAlert,
   Package,
+  Clock,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Hash,
+  Filter,
+  ChevronRight,
+  Sparkles,
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getHistory } from '../../src/services/api/shopkeeper';
+import { PharmaTheme } from '../../src/constants/theme';
+import { SkeletonHistoryCard } from '../../src/components/common/Skeleton';
 
 const TABS = ['All', 'Verified', 'Suspicious', 'Counterfeit'] as const;
 
@@ -65,73 +73,108 @@ export default function TransactionsScreen() {
       : historyList.filter((item) => item.status === activeTab);
   }, [historyList, activeTab]);
 
-  const renderItem = ({ item }: { item: any }) => {
-    const isVerified = item.status === 'Verified' || item.status === 'Stock Received' || item.action === 'RECEIVE';
+  const renderItem = ({ item, index }: { item: any; index: number }) => {
+    const isVerified =
+      item.status === 'Verified' ||
+      item.status === 'Stock Received' ||
+      item.action === 'RECEIVE';
     const isSuspicious = item.status === 'Suspicious' || item.status === 'Duplicate';
 
     return (
-      <TouchableOpacity
-        style={styles.historyCard}
-        onPress={() => {
-          if (item.packId) {
-            router.push({ pathname: '/verification', params: { qrData: item.packId, mode: 'VERIFY' } });
-          }
-        }}
-        activeOpacity={0.75}
-      >
-        <View
-          style={[
-            styles.iconWrapper,
-            isVerified
-              ? { backgroundColor: '#f0fdfa' }
-              : isSuspicious
-              ? { backgroundColor: '#fffbeb' }
-              : { backgroundColor: '#fef2f2' },
-          ]}
-        >
-          {isVerified ? (
-            <ShieldCheck color="#0f766e" size={20} />
-          ) : isSuspicious ? (
-            <AlertTriangle color="#d97706" size={20} />
-          ) : (
-            <ShieldAlert color="#dc2626" size={20} />
-          )}
-        </View>
-        <View style={styles.infoWrapper}>
-          <Text style={styles.medicineName}>{item.name || item.medicineName || 'Medicine Pack'}</Text>
-          <Text style={styles.timeText}>
-            Action: {item.action || 'SCAN'} • Batch: {item.batch || item.batchNo || 'N/A'} • {item.time || 'Recently'}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.statusPill,
-            isVerified
-              ? { backgroundColor: '#f0fdfa', borderColor: '#ccfbf1' }
-              : isSuspicious
-              ? { backgroundColor: '#fffbeb', borderColor: '#fef3c7' }
-              : { backgroundColor: '#fef2f2', borderColor: '#fee2e2' },
-          ]}
-        >
-          <Text
+      <View style={styles.timelineItemWrapper}>
+        {/* Timeline Indicator Column */}
+        <View style={styles.timelineTrackCol}>
+          <View
             style={[
-              styles.statusText,
+              styles.timelineNodeDot,
               isVerified
-                ? { color: '#0f766e' }
+                ? { backgroundColor: '#10b981', borderColor: '#a7f3d0' }
                 : isSuspicious
-                ? { color: '#d97706' }
-                : { color: '#dc2626' },
+                ? { backgroundColor: '#f59e0b', borderColor: '#fde68a' }
+                : { backgroundColor: '#ef4444', borderColor: '#fecaca' },
+            ]}
+          />
+          {index < filteredData.length - 1 && <View style={styles.timelineVerticalLine} />}
+        </View>
+
+        {/* Transaction Glass Card */}
+        <TouchableOpacity
+          style={styles.historyGlassCard}
+          onPress={() => {
+            if (item.packId) {
+              router.push({ pathname: '/verification', params: { qrData: item.packId, mode: 'VERIFY' } });
+            }
+          }}
+          activeOpacity={0.8}
+        >
+          <View
+            style={[
+              styles.iconWrapper,
+              isVerified
+                ? { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }
+                : isSuspicious
+                ? { backgroundColor: '#fffbeb', borderColor: '#fde68a' }
+                : { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
             ]}
           >
-            {item.status || 'Verified'}
-          </Text>
-        </View>
-      </TouchableOpacity>
+            {isVerified ? (
+              <ShieldCheck color="#059669" size={20} />
+            ) : isSuspicious ? (
+              <AlertTriangle color="#d97706" size={20} />
+            ) : (
+              <ShieldAlert color="#dc2626" size={20} />
+            )}
+          </View>
+
+          <View style={styles.infoWrapper}>
+            <View style={styles.titleRow}>
+              <Text style={styles.medicineNameText} numberOfLines={1}>
+                {item.name || item.medicineName || 'Pharmaceutical Unit'}
+              </Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  isVerified
+                    ? { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }
+                    : isSuspicious
+                    ? { backgroundColor: '#fffbeb', borderColor: '#fde68a' }
+                    : { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    isVerified
+                      ? { color: '#059669' }
+                      : isSuspicious
+                      ? { color: '#d97706' }
+                      : { color: '#dc2626' },
+                  ]}
+                >
+                  {item.status || 'Verified'}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.metaText}>
+              Action: <Text style={{ fontWeight: '800', color: '#0f172a' }}>{item.action || 'SCAN'}</Text> • Batch: <Text style={styles.batchMonoText}>{item.batch || item.batchNo || 'N/A'}</Text>
+            </Text>
+
+            <View style={styles.timeRow}>
+              <Clock size={11} color="#94a3b8" style={{ marginRight: 4 }} />
+              <Text style={styles.timeText}>{item.time || 'Recently Logged'}</Text>
+            </View>
+          </View>
+          <ChevronRight size={16} color="#cbd5e1" style={{ marginLeft: 6 }} />
+        </TouchableOpacity>
+      </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      {/* Header Bar */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => {
@@ -139,13 +182,15 @@ export default function TransactionsScreen() {
             else router.replace('/(shopkeeper)/dashboard');
           }}
           style={styles.iconButton}
+          activeOpacity={0.8}
         >
-          <ArrowLeft color="#0f172a" size={24} />
+          <ArrowLeft color="#0f172a" size={20} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Scan History & Audit Trail</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>Custody & Audit Ledger</Text>
+        <View style={{ width: 38 }} />
       </View>
 
+      {/* Filter Tabs */}
       <View style={styles.tabContainer}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab;
@@ -159,6 +204,7 @@ export default function TransactionsScreen() {
               key={tab}
               style={[styles.tabButton, isActive && styles.activeTabButton]}
               onPress={() => setActiveTab(tab)}
+              activeOpacity={0.8}
             >
               <Text style={[styles.tabText, isActive && styles.activeTabText]}>
                 {tab} ({count})
@@ -168,10 +214,12 @@ export default function TransactionsScreen() {
         })}
       </View>
 
+      {/* Content Stream */}
       {loading && !refreshing ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#0f766e" />
-          <Text style={styles.loadingText}>Fetching transaction logs...</Text>
+        <View style={{ padding: 16 }}>
+          <SkeletonHistoryCard />
+          <SkeletonHistoryCard />
+          <SkeletonHistoryCard />
         </View>
       ) : (
         <FlatList
@@ -181,14 +229,21 @@ export default function TransactionsScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0f766e']} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[PharmaTheme.colors.primary]}
+              tintColor={PharmaTheme.colors.primary}
+            />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Package size={48} color="#cbd5e1" />
-              <Text style={styles.emptyTitle}>No transaction logs found</Text>
+              <View style={styles.emptyIconCircle}>
+                <Package size={32} color="#94a3b8" />
+              </View>
+              <Text style={styles.emptyTitle}>No Transaction Records</Text>
               <Text style={styles.emptySubtitle}>
-                Scans and sales recorded in your shop will be logged here.
+                Inbound intake scans and point-of-sale dispenses recorded in your store will appear in this ledger.
               </Text>
             </View>
           }
@@ -215,11 +270,18 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f1f5f9',
   },
   iconButton: {
-    padding: 4,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#0f172a',
   },
   tabContainer: {
@@ -232,17 +294,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tabButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
     borderRadius: 20,
     backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   activeTabButton: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
   },
   tabText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#64748b',
   },
   activeTabText: {
@@ -250,75 +315,124 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    gap: 10,
+    paddingBottom: 110,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  timelineItemWrapper: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  timelineTrackCol: {
+    width: 24,
     alignItems: 'center',
-    padding: 24,
+    marginRight: 8,
+    paddingTop: 16,
   },
-  loadingText: {
-    fontSize: 13,
-    color: '#64748b',
-    marginTop: 10,
+  timelineNodeDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2.5,
+    zIndex: 2,
   },
-  historyCard: {
+  timelineVerticalLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: '#e2e8f0',
+    marginTop: 4,
+    marginBottom: -16,
+  },
+  historyGlassCard: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    borderRadius: 14,
+    borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowRadius: 6,
+    elevation: 2,
   },
   iconWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    borderWidth: 1,
   },
   infoWrapper: {
     flex: 1,
   },
-  medicineName: {
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 3,
+  },
+  medicineNameText: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#0f172a',
+    flex: 1,
+    marginRight: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 7,
+    borderWidth: 1,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  metaText: {
+    fontSize: 11.5,
+    color: '#64748b',
+    marginTop: 1,
+  },
+  batchMonoText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    color: '#0f172a',
+    fontWeight: '700',
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
   },
   timeText: {
     fontSize: 11,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  statusPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: 'bold',
+    color: '#94a3b8',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 48,
     paddingHorizontal: 24,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  emptyIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#0f172a',
-    marginTop: 12,
   },
   emptySubtitle: {
     fontSize: 12,

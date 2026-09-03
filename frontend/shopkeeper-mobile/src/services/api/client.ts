@@ -4,23 +4,32 @@ import { Platform } from 'react-native';
 import { getToken, saveToken, clearAllAuthData, SECURE_KEYS } from '../storage/secureStorage';
 
 const getBaseUrl = () => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
   const hostUri =
     Constants.expoConfig?.hostUri ||
     (Constants as any).manifest?.debuggerHost ||
     (Constants as any).manifest2?.extra?.expoClient?.hostUri;
+  let host = '10.209.231.191';
   if (hostUri) {
-    const host = hostUri.split(':')[0];
-    if (host && host !== 'localhost' && host !== '127.0.0.1') {
-      return `http://${host}:3002`;
+    const extracted = hostUri.split(':')[0];
+    if (extracted && extracted !== 'localhost' && extracted !== '127.0.0.1') {
+      host = extracted;
     }
+  } else if (Platform.OS === 'android') {
+    host = '10.0.2.2';
   }
+
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    let url = process.env.EXPO_PUBLIC_API_URL;
+    if (Platform.OS !== 'web' && (url.includes('localhost') || url.includes('127.0.0.1'))) {
+      url = url.replace(/localhost|127\.0\.0\.1/g, host);
+    }
+    return url;
+  }
+
   if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:3002';
+    return 'http://10.0.2.2';
   }
-  return 'http://192.168.1.9:3002';
+  return `http://${host}`;
 };
 
 export const API_URL = getBaseUrl();
@@ -36,7 +45,13 @@ export const apiClient = axios.create({
 // Request Interceptor: Attach Access Token
 apiClient.interceptors.request.use(
   async (config) => {
-    const token = (await getToken(SECURE_KEYS.ACCESS_TOKEN)) || (await getToken(SECURE_KEYS.LEGACY_TOKEN));
+    let token = (await getToken(SECURE_KEYS.ACCESS_TOKEN)) || (await getToken(SECURE_KEYS.LEGACY_TOKEN));
+    if (!token) {
+      try {
+        const { useAuthStore } = await import('../../store/authStore');
+        token = useAuthStore.getState().accessToken;
+      } catch (e) {}
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -93,9 +108,16 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = await getToken(SECURE_KEYS.REFRESH_TOKEN);
+        let refreshToken = await getToken(SECURE_KEYS.REFRESH_TOKEN);
         if (!refreshToken) {
-          throw new Error('No refresh token available');
+          try {
+            const { useAuthStore } = await import('../../store/authStore');
+            refreshToken = useAuthStore.getState().refreshToken;
+          } catch (e) {}
+        }
+
+        if (!refreshToken) {
+          throw new Error('Session expired: No refresh token available');
         }
 
         // Call backend refresh endpoint using a fresh un-intercepted axios instance
@@ -113,13 +135,27 @@ apiClient.interceptors.response.use(
           await saveToken(SECURE_KEYS.REFRESH_TOKEN, response.data.refreshToken);
         }
 
+        try {
+          const { useAuthStore } = await import('../../store/authStore');
+          await useAuthStore.getState().setTokens(newAccessToken, response.data?.refreshToken);
+        } catch (e) {}
+
         processQueue(null, newAccessToken);
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return apiClient(originalRequest);
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         await clearAllAuthData();
-        return Promise.reject(refreshErr);
+        try {
+          const { useAuthStore } = await import('../../store/authStore');
+          await useAuthStore.getState().logout();
+        } catch (e) {}
+        return Promise.reject({
+          isAuthError: true,
+          status: 401,
+          message: 'Your pharmacy session has expired. Please sign in again to continue scanning.',
+          originalError: refreshErr,
+        });
       } finally {
         isRefreshing = false;
       }

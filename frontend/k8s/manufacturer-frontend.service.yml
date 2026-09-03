@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: manufacturer-dashboard
+  labels:
+    app: manufacturer-frontend
+spec:
+  selector:
+    app: manufacturer-frontend
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: 5173

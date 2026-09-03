@@ -133,11 +133,13 @@ export const mockApi = {
 
     const pubKey = `-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE${Math.random().toString(36).substring(2).toUpperCase()}8F29A71X\n${Math.random().toString(36).substring(2).toUpperCase()}1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6==\n-----END PUBLIC KEY-----`;
 
+    console.log(`[mockApi] Approving KYC for manufacturer: ${id}`);
     const updated: ManufacturerRecord = {
       ...manufacturersState[index],
       kycStatus: 'APPROVED',
       hasSigningKey: true,
       publicKeyPem: pubKey,
+      verifiedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
@@ -206,6 +208,95 @@ export const mockApi = {
       targetId: id,
       targetName: updated.companyName,
       reason,
+      createdAt: new Date().toISOString(),
+      ipAddress: '10.244.0.15',
+    };
+    auditLogsState.unshift(auditEntry);
+
+    return {
+      status: 'success',
+      manufacturer: updated,
+    };
+  },
+
+  async blockManufacturer(
+    id: string,
+    reason: string,
+    adminUser: AdminUser
+  ): Promise<{ status: string; manufacturer: ManufacturerRecord }> {
+    await delay(500);
+    const index = manufacturersState.findIndex((m) => m.manufacturerId === id);
+    if (index === -1) throw new Error('Manufacturer record not found.');
+
+    console.log(`[mockApi] Blocking manufacturer: ${id}, reason: ${reason}`);
+    const updated: ManufacturerRecord = {
+      ...manufacturersState[index],
+      kycStatus: 'BLOCKED',
+      blockedReason: reason,
+      blockedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    manufacturersState[index] = updated;
+
+    // Record audit event
+    const auditEntry: AuditLogEntry = {
+      _id: `LOG_${Date.now()}`,
+      action: 'MANUFACTURER_BLOCKED' as any,
+      performedBy: {
+        adminId: adminUser.adminId,
+        fullName: adminUser.fullName,
+        email: adminUser.email,
+        role: adminUser.role,
+      },
+      targetType: 'MANUFACTURER',
+      targetId: id,
+      targetName: updated.companyName,
+      reason,
+      createdAt: new Date().toISOString(),
+      ipAddress: '10.244.0.15',
+    };
+    auditLogsState.unshift(auditEntry);
+
+    return {
+      status: 'success',
+      manufacturer: updated,
+    };
+  },
+
+  async unblockManufacturer(
+    id: string,
+    adminUser: AdminUser
+  ): Promise<{ status: string; manufacturer: ManufacturerRecord }> {
+    await delay(500);
+    const index = manufacturersState.findIndex((m) => m.manufacturerId === id);
+    if (index === -1) throw new Error('Manufacturer record not found.');
+
+    console.log(`[mockApi] Unblocking manufacturer: ${id}`);
+    const updated: ManufacturerRecord = {
+      ...manufacturersState[index],
+      kycStatus: 'APPROVED',
+      blockedReason: null,
+      blockedAt: null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    manufacturersState[index] = updated;
+
+    // Record audit event
+    const auditEntry: AuditLogEntry = {
+      _id: `LOG_${Date.now()}`,
+      action: 'MANUFACTURER_UNBLOCKED' as any,
+      performedBy: {
+        adminId: adminUser.adminId,
+        fullName: adminUser.fullName,
+        email: adminUser.email,
+        role: adminUser.role,
+      },
+      targetType: 'MANUFACTURER',
+      targetId: id,
+      targetName: updated.companyName,
+      reason: 'Administrative block lifted by CDSCO regulatory inspector.',
       createdAt: new Date().toISOString(),
       ipAddress: '10.244.0.15',
     };

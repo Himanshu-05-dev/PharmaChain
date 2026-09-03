@@ -8,13 +8,12 @@ import {
 } from 'react-native';
 import { useReportStore } from '../../src/store/reportStore';
 import {
-  FileText,
   Clock,
   CheckCircle2,
   AlertCircle,
   Plus,
   ShieldAlert,
-  ChevronRight,
+  ShieldCheck,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,20 +30,20 @@ export default function ReportsScreen() {
   ).length;
 
   const renderItem = ({ item }: { item: any }) => {
-    let statusBg = '#fffbeb';
-    let statusText = '#92400e';
-    let statusBorder = '#fde68a';
+    let statusBg = '#fff7ed';
+    let statusText = '#c2410c';
+    let statusBorder = '#fed7aa';
     let StatusIcon = Clock;
 
     if (item.status === 'Reviewed' || item.status === 'Resolved') {
-      statusBg = '#ecfdf5';
-      statusText = '#065f46';
-      statusBorder = '#a7f3d0';
+      statusBg = '#fff5f5';
+      statusText = '#ff5a36';
+      statusBorder = '#fed7aa';
       StatusIcon = CheckCircle2;
     } else if (item.status === 'Pending') {
-      statusBg = '#fff7ed';
-      statusText = '#9a3412';
-      statusBorder = '#fed7aa';
+      statusBg = '#fff1f2';
+      statusText = '#e11d48';
+      statusBorder = '#fecdd3';
       StatusIcon = AlertCircle;
     }
 
@@ -53,13 +52,13 @@ export default function ReportsScreen() {
         <View style={styles.cardHeader}>
           <View style={styles.headerLeft}>
             <View style={styles.iconContainer}>
-              <ShieldAlert size={20} color="#3b00b9" />
+              <ShieldAlert size={20} color="#ff5a36" />
             </View>
             <View style={styles.titleInfo}>
               <Text style={styles.medicineName} numberOfLines={1}>
                 {item.medicineName}
               </Text>
-              <Text style={styles.idText}>Investigation Case #{item.id}</Text>
+              <Text style={styles.idText}>Incident Case #{item.id}</Text>
             </View>
           </View>
           <View
@@ -80,9 +79,9 @@ export default function ReportsScreen() {
         </Text>
 
         <View style={styles.cardFooter}>
-          <Text style={styles.dateText}>Filed on {item.date}</Text>
+          <Text style={styles.dateText}>Filed on {item.date || 'Today'}</Text>
           <View style={styles.trackingStatus}>
-            <Text style={styles.trackingText}>CDSCO Dispatch Active</Text>
+            <Text style={styles.trackingText}>CDSCO Incident Logged</Text>
           </View>
         </View>
       </View>
@@ -92,7 +91,7 @@ export default function ReportsScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) + 8 }]}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 24) + 8 }]}>
         <View>
           <Text style={styles.headerTitle}>Pharmacovigilance</Text>
           <Text style={styles.headerSubtitle}>
@@ -102,63 +101,63 @@ export default function ReportsScreen() {
         <TouchableOpacity
           style={styles.newReportBtn}
           onPress={() => router.push('/report')}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
-          <Plus size={16} color="#ffffff" style={{ marginRight: 4 }} />
-          <Text style={styles.newReportBtnText}>Report</Text>
+          <Plus size={16} color="#ffffff" strokeWidth={2.5} />
+          <Text style={styles.newReportText}>Report</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Summary Metrics Row */}
-      <View style={styles.metricsRow}>
-        <View style={styles.metricBox}>
-          <Text style={styles.metricValue}>{totalReports}</Text>
-          <Text style={styles.metricLabel}>Total Filed</Text>
+      {/* Summary Cards Strip (Warm Sunset) */}
+      <View style={styles.summaryContainer}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryCount}>{totalReports}</Text>
+          <Text style={styles.summaryLabel}>Total Cases</Text>
         </View>
-        <View style={styles.metricDivider} />
-        <View style={styles.metricBox}>
-          <Text style={[styles.metricValue, { color: '#ea580c' }]}>
+        <View style={styles.summaryCard}>
+          <Text style={[styles.summaryCount, { color: '#ea580c' }]}>
             {pendingReports}
           </Text>
-          <Text style={styles.metricLabel}>Under Review</Text>
+          <Text style={styles.summaryLabel}>In Review</Text>
         </View>
-        <View style={styles.metricDivider} />
-        <View style={styles.metricBox}>
-          <Text style={[styles.metricValue, { color: '#059669' }]}>
+        <View style={styles.summaryCard}>
+          <Text style={[styles.summaryCount, { color: '#ff5a36' }]}>
             {resolvedReports}
           </Text>
-          <Text style={styles.metricLabel}>Verified / Done</Text>
+          <Text style={styles.summaryLabel}>Resolved</Text>
         </View>
       </View>
 
-      {reports.length === 0 ? (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIconCircle}>
-            <FileText size={44} color="#3b00b9" />
+      {/* Reports List */}
+      <FlatList
+        data={reports}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: (insets.bottom || 10) + 30 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconCircle}>
+              <ShieldCheck size={36} color="#ff5a36" />
+            </View>
+            <Text style={styles.emptyTitle}>No Incidents Reported</Text>
+            <Text style={styles.emptySubtitle}>
+              If you detect counterfeit packaging, suspicious quality, or an adverse reaction, file a complaint directly to CDSCO.
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyBtn}
+              onPress={() => router.push('/report')}
+              activeOpacity={0.85}
+            >
+              <Plus size={16} color="#ffffff" />
+              <Text style={styles.emptyBtnText}>File Incident Report</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.emptyTitle}>No Safety Reports Filed</Text>
-          <Text style={styles.emptySubtitle}>
-            Notice any tampered blister packaging or suspicious medication? File a report directly to CDSCO.
-          </Text>
-          <TouchableOpacity
-            style={styles.emptyActionBtn}
-            onPress={() => router.push('/report')}
-          >
-            <Text style={styles.emptyActionBtnText}>File Your First Report</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={reports}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={[
-            styles.listContainer,
-            { paddingBottom: (insets.bottom || 10) + 24 },
-          ]}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+        }
+      />
     </View>
   );
 }
@@ -166,206 +165,212 @@ export default function ReportsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fffbf7', // Warm ivory
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 14,
     backgroundColor: '#ffffff',
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#f3ede8',
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.3,
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#1c1917',
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#78716c',
     marginTop: 2,
   },
   newReportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3b00b9',
+    gap: 4,
+    backgroundColor: '#ff5a36',
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 10,
-    shadowColor: '#3b00b9',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    borderRadius: 12,
+    shadowColor: '#ff5a36',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
     elevation: 3,
   },
-  newReportBtnText: {
+  newReportText: {
     color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  metricBox: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  metricValue: {
-    fontSize: 18,
+    fontSize: 12,
     fontWeight: '800',
-    color: '#0f172a',
   },
-  metricLabel: {
-    fontSize: 11,
-    color: '#64748b',
+  summaryContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+  },
+  summaryCount: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1c1917',
+  },
+  summaryLabel: {
+    fontSize: 10,
+    color: '#78716c',
+    fontWeight: '600',
     marginTop: 2,
-    fontWeight: '500',
   },
-  metricDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#e2e8f0',
-  },
-  listContainer: {
-    padding: 20,
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 6,
     gap: 12,
   },
   reportCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 5,
+    borderColor: '#fed7aa',
+    shadowColor: '#ea580c',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
     flex: 1,
-    marginRight: 8,
   },
   iconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: '#f3e8ff',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ffedd5',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   titleInfo: {
     flex: 1,
   },
   medicineName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#1c1917',
   },
   idText: {
     fontSize: 11,
-    color: '#64748b',
-    marginTop: 2,
-    fontWeight: '500',
+    color: '#78716c',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: 8,
     borderWidth: 1,
   },
   statusText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '900',
   },
   description: {
-    fontSize: 13,
-    color: '#334155',
-    lineHeight: 19,
-    marginBottom: 14,
+    fontSize: 12,
+    color: '#44403c',
+    lineHeight: 17,
+    marginBottom: 12,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: '#fffaf5',
+    paddingTop: 10,
   },
   dateText: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: '#a8a29e',
   },
   trackingStatus: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#fff7ed',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#fed7aa',
   },
   trackingText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#475569',
+    color: '#c2410c',
+    fontWeight: '800',
   },
   emptyState: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 36,
+    paddingVertical: 50,
+    paddingHorizontal: 20,
   },
   emptyIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f3e8ff',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#ffedd5',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fed7aa',
     marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0f172a',
-    marginBottom: 8,
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#1c1917',
+    marginBottom: 6,
   },
   emptySubtitle: {
-    fontSize: 13,
-    color: '#64748b',
+    fontSize: 12,
+    color: '#78716c',
     textAlign: 'center',
-    lineHeight: 19,
+    lineHeight: 18,
+    maxWidth: 270,
     marginBottom: 20,
   },
-  emptyActionBtn: {
-    backgroundColor: '#3b00b9',
-    paddingHorizontal: 20,
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ff5a36',
     paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    shadowColor: '#ff5a36',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  emptyActionBtnText: {
+  emptyBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
     color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

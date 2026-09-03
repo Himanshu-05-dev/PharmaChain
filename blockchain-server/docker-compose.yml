@@ -232,7 +232,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - PHARMA_CORE_JWKS_URL=${PHARMA_CORE_JWKS_URL:-http://host.docker.internal:4000/.well-known/jwks.json}
+      - PHARMA_CORE_JWKS_URL=${PHARMA_CORE_JWKS_URL:-http://host.docker.internal:80/.well-known/jwks.json}
       - CHANNEL_NAME=mychannel
       - MSP_ID=Org1MSP
       - PEER_ENDPOINT=peer0.org1.example.com:7051

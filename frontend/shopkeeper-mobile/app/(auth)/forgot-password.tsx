@@ -9,11 +9,14 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ScrollView,
-  Alert 
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { KeyRound, ArrowLeft, Send, CheckCircle2, AlertCircle } from 'lucide-react-native';
+import { KeyRound, ArrowLeft, Send, CheckCircle2, AlertCircle, Mail, ArrowRight } from 'lucide-react-native';
 import { forgotPassword } from '../../src/services/api/auth';
+import { PharmaTheme } from '../../src/constants/theme';
+import { PharmaChainLogo } from '../../src/components/common/PharmaChainLogo';
+import { AnimatedAuthBackground } from '../../src/components/common/AnimatedAuthBackground';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -24,7 +27,7 @@ export default function ForgotPasswordScreen() {
 
   const handleSendReset = async () => {
     if (!identifier.trim()) {
-      setErrorMessage('Please enter your registered email or mobile number.');
+      setErrorMessage('Please enter your registered pharmacy email or phone number.');
       return;
     }
 
@@ -46,98 +49,105 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <AnimatedAuthBackground />
+
+      <KeyboardAvoidingView 
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Navigation Bar */}
-        <View style={styles.navBar}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={22} color="#0f172a" />
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>Forgot Password</Text>
-          <View style={{ width: 22 }} />
-        </View>
-
-        {isSent ? (
-          <View style={styles.card}>
-            <View style={styles.iconCircleSuccess}>
-              <CheckCircle2 size={48} color="#16a34a" />
-            </View>
-            <Text style={styles.title}>Reset Link Sent</Text>
-            <Text style={styles.subtitle}>
-              Password reset instructions have been sent to <Text style={{ fontWeight: '700', color: '#0f172a' }}>{identifier}</Text>. Please follow the instructions to set your new password.
-            </Text>
-
-            <TouchableOpacity 
-              style={styles.primaryBtn}
-              onPress={() => router.replace('/(auth)/login')}
-            >
-              <Text style={styles.primaryBtnText}>Return to Login</Text>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Navigation Bar */}
+          <View style={styles.navBar}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.8}>
+              <ArrowLeft size={20} color="#0f172a" />
             </TouchableOpacity>
+            <Text style={styles.navTitle}>Account Recovery</Text>
+            <View style={{ width: 40 }} />
           </View>
-        ) : (
-          <View style={styles.card}>
-            <View style={styles.iconCircle}>
-              <KeyRound size={44} color="#0f766e" />
-            </View>
-            <Text style={styles.title}>Account Recovery</Text>
-            <Text style={styles.subtitle}>
-              Enter your registered pharmacy email or owner mobile number to receive a secure password reset link.
-            </Text>
 
-            {!!errorMessage && (
-              <View style={styles.errorBanner}>
-                <AlertCircle size={16} color="#dc2626" style={{ marginRight: 6 }} />
-                <Text style={styles.errorText}>{errorMessage}</Text>
+          {isSent ? (
+            <View style={styles.card}>
+              <View style={styles.iconCircleSuccess}>
+                <CheckCircle2 size={40} color="#059669" />
               </View>
-            )}
+              <Text style={styles.title}>Reset Instructions Sent</Text>
+              <Text style={styles.subtitle}>
+                Password reset instructions have been dispatched to <Text style={{ fontWeight: '800', color: '#0f172a' }}>{identifier}</Text>. Please follow the email link to verify and reset your node password.
+              </Text>
 
-            <Text style={styles.label}>Registered Email / Mobile Number</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="E.g., store@pharmacy.com or mobile"
-              placeholderTextColor="#94a3b8"
-              value={identifier}
-              onChangeText={(val) => {
-                setIdentifier(val);
-                if (errorMessage) setErrorMessage('');
-              }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!isLoading}
-            />
+              <TouchableOpacity 
+                style={styles.primaryBtn}
+                onPress={() => router.replace('/(auth)/login')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.primaryBtnText}>Return to Sign In</Text>
+                <ArrowRight size={16} color="#ffffff" style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.card}>
+              <View style={styles.brandIconWrapper}>
+                <PharmaChainLogo size={46} colorScheme="cobalt" />
+              </View>
 
-            <TouchableOpacity 
-              style={[styles.primaryBtn, isLoading && styles.disabledBtn]}
-              onPress={handleSendReset}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <View style={styles.btnRow}>
-                  <Send size={18} color="#ffffff" style={{ marginRight: 8 }} />
-                  <Text style={styles.primaryBtnText}>Send Reset Link</Text>
+              <Text style={styles.title}>Forgot Password?</Text>
+              <Text style={styles.subtitle}>
+                Enter your registered pharmacy email address to receive a secure cryptographically verified password reset link.
+              </Text>
+
+              {!!errorMessage && (
+                <View style={styles.errorBanner}>
+                  <AlertCircle size={16} color="#dc2626" style={{ marginRight: 6 }} />
+                  <Text style={styles.errorText}>{errorMessage}</Text>
                 </View>
               )}
-            </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.cancelBtn}
-              onPress={() => router.back()}
-            >
-              <Text style={styles.cancelText}>Back to Login</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Registered Email Address</Text>
+                <View style={styles.inputContainer}>
+                  <Mail size={18} color="#94a3b8" style={{ marginRight: 8 }} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="pharmacy@store.com"
+                    placeholderTextColor="#94a3b8"
+                    value={identifier}
+                    onChangeText={(val) => {
+                      setIdentifier(val);
+                      if (errorMessage) setErrorMessage('');
+                    }}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    editable={!isLoading}
+                  />
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                style={[styles.primaryBtn, isLoading && styles.primaryBtnDisabled]}
+                onPress={handleSendReset}
+                disabled={isLoading}
+                activeOpacity={0.85}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <View style={styles.btnContent}>
+                    <Send size={16} color="#ffffff" style={{ marginRight: 8 }} />
+                    <Text style={styles.primaryBtnText}>Send Recovery Link</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -146,10 +156,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
+  keyboardView: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 40,
+    paddingTop: 54,
+    paddingBottom: 24,
+    flexGrow: 1,
   },
   navBar: {
     flexDirection: 'row',
@@ -158,128 +172,135 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   backButton: {
-    padding: 6,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   navTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
     color: '#0f172a',
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    alignItems: 'center',
+    borderColor: 'rgba(226, 232, 240, 0.9)',
     shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f0fdfa',
-    justifyContent: 'center',
+    shadowRadius: 16,
+    elevation: 4,
     alignItems: 'center',
-    marginBottom: 16,
+  },
+  brandIconWrapper: {
+    width: 68,
+    height: 68,
+    borderRadius: 22,
+    backgroundColor: '#eff6ff',
     borderWidth: 1.5,
-    borderColor: '#99f6e4',
+    borderColor: '#dbeafe',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   iconCircleSuccess: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#dcfce7',
-    justifyContent: 'center',
+    width: 68,
+    height: 68,
+    borderRadius: 22,
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1.5,
+    borderColor: '#a7f3d0',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
   title: {
     fontSize: 22,
     fontWeight: '800',
     color: '#0f172a',
-    marginBottom: 8,
+    marginBottom: 6,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 13,
     color: '#64748b',
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
+    lineHeight: 19,
+    marginBottom: 20,
     paddingHorizontal: 10,
   },
   errorBanner: {
-    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fef2f2',
     borderWidth: 1,
     borderColor: '#fecaca',
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 12,
+    padding: 12,
     marginBottom: 16,
+    width: '100%',
   },
   errorText: {
     fontSize: 12,
-    color: '#dc2626',
+    color: '#b91c1c',
+    fontWeight: '600',
     flex: 1,
   },
-  label: {
-    alignSelf: 'flex-start',
-    fontSize: 13,
-    fontWeight: '600',
+  inputGroup: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
     color: '#334155',
     marginBottom: 6,
   },
-  input: {
-    width: '100%',
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 13,
+    fontSize: 14,
     color: '#0f172a',
-    marginBottom: 20,
   },
   primaryBtn: {
+    backgroundColor: '#2563eb',
+    borderRadius: 14,
+    paddingVertical: 15,
     width: '100%',
-    backgroundColor: '#0f766e',
-    borderRadius: 10,
-    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0f766e',
+    shadowColor: '#2563eb',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  btnRow: {
+  primaryBtnDisabled: {
+    opacity: 0.65,
+  },
+  btnContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   primaryBtnText: {
     color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  disabledBtn: {
-    opacity: 0.65,
-  },
-  cancelBtn: {
-    paddingVertical: 14,
-    marginTop: 6,
-  },
-  cancelText: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '600',
+    fontSize: 14.5,
+    fontWeight: '800',
   },
 });

@@ -5,6 +5,8 @@ import {
     internalStatsController,
     kycApproveController,
     kycRejectController,
+    kycBlockController,
+    kycUnblockController,
 } from '../controllers/auth.controller.js';
 
 const router = express.Router();
@@ -25,5 +27,11 @@ router.post('/approve', kycApproveController);
 
 // POST /api/manufacturer/internal/reject (alias to /auth/kyc/reject)
 router.post('/reject', kycRejectController);
+
+// POST /api/manufacturer/internal/block (alias to /auth/kyc/block)
+router.post('/block', kycBlockController);
+
+// POST /api/manufacturer/internal/unblock (alias to /auth/kyc/unblock)
+router.post('/unblock', kycUnblockController);
 
 export default router;

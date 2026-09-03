@@ -14,7 +14,7 @@ const formatTime = (d = new Date()) => d.toTimeString().split(' ')[0];
 
 export const chainIntakeController = async (req, res) => {
     try {
-        const { packHash, shopId, operatorId, manufacturerId } = req.body;
+        const { packHash, shopId, operatorId, manufacturerId, shopName, licenseNumber, location, latitude, longitude, timestamp } = req.body;
 
         if (!packHash || !shopId || !operatorId || !manufacturerId) {
             return res.status(400).json({
@@ -33,34 +33,46 @@ export const chainIntakeController = async (req, res) => {
             sellingDate: formatDate(now),
             sellingTime: formatTime(now),
             sellerId: operatorId,
+            shopName: shopName || '',
+            licenseNumber: licenseNumber || '',
+            location: location || '',
+            latitude: latitude ? String(latitude) : '',
+            longitude: longitude ? String(longitude) : '',
+            timestamp: timestamp || now.toISOString(),
         };
 
         // ── Submit transition to pharma-backend with RS256 Bearer JWT ─────────
         let backendResult = null;
         try {
             backendResult = await submitTransition(transition);
-            console.log(`[pharma-core Chain] Intake transition submitted to pharma-backend for ${packHash}`);
+            console.log(`[pharma-core Chain] ✅ Intake transition committed to Fabric for packHash: ${packHash}`);
         } catch (backendErr) {
-            console.warn(`[pharma-core Chain] Notice: pharma-backend submission skipped/deferred: ${backendErr.message}`);
+            console.error(`[pharma-core Chain] ❌ Fabric Intake submission failed for ${packHash}: ${backendErr.message}`);
+            return res.status(backendErr.status || 502).json({
+                status: 'error',
+                code: backendErr.code || 'BLOCKCHAIN_INTAKE_ERROR',
+                message: backendErr.message,
+                diagnosis: backendErr.diagnosis || 'Check Fabric Gateway connectivity and chaincode state',
+                transition,
+            });
         }
-
-        console.log(`[pharma-core Chain] Intake transition processed for packHash: ${packHash}`);
 
         return res.status(200).json({
             status: 'success',
-            message: 'Intake transition processed',
+            message: 'Intake transition processed and committed on blockchain',
             transition,
-            backendSubmitted: backendResult !== null,
+            backendSubmitted: true,
+            backendResult,
         });
     } catch (error) {
-        console.error('[pharma-core Chain] chainIntakeController error:', error.message);
-        return res.status(500).json({ status: 'error', message: error.message });
+        console.error('[pharma-core Chain] ❌ chainIntakeController error:', error.message);
+        return res.status(error.status || 500).json({ status: 'error', code: error.code || 'INTERNAL_ERROR', message: error.message, diagnosis: error.diagnosis });
     }
 };
 
 export const chainSaleController = async (req, res) => {
     try {
-        const { packHash, shopId, operatorId } = req.body;
+        const { packHash, shopId, operatorId, shopName, licenseNumber, location, latitude, longitude, timestamp } = req.body;
 
         if (!packHash || !shopId || !operatorId) {
             return res.status(400).json({
@@ -79,28 +91,40 @@ export const chainSaleController = async (req, res) => {
             sellingDate: formatDate(now),
             sellingTime: formatTime(now),
             sellerId: operatorId,
+            shopName: shopName || '',
+            licenseNumber: licenseNumber || '',
+            location: location || '',
+            latitude: latitude ? String(latitude) : '',
+            longitude: longitude ? String(longitude) : '',
+            timestamp: timestamp || now.toISOString(),
         };
 
         // ── Submit transition to pharma-backend with RS256 Bearer JWT ─────────
         let backendResult = null;
         try {
             backendResult = await submitTransition(transition);
-            console.log(`[pharma-core Chain] Sale transition submitted to pharma-backend for ${packHash}`);
+            console.log(`[pharma-core Chain] ✅ Sale transition committed to Fabric for packHash: ${packHash} (Shop: ${shopName || shopId})`);
         } catch (backendErr) {
-            console.warn(`[pharma-core Chain] Notice: pharma-backend submission skipped/deferred: ${backendErr.message}`);
+            console.error(`[pharma-core Chain] ❌ Fabric Sale submission failed for ${packHash}: ${backendErr.message}`);
+            return res.status(backendErr.status || 502).json({
+                status: 'error',
+                code: backendErr.code || 'BLOCKCHAIN_SALE_ERROR',
+                message: backendErr.message,
+                diagnosis: backendErr.diagnosis || 'Check Fabric Gateway connectivity and chaincode state',
+                transition,
+            });
         }
-
-        console.log(`[pharma-core Chain] Sale transition processed for packHash: ${packHash}`);
 
         return res.status(200).json({
             status: 'success',
-            message: 'Sale transition processed',
+            message: 'Sale transition processed and committed on blockchain',
             transition,
-            backendSubmitted: backendResult !== null,
+            backendSubmitted: true,
+            backendResult,
         });
     } catch (error) {
-        console.error('[pharma-core Chain] chainSaleController error:', error.message);
-        return res.status(500).json({ status: 'error', message: error.message });
+        console.error('[pharma-core Chain] ❌ chainSaleController error:', error.message);
+        return res.status(error.status || 500).json({ status: 'error', code: error.code || 'INTERNAL_ERROR', message: error.message, diagnosis: error.diagnosis });
     }
 };
 
@@ -126,21 +150,27 @@ export const chainRecallController = async (req, res) => {
         let backendResult = null;
         try {
             backendResult = await submitRecall(recallPayload);
-            console.log(`[pharma-core Chain] Recall payload submitted to pharma-backend for batch: ${batchId}`);
+            console.log(`[pharma-core Chain] 🚨 Recall payload committed to Fabric for batch: ${batchId}`);
         } catch (backendErr) {
-            console.warn(`[pharma-core Chain] Notice: pharma-backend submission skipped/deferred: ${backendErr.message}`);
+            console.error(`[pharma-core Chain] ❌ Fabric Recall submission failed for ${batchId}: ${backendErr.message}`);
+            return res.status(backendErr.status || 502).json({
+                status: 'error',
+                code: backendErr.code || 'BLOCKCHAIN_RECALL_ERROR',
+                message: backendErr.message,
+                diagnosis: backendErr.diagnosis || 'Check Fabric Gateway connectivity and batch recall state',
+                recallPayload,
+            });
         }
-
-        console.log(`[pharma-core Chain] Recall processed for batch: ${batchId}`);
 
         return res.status(200).json({
             status: 'success',
-            message: 'Recall transition processed',
+            message: 'Recall transition processed and committed on blockchain',
             recallPayload,
-            backendSubmitted: backendResult !== null,
+            backendSubmitted: true,
+            backendResult,
         });
     } catch (error) {
-        console.error('[pharma-core Chain] chainRecallController error:', error.message);
-        return res.status(500).json({ status: 'error', message: error.message });
+        console.error('[pharma-core Chain] ❌ chainRecallController error:', error.message);
+        return res.status(error.status || 500).json({ status: 'error', code: error.code || 'INTERNAL_ERROR', message: error.message, diagnosis: error.diagnosis });
     }
 };

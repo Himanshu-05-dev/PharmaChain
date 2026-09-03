@@ -124,3 +124,7 @@ ehthumbs.db
 *.sln
 .agents/
 .gemini/
+
+
+skill_files
+.agent

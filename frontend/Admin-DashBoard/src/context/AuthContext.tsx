@@ -32,13 +32,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.removeItem('pharmachain_admin_token');
         localStorage.removeItem('pharmachain_admin_user');
       }
-    } else {
-      // Default to logged-in mock session for instantaneous development experience
-      const defaultToken = 'mock_admin_session_token_cdsco';
-      setToken(defaultToken);
-      setUser(MOCK_ADMIN_USER);
-      localStorage.setItem('pharmachain_admin_token', defaultToken);
-      localStorage.setItem('pharmachain_admin_user', JSON.stringify(MOCK_ADMIN_USER));
     }
     setIsLoading(false);
   }, []);

@@ -1,5 +1,6 @@
 export type BackendUIState =
   | "GENUINE"
+  | "PURCHASED_RECENTLY"
   | "ALREADY_SOLD"
   | "RECALLED"
   | "EXPIRED"
@@ -20,6 +21,7 @@ export type VerificationStatus =
   | "RECALLED"
   | "COUNTERFEIT"
   | "GENUINE"
+  | "PURCHASED_RECENTLY"
   | "AT_SHOP"
   | "ALREADY_SOLD"
   | "NOT_FOUND";
@@ -40,6 +42,25 @@ export interface VerificationPayload {
   [key: string]: any;
 }
 
+export interface DispensingShop {
+  shopId?: string | null;
+  name?: string | null;
+  licenseNumber?: string | null;
+  location?: string | null;
+  latitude?: string | number | null;
+  longitude?: string | number | null;
+  address?: string | null;
+  phone?: string | null;
+  sellingDate?: string | null;
+  sellingTime?: string | null;
+  timestamp?: string | null;
+  formattedSaleTime?: string | null;
+  relativeSaleTime?: string | null;
+  hoursSinceSale?: number | null;
+  daysSinceSale?: number | null;
+  isRecentSale?: boolean;
+}
+
 export interface VerificationResult {
   success: boolean;
   status: VerificationStatus;
@@ -51,31 +72,46 @@ export interface VerificationResult {
   blockchainStatus?: string;
   detail?: any;
 
+  isRecentlySold?: boolean;
+  hoursSinceSale?: number | null;
+  daysSinceSale?: number | null;
+  dispensingShop?: DispensingShop | null;
+
   payload?: VerificationPayload;
 
   pack?: {
     packId: string;
     medicineName: string;
+    genericName?: string;
+    brandName?: string;
     batchId: string;
     manufacturingDate: string;
     expiryDate: string;
     dosage?: string;
+    composition?: string;
+    drugSchedule?: string;
+    storageCondition?: string;
     serial?: string;
   };
 
   manufacturer?: {
     name: string;
     id?: string;
+    productionSite?: string;
+    licenseNumber?: string;
   };
 
   shop?: {
     name: string;
     id?: string;
+    licenseNumber?: string;
+    location?: string;
   };
 
   transaction?: {
     status: string;
     saleTime?: string;
+    location?: string;
   };
 
   risk?: {
@@ -111,7 +147,12 @@ export interface SavedMedicine {
   id: string;
   name: string;
   genericName: string;
+  brandName?: string;
   dosage: string;
+  composition?: string;
+  drugSchedule?: string;
+  storageCondition?: string;
+  productionSite?: string;
   batchNumber: string;
   manufacturer: string;
   mfgDate: string;

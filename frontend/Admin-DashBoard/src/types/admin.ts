@@ -39,22 +39,79 @@ export interface DashboardStats {
 }
 
 // ── Manufacturer Verification Types ───────────────────────────────────────────
-export type ManufacturerKycStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type ManufacturerKycStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'BLOCKED';
+
+export interface ManufacturerKycDocument {
+  id: string;
+  name: string;
+  type: string;
+  size?: number;
+  uploadDate?: string;
+  status?: string;
+  url?: string;
+}
 
 export interface ManufacturerRecord {
   manufacturerId: string;
   companyName: string;
+  companyCode?: string;
+  cinNumber?: string;
+  gstin?: string;
+  companyType?: string;
+  headquarters?: string;
+  website?: string;
+
+  // License & CDSCO Details
   licenseNumber: string;
+  cdscoRegistration?: string;
+  issuingAuthority?: string;
+  licenseIssueDate?: string;
+  licenseExpiryDate?: string;
+  gmpStandard?: string;
+
+  // Manufacturing Facilities
+  plantName?: string;
+  primaryPlantName?: string;
+  facilityId?: string;
+  primaryPlantFacilityId?: string;
+  plantAddress?: string;
+  primaryPlantAddress?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+
+  // Authorized Signatory & Personnel
+  authorizedPersonName?: string;
+  directorName?: string;
+  authorizedPersonRole?: string;
+  phone?: string;
+  idProofType?: string;
+  idProofNumber?: string;
+
+  // Uploaded Compliance Documents
+  kycDocs?: ManufacturerKycDocument[];
+
+  // Authentication & Status
   email: string;
   kycStatus: ManufacturerKycStatus;
   createdAt: string;
   updatedAt?: string;
-  hasSigningKey: boolean;
-  publicKeyPem?: string | null;
+  verifiedAt?: string | null;
   rejectionReason?: string | null;
-  state?: string;
-  directorName?: string;
-  plantAddress?: string;
+  blockedReason?: string | null;
+  blockedAt?: string | null;
+
+  // Cryptographic Key Details
+  hasSigningKey: boolean;
+  keyAlgorithm?: string;
+  publicKeyPem?: string | null;
+  keyDetails?: {
+    keyId?: string;
+    algorithm?: string;
+    publicKeyPem?: string;
+    status?: string;
+    createdAt?: string;
+  } | null;
 }
 
 // ── Shopkeeper Verification Types ─────────────────────────────────────────────

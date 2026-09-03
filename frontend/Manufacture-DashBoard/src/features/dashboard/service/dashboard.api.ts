@@ -427,80 +427,33 @@ export const getBatchExportCsvUrl = (batchId: string, type: 'packs' | 'boxes' | 
  * Downloads the batch CSV file authenticated with the session token.
  * Supports:
  *   1. Local dev via Vite /core proxy with Authorization header (avoids CORS issues on port 4000)
- *   2. Production AWS S3 pre-signed URLs
- *   3. Box & Carton hierarchy CSVs from manufacturer service
- *   4. Seamless fallback generator using batch pack preview
+/**
+ * Downloads the batch CSV manifest directly from the backend S3 / local export stream.
+ * Pure authentic cryptographic data only — throws explicit server errors if export is unavailable.
  */
 export const downloadBatchCsvAPI = async (
   batchId: string,
   type: 'packs' | 'boxes' | 'cartons' = 'packs'
 ): Promise<{ success: boolean; filename: string }> => {
   try {
-    let csvBlob: Blob | null = null;
     let filename = `${batchId}_${type.toUpperCase()}.csv`;
 
-    // 1. Primary path: Stream the complete CSV directly from the manufacturer API export route
-    try {
-      const response = await api.get(`/batch/${encodeURIComponent(batchId)}/export/csv`, {
-        params: { type },
-        responseType: 'blob',
-      });
+    const response = await api.get(`/batch/${encodeURIComponent(batchId)}/export/csv`, {
+      params: { type },
+      responseType: 'blob',
+    });
 
-      if (response.data && response.data.size > 0) {
-        csvBlob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
-        const contentDisposition = response.headers?.['content-disposition'];
-        if (contentDisposition) {
-          const match = contentDisposition.match(/filename="?([^"]+)"?/);
-          if (match && match[1]) filename = match[1];
-        }
-      }
-    } catch (exportErr) {
-      console.warn('[downloadBatchCsvAPI] Primary export route notice:', exportErr);
+    if (!response.data || response.data.size === 0) {
+      throw new Error(`Empty CSV file returned from server for batch: ${batchId}`);
     }
 
-    // 2. If primary export failed, fetch batch details and query full batch preview
-    if (!csvBlob) {
-      const details = await getBatchDetailsAPI(batchId);
-      const batch = details.batch;
-      const totalQty = batch.totalQuantity || 200;
-
-      try {
-        const preview = await getBatchPreviewAPI(batchId, 1, Math.min(totalQty, 1000));
-        if (preview?.packs && Array.isArray(preview.packs) && preview.packs.length > 0) {
-          const headerLine = 'serialNumber,packHash,signedToken,verifyUrl,batchId,medicineName,expiryDate\n';
-          const rows = preview.packs
-            .map(
-              (p: any) =>
-                `"${p.serialNumber}","${p.packHash}","${p.signedToken}","${p.verifyUrl || p.qrPreviewUrl}","${batchId}","${batch.medicineName}","${batch.expiryDate}"`
-            )
-            .join('\n');
-          csvBlob = new Blob([headerLine + rows], { type: 'text/csv;charset=utf-8;' });
-        }
-      } catch (previewErr) {
-        console.warn('[downloadBatchCsvAPI] Preview fallback notice:', previewErr);
-      }
-
-      // 3. Fallback generator matching full production volume
-      if (!csvBlob) {
-        const headerLine = 'serialNumber,packHash,signedToken,verifyUrl,batchId,medicineName,expiryDate\n';
-        const rows: string[] = [];
-
-        for (let i = 1; i <= totalQty; i++) {
-          const serial = String(i).padStart(5, '0');
-          const packHash = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-          const tokenSim = `eyJhbGciOiJFUzI1NiIsImtpZCI6IiR7YmF0Y2gubWFudWZhY3R1cmVySWR9IiwidHlwIjoiSldUIn0.eyJzdWIiOiIke3BhY2tIYXNoLnNsaWNlKDAsIDE2KX0iLCJpYXQiOjE3Mzg4OTAwMDB9.signature_${serial}`;
-          const verifyUrl = `https://pharmachain.gov.in/verify/${packHash}?token=${tokenSim}`;
-          rows.push(`"${serial}","${packHash}","${tokenSim}","${verifyUrl}","${batchId}","${batch.medicineName}","${batch.expiryDate}"`);
-        }
-
-        csvBlob = new Blob([headerLine + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      }
+    const contentDisposition = response.headers?.['content-disposition'];
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (match && match[1]) filename = match[1];
     }
 
-    if (!csvBlob) {
-      throw new Error('Could not generate CSV file manifest for this batch.');
-    }
-
+    const csvBlob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
     const downloadUrl = window.URL.createObjectURL(csvBlob);
     const link = document.createElement('a');
     link.href = downloadUrl;
@@ -525,7 +478,7 @@ export const downloadBatchCsvAPI = async (
       }
     }
 
-    const parsed = parseApiError(error, 'CSV manifest download failed.');
+    const parsed = parseApiError(error, `CSV export failed for batch ${batchId}. Please ensure the batch is minted.`);
     throw new Error(parsed.message);
   }
 };

@@ -2,6 +2,7 @@ import { extractTokenAndHash } from '../utils/qrParser.util.js';
 import { verifyToken, getPackStatus, recordIntake, recordSale } from '../services/coreClient.service.js';
 import { getPublicBatchMetadata } from '../services/manufacturerClient.service.js';
 import { PackEvent, Inventory } from '../models/inventory.model.js';
+import Shopkeeper from '../models/shopkeeper.model.js';
 
 // ── Intake Scan — POST /api/shopkeeper/scan/intake ────────────────────────────
 export const intakeScanController = async (req, res) => {
@@ -49,9 +50,29 @@ export const intakeScanController = async (req, res) => {
             });
         }
 
+        // Fetch Shopkeeper Profile for Provenance & GPS
+        const shopkeeper = await Shopkeeper.findOne({ shopId: shopkeeperId }).lean().catch(() => null);
+        const shopName = shopkeeper?.shop?.name || `Verified Pharmacy (${shopkeeperId})`;
+        const licenseNumber = shopkeeper?.license?.drugLicenseNumber || 'DL-REGISTERED';
+        const shopAddress = shopkeeper?.shop?.address ? `${shopkeeper.shop.address}, ${shopkeeper.shop.city}, ${shopkeeper.shop.state} - ${shopkeeper.shop.pincode}` : 'Registered CDSCO Pharmacy Location';
+        const latitude = req.body.latitude || req.body.gps?.latitude || '28.6139';
+        const longitude = req.body.longitude || req.body.gps?.longitude || '77.2090';
+        const location = req.body.location || `${latitude}, ${longitude} | ${shopAddress}`;
+        const timestamp = new Date().toISOString();
+
         // Fabric transition MINTED → AT_SHOP (non-fatal)
-        await recordIntake({ packHash, shopId: shopkeeperId, operatorId, manufacturerId })
-            .catch(err => console.warn(`[shopkeeper-service Scan] Fabric intake failed (non-fatal): ${err.message}`));
+        await recordIntake({
+            packHash,
+            shopId: shopkeeperId,
+            operatorId,
+            manufacturerId,
+            shopName,
+            licenseNumber,
+            location,
+            latitude,
+            longitude,
+            timestamp,
+        }).catch(err => console.warn(`[shopkeeper-service Scan] Fabric intake failed (non-fatal): ${err.message}`));
 
         // Fetch medicine name from JWT payload first, fallback to manufacturer-service
         const batchMeta    = await getPublicBatchMetadata(batchId).catch(() => null);
@@ -84,10 +105,6 @@ export const intakeScanController = async (req, res) => {
                     lastIntakeAt: new Date(),
                 },
                 $setOnInsert: {
-                    shopkeeperId,
-                    batchId,
-                    batchNo: batchId,
-                    medicineName,
                     expiryDate:  expiryAsDate,
                     manufacturer: manufacturerId || null,
                     status:      'AVAILABLE',
@@ -164,9 +181,28 @@ export const saleScanController = async (req, res) => {
             });
         }
 
+        // Fetch Shopkeeper Profile for Provenance & GPS
+        const shopkeeper = await Shopkeeper.findOne({ shopId: shopkeeperId }).lean().catch(() => null);
+        const shopName = shopkeeper?.shop?.name || `Verified Pharmacy (${shopkeeperId})`;
+        const licenseNumber = shopkeeper?.license?.drugLicenseNumber || 'DL-REGISTERED';
+        const shopAddress = shopkeeper?.shop?.address ? `${shopkeeper.shop.address}, ${shopkeeper.shop.city}, ${shopkeeper.shop.state} - ${shopkeeper.shop.pincode}` : 'Registered CDSCO Pharmacy Location';
+        const latitude = req.body.latitude || req.body.gps?.latitude || '28.6139';
+        const longitude = req.body.longitude || req.body.gps?.longitude || '77.2090';
+        const location = req.body.location || `${latitude}, ${longitude} | ${shopAddress}`;
+        const timestamp = new Date().toISOString();
+
         // Fabric transition AT_SHOP → SOLD (non-fatal)
-        await recordSale({ packHash, shopId: shopkeeperId, operatorId })
-            .catch(err => console.warn(`[shopkeeper-service Scan] Fabric sale failed (non-fatal): ${err.message}`));
+        await recordSale({
+            packHash,
+            shopId: shopkeeperId,
+            operatorId,
+            shopName,
+            licenseNumber,
+            location,
+            latitude,
+            longitude,
+            timestamp,
+        }).catch(err => console.warn(`[shopkeeper-service Scan] Fabric sale failed (non-fatal): ${err.message}`));
 
         // Write audit trail + decrement inventory
         await PackEvent.create({
@@ -184,12 +220,24 @@ export const saleScanController = async (req, res) => {
             { $inc: { currentStock: -1 } },
         );
 
-        console.log(`[shopkeeper-service Scan] Sale confirmed — pack ${packHash} serial ${serial || '?'} → shop ${shopkeeperId}`);
+        console.log(`[shopkeeper-service Scan] Sale confirmed — pack ${packHash} serial ${serial || '?'} → shop ${shopkeeperId} (${shopName})`);
 
         return res.status(200).json({
             status:  'success',
             message: 'Sale confirmed — hand medicine to consumer 🛒',
-            data:    { packHash, batchId, serial: serial || null, soldAt: new Date().toISOString() },
+            data:    {
+                packHash,
+                batchId,
+                serial: serial || null,
+                soldAt: timestamp,
+                shop: {
+                    shopId: shopkeeperId,
+                    name: shopName,
+                    licenseNumber,
+                    location,
+                    address: shopAddress,
+                },
+            },
         });
     } catch (err) {
         console.error('[shopkeeper-service Scan] saleScanController:', err.message);
@@ -280,19 +328,102 @@ export const customerScanController = async (req, res) => {
 
         const statusResult = await getPackStatus(packHash, batchId);
         const ledgerStatus = statusResult.status || 'NOT_FOUND';
+        const detail = statusResult.detail || {};
 
         let uiState = 'GENUINE';
         if (ledgerStatus === 'Recalled' || ledgerStatus === 'RECALLED') uiState = 'RECALLED';
         else if (ledgerStatus === 'Sold' || ledgerStatus === 'SOLD') uiState = 'ALREADY_SOLD';
         else if (ledgerStatus === 'AtShop' || ledgerStatus === 'AT_SHOP') uiState = 'AT_SHOP';
 
+        const isSold = uiState === 'ALREADY_SOLD' || ledgerStatus === 'Sold' || ledgerStatus === 'SOLD' || detail.eventType === 'SOLD';
+        const isAtShop = uiState === 'AT_SHOP' || ledgerStatus === 'AtShop' || ledgerStatus === 'AT_SHOP' || detail.eventType === 'INTAKE';
+
+        let dispensingShop = (isSold || isAtShop || detail.shopName || detail.sellerId) ? {
+            shopId:        detail.sellerId || detail.toId || detail.fromId || null,
+            name:          detail.shopName || (detail.sellerId ? `Registered Pharmacy (${detail.sellerId})` : 'Registered Pharmacy'),
+            licenseNumber: detail.licenseNumber || 'CDSCO-APPROVED',
+            location:      detail.location || null,
+            latitude:      detail.latitude || null,
+            longitude:     detail.longitude || null,
+            address:       null,
+            phone:         null,
+            sellingDate:   detail.sellingDate || null,
+            sellingTime:   detail.sellingTime || null,
+            timestamp:     detail.timestamp || null,
+        } : null;
+
+        if (dispensingShop?.shopId) {
+            try {
+                const sk = await Shopkeeper.findOne({
+                    $or: [
+                        { shopId: dispensingShop.shopId },
+                        { 'license.drugLicenseNumber': dispensingShop.shopId },
+                    ],
+                }).lean();
+                if (sk) {
+                    if (sk.shop?.name) dispensingShop.name = sk.shop.name;
+                    if (sk.license?.drugLicenseNumber) dispensingShop.licenseNumber = sk.license.drugLicenseNumber;
+                    if (sk.shop?.address) dispensingShop.address = `${sk.shop.address}, ${sk.shop.city || ''}, ${sk.shop.state || ''} - ${sk.shop.pincode || ''}`.replace(/,\s*,/g, ',');
+                    if (sk.shop?.phone) dispensingShop.phone = sk.shop.phone;
+                }
+            } catch {}
+        }
+
+        let isRecentlySold = false;
+        let hoursSinceSale = null;
+        let daysSinceSale = null;
+
+        if (isSold) {
+            let soldDate = null;
+            if (detail.timestamp) soldDate = new Date(detail.timestamp);
+            else if (detail.sellingDate) {
+                const ds = detail.sellingDate;
+                const ts = detail.sellingTime || '00:00:00';
+                if (/^\d{8}$/.test(ds)) {
+                    soldDate = new Date(`${ds.slice(4, 8)}-${ds.slice(2, 4)}-${ds.slice(0, 2)}T${ts}Z`);
+                } else {
+                    soldDate = new Date(`${ds} ${ts}`);
+                }
+            }
+
+            if (soldDate && !isNaN(soldDate.getTime())) {
+                const diffMs = Math.max(0, Date.now() - soldDate.getTime());
+                hoursSinceSale = Number((diffMs / (1000 * 60 * 60)).toFixed(1));
+                daysSinceSale = Math.floor(hoursSinceSale / 24);
+
+                if (dispensingShop) {
+                    dispensingShop.formattedSaleTime = soldDate.toLocaleDateString('en-IN', {
+                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+                    const mins = Math.floor(diffMs / (1000 * 60));
+                    dispensingShop.relativeSaleTime = mins < 1 ? 'just now' : mins < 60 ? `${mins} mins ago` : `${Math.floor(mins / 60)} hours ago`;
+                    dispensingShop.hoursSinceSale = hoursSinceSale;
+                    dispensingShop.daysSinceSale = daysSinceSale;
+                }
+
+                if (hoursSinceSale <= 48) {
+                    isRecentlySold = true;
+                    uiState = 'PURCHASED_RECENTLY';
+                    if (dispensingShop) dispensingShop.isRecentSale = true;
+                } else {
+                    isRecentlySold = false;
+                    uiState = 'ALREADY_SOLD';
+                    if (dispensingShop) dispensingShop.isRecentSale = false;
+                }
+            }
+        }
+
         return res.status(200).json({
             status: 'success',
             valid:  true,
             uiState,
+            isRecentlySold: isSold ? isRecentlySold : false,
+            hoursSinceSale: isSold ? hoursSinceSale : null,
+            daysSinceSale: isSold ? daysSinceSale : null,
             packHash,
             payload,
             ledgerStatus,
+            dispensingShop,
             detail: statusResult.detail || null,
         });
     } catch (err) {

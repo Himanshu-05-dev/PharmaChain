@@ -38,24 +38,7 @@ const INITIAL_FORM: ManufacturerRegisterPayload = {
   issuingAuthority: '',
   licenseExpiryDate: '',
   gmpStandard: 'WHO-GMP',
-  kycDocs: [
-    {
-      id: 'doc-1',
-      name: 'CDSCO_Form28D_Manufacturing_License.pdf',
-      type: 'application/pdf',
-      size: 2450000,
-      uploadDate: new Date().toISOString().split('T')[0],
-      status: 'UPLOADED',
-    },
-    {
-      id: 'doc-2',
-      name: 'Certificate_of_Incorporation_GSTIN.pdf',
-      type: 'application/pdf',
-      size: 1820000,
-      uploadDate: new Date().toISOString().split('T')[0],
-      status: 'UPLOADED',
-    },
-  ],
+  kycDocs: [],
 
   primaryPlantName: '',
   primaryPlantFacilityId: '',
@@ -93,59 +76,6 @@ export const RegisterWizard: React.FC = () => {
         return next;
       });
     }
-  };
-
-  const handleFillSample = () => {
-    setForm({
-      companyName: 'Apex Healthcare Therapeutics Ltd.',
-      manufacturerId: 'MFR_APEX_901',
-      companyCode: 'APEX',
-      cinNumber: 'L24239MH2022PLC381902',
-      gstin: '27AAACA9876C1Z5',
-      companyType: 'Formulation',
-      headquarters: 'Apex Pharma Tower, Bandra Kurla Complex, Mumbai 400051, Maharashtra',
-      website: 'https://apexhealthcare.in',
-
-      cdscoLicenseNo: 'CDSCO-MFG-DL-2026-77821',
-      cdscoRegistration: 'REG-INDIA-2026-99014',
-      issuingAuthority: 'State Drug Controller Maharashtra & CDSCO West Zone',
-      licenseExpiryDate: '2029-12-31',
-      gmpStandard: 'WHO-GMP',
-      kycDocs: [
-        {
-          id: 'doc-1',
-          name: 'CDSCO_Form28D_License_Apex.pdf',
-          type: 'application/pdf',
-          size: 2450000,
-          uploadDate: new Date().toISOString().split('T')[0],
-          status: 'UPLOADED',
-        },
-        {
-          id: 'doc-2',
-          name: 'GMP_ScheduleM_Certificate.pdf',
-          type: 'application/pdf',
-          size: 1950000,
-          uploadDate: new Date().toISOString().split('T')[0],
-          status: 'UPLOADED',
-        },
-      ],
-
-      primaryPlantName: 'Tarapur Oral Solid Formulation Unit',
-      primaryPlantFacilityId: 'FAC-MH-TARAPUR-01',
-      primaryPlantAddress: 'Plot 45-B, MIDC Tarapur, Palghar, Maharashtra 401506',
-      authorizedPersonName: 'Dr. Sanjay Kulkarni',
-      authorizedPersonRole: 'Chief Regulatory & Quality Officer (QP)',
-      email: 'sanjay.kulkarni@apexhealthcare.in',
-      phone: '+91 98200 88712',
-      idProofType: 'DIN',
-      idProofNumber: 'DIN-00918234',
-
-      password: 'ApexPharma@2026',
-      confirmPassword: 'ApexPharma@2026',
-      keyAlgorithm: 'ES256 (ECDSA P-256)',
-      agreeTerms: true,
-    });
-    setErrors({});
   };
 
   const validateStep1 = () => {
@@ -230,7 +160,7 @@ export const RegisterWizard: React.FC = () => {
   const handleAddMockFile = () => {
     const newDoc: KYCDocumentItem = {
       id: `doc-${Date.now()}`,
-      name: `CDSCO_Approval_Appendix_${Math.floor(100 + Math.random() * 900)}.pdf`,
+      name: `CDSCO_Approval_Doc_${Math.floor(100 + Math.random() * 900)}.pdf`,
       type: 'application/pdf',
       size: 1400000,
       uploadDate: new Date().toISOString().split('T')[0],
@@ -264,33 +194,21 @@ export const RegisterWizard: React.FC = () => {
   return (
     <div className="w-full max-w-3xl mx-auto">
       <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-blue-500" />
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-600" />
 
-        {/* Header & Quick Fill */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--border)]">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                CDSCO Form 28-D Statutory Onboarding
-              </span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight mt-1">
-              Manufacturer Entity Registration
-            </h1>
-            <p className="text-xs text-[var(--text-muted)]">
-              Register company, upload drug manufacturing licenses & configure ES256 key vault
-            </p>
+        {/* Header */}
+        <div className="pb-6 border-b border-[var(--border)]">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-500 dark:text-amber-300 border border-amber-500/20">
+              CDSCO Form 28-D Statutory Onboarding
+            </span>
           </div>
-
-          <button
-            type="button"
-            onClick={handleFillSample}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-element)] hover:bg-[var(--bg-active)] border border-[var(--border)] text-xs text-amber-400 hover:text-amber-300 font-semibold transition-all self-start sm:self-auto"
-            title="Auto-fill verified CDSCO sample data for rapid testing"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Fill Sample Data</span>
-          </button>
+          <h1 className="text-xl sm:text-2xl font-black text-[var(--text-primary)] tracking-tight mt-1">
+            Manufacturer Unit Registration
+          </h1>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">
+            Register manufacturing facility, upload drug licenses & configure cryptographic key vault
+          </p>
         </div>
 
         {/* Stepper Bar */}
@@ -303,18 +221,18 @@ export const RegisterWizard: React.FC = () => {
                 key={s.num}
                 className={`p-2.5 rounded-2xl border transition-all flex items-center gap-2.5 ${
                   isCurrent
-                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 ring-1 ring-emerald-500/30'
+                    ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 dark:text-amber-300 ring-1 ring-amber-500/30 shadow-xs'
                     : isDone
-                    ? 'bg-[var(--bg-element)] border-emerald-500/20 text-emerald-400/80'
+                    ? 'bg-[var(--bg-element)] border-amber-500/20 text-amber-500/80'
                     : 'bg-[var(--bg-element)]/50 border-[var(--border)] text-[var(--text-muted)] opacity-60'
                 }`}
               >
                 <div
                   className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                     isDone
-                      ? 'bg-emerald-500 text-slate-950 font-black'
+                      ? 'bg-amber-500 text-black font-black'
                       : isCurrent
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                      ? 'bg-amber-500/20 text-amber-500 dark:text-amber-300 border border-amber-500/40'
                       : 'bg-[var(--bg-surface)] text-[var(--text-muted)]'
                   }`}
                 >
@@ -855,7 +773,7 @@ export const RegisterWizard: React.FC = () => {
               <button
                 type="button"
                 onClick={handleNext}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer"
               >
                 <span>Continue to Step 0{currentStep + 1}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -864,7 +782,7 @@ export const RegisterWizard: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg shadow-amber-500/25 active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <>

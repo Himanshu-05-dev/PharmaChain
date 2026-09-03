@@ -31,61 +31,61 @@ import {
 } from 'lucide-react';
 
 const INITIAL_FORM_DATA = {
-  // 1. Medicine Identity & Formulation (Tier 2)
-  medicineName: 'Augmentin 625 Duo Tablets IP',
-  genericName: 'Amoxicillin and Potassium Clavulanate Tablets IP',
-  brandName: 'Augmentin Duo',
-  therapeuticCategory: 'Antibacterial / Penicillin Combination',
+  // 1. Medicine Identity & Formulation (Tier 2) - Clean for User Input
+  medicineName: '',
+  genericName: '',
+  brandName: '',
+  therapeuticCategory: '',
   drugSchedule: 'H' as const,
   pharmacopoeiaStandard: 'IP' as const,
-  composition: 'Amoxicillin Trihydrate IP eq to Amoxicillin 500mg + Potassium Clavulanate Diluted IP eq to Clavulanic Acid 125mg',
-  dosage: '625mg',
-  strength: '625mg per film-coated tablet',
+  composition: '',
+  dosage: '',
+  strength: '',
   form: 'Tablet' as Batch['form'],
   route: 'Oral' as const,
-  color: 'Titanium Dioxide IP White',
-  shape: 'Biconvex Oval Shape',
+  color: '',
+  shape: '',
   coating: 'Film Coated' as const,
 
-  // 2. Storage, Shelf Life & Manufacturing Site (Tier 2)
-  batchId: `BATCH-CIPLA-${new Date().getFullYear()}-${String(Math.floor(100 + Math.random() * 900))}`,
-  manufacturerBatchNumber: `ERP-AUG-${Math.floor(1000 + Math.random() * 9000)}`,
+  // 2. Storage, Shelf Life & Manufacturing Site (Tier 2) - Smart Metadata Only
+  batchId: `BATCH-${new Date().getFullYear()}-${String(Math.floor(1000 + Math.random() * 9000))}`,
+  manufacturerBatchNumber: '',
   manufacturingDate: new Date().toISOString().split('T')[0],
   expiryDate: new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   shelfLifeMonths: 24,
-  productionSite: 'Baddi Formulation Unit 1 (FAC-HP-01)',
-  productionAddress: 'Plot 104, Industrial Area, Baddi, Solan, Himachal Pradesh 173205',
-  manufacturingLicenseNo: 'CDSCO-MFG-DL-2024-88491',
-  productionLineId: 'LINE-OSD-04',
-  supervisorId: 'SUP-RAJESH-441',
-  shiftCode: 'SHIFT-A (06:00 - 14:00)',
-  equipmentBatchId: 'EQ-GRANULATOR-G02',
+  productionSite: '',
+  productionAddress: '',
+  manufacturingLicenseNo: '',
+  productionLineId: '',
+  supervisorId: '',
+  shiftCode: 'SHIFT-A (08:00 - 16:00)',
+  equipmentBatchId: '',
 
   // 3. Packaging & Logistics Hierarchy (Tier 2)
-  totalQuantity: 100000,
+  totalQuantity: 10000,
   packSize: 10,
   packType: 'Alu-Alu Blister Strip' as const,
-  unitsPerCarton: 1000,
+  unitsPerCarton: 100,
 
   // 4. Regulatory, Statutory & Cold Chain (Tier 2)
-  cdscoApprovalNo: 'CDSCO-APP-2026-99120',
-  gstin: '07AAACM1234F1Z8',
-  hsn: '30041000',
+  cdscoApprovalNo: '',
+  gstin: '',
+  hsn: '3004',
   controlledSubstance: false,
   coldChainRequired: false,
-  temperatureRange: '15°C to 25°C (Do not exceed 30°C)',
+  temperatureRange: '15°C to 25°C',
   storageConditions: 'Store in a cool dry place, protect from light and moisture',
 
   // 5. Quality Assurance, Release & COA (Tier 2)
-  qaOfficerId: 'QA-OFFICER-SHARMA-01',
+  qaOfficerId: '',
   qaApprovalDate: new Date().toISOString().split('T')[0],
-  retestDate: new Date(Date.now() + 1.5 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  coaReferenceNo: `COA-2026-AUG-${Math.floor(1000 + Math.random() * 9000)}`,
+  retestDate: '',
+  coaReferenceNo: '',
   microbialTestStatus: 'PASS',
   dissolutionTestStatus: 'PASS',
-  assayResult: '99.8% Active Purity (Acceptance Range: 95.0% - 105.0%)',
-  internalBatchNotes: 'Granulation moisture content: 1.8%. First pass compression yield: 99.4%. Release approved by Qualified Person.',
-  tags: 'Antibiotics, Respiratory, Schedule H, High Velocity',
+  assayResult: '',
+  internalBatchNotes: '',
+  tags: '',
 
   // Minting Options
   autoSignES256: true,
@@ -116,19 +116,6 @@ export const CreateBatchWizard: React.FC = () => {
 
   const handleBack = () => {
     setCurrentStep((s) => Math.max(s - 1, 1));
-  };
-
-  const handleFillSample = () => {
-    setFormData({
-      ...INITIAL_FORM_DATA,
-      batchId: `BATCH-CIPLA-${new Date().getFullYear()}-${String(Math.floor(100 + Math.random() * 900))}`,
-      manufacturerBatchNumber: `ERP-AUG-${Math.floor(1000 + Math.random() * 9000)}`,
-    });
-    showToast({
-      type: 'info',
-      title: 'Complete Tier-2 Formulations Loaded',
-      message: 'All 35+ Tier-2 chemical, manufacturing, QA, and packaging fields have been populated.',
-    });
   };
 
   const handleExecuteBatchCreation = async () => {
@@ -326,17 +313,8 @@ export const CreateBatchWizard: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
-            type="button"
-            onClick={handleFillSample}
-            className="px-3 py-1.5 rounded-xl bg-[var(--bg-element)] hover:bg-[var(--bg-active)] border border-amber-500/30 text-xs text-amber-400 font-semibold flex items-center gap-1.5 transition-all"
-            title="Auto-fill complete 35+ field Tier-2 dataset"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Fill Tier-2 Sample</span>
-          </button>
-          <button
             onClick={() => setActiveNav('batches')}
-            className="px-3.5 py-1.5 rounded-xl bg-[var(--bg-element)] hover:bg-[var(--bg-active)] border border-[var(--border)] text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all"
+            className="px-4 py-2 rounded-xl bg-[var(--bg-element)] hover:bg-[var(--bg-active)] border border-[var(--border)] text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all cursor-pointer font-bold"
           >
             Cancel
           </button>
@@ -444,9 +422,12 @@ export const CreateBatchWizard: React.FC = () => {
                   setMintingPhase('IDLE');
                   setCurrentStep(1);
                   setCreatedBatchResult(null);
-                  handleFillSample();
+                  setFormData({
+                    ...INITIAL_FORM_DATA,
+                    batchId: `BATCH-${new Date().getFullYear()}-${String(Math.floor(1000 + Math.random() * 9000))}`,
+                  });
                 }}
-                className="px-4 py-2.5 rounded-xl bg-[var(--bg-element)] hover:bg-[var(--bg-active)] border border-[var(--border)] text-xs font-semibold text-[var(--text-primary)]"
+                className="px-4 py-2.5 rounded-xl bg-[var(--bg-element)] hover:bg-[var(--bg-active)] border border-[var(--border)] text-xs font-semibold text-[var(--text-primary)] cursor-pointer"
               >
                 Create Another Batch
               </button>

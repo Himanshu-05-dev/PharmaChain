@@ -1,0 +1,159 @@
+# =============================================================================
+# skaffold.yaml — PharmaChain Monorepo Master Orchestrator
+# Part of Smart India Hackathon (SIH 2026) | National Drug Provenance Ledger
+#
+# Runs ALL components with a single command:
+#   skaffold dev
+#
+# Orchestrates:
+#   1. Blockchain Ledger: Pre-deploy hook starts Hyperledger Fabric + Spring Gateway
+#   2. Backend Microservices (5): pharma-core, manufacturer, shopkeeper, consumer, admin
+#   3. Frontend Portals (3): manufacturer-dashboard, admin-dashboard, shopkeeper-dashboard
+# =============================================================================
+
+apiVersion: skaffold/v4beta2
+kind: Config
+metadata:
+  name: pharmachain-platform
+
+build:
+  tagPolicy:
+    sha256: {}
+  artifacts:
+    # ── 1. Backend: Pharma Core Crypto Vault ──────────────────────────────────
+    - image: pharma-core-service
+      context: server/services/pharma-core
+      docker:
+        dockerfile: dockerfile
+      sync:
+        infer:
+          - "src/**"
+
+    # ── 2. Backend: Manufacturer Service ──────────────────────────────────────
+    - image: manufacturer-service
+      context: server/services/manufacturer
+      docker:
+        dockerfile: dockerfile
+      sync:
+        infer:
+          - "src/**"
+
+    # ── 3. Backend: Shopkeeper Service ────────────────────────────────────────
+    - image: shopkeeper-service
+      context: server/services/shopkeeper
+      docker:
+        dockerfile: dockerfile
+      sync:
+        infer:
+          - "src/**"
+
+    # ── 4. Backend: Consumer Service ──────────────────────────────────────────
+    - image: consumer-service
+      context: server/services/consumer
+      docker:
+        dockerfile: dockerfile
+      sync:
+        infer:
+          - "src/**"
+
+    # ── 5. Backend: Admin Service ─────────────────────────────────────────────
+    - image: admin-service
+      context: server/services/admin
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        infer:
+          - "src/**"
+
+    # ── 6. Frontend: Manufacturer Portal ──────────────────────────────────────
+    - image: manufacturer-dashboard
+      context: frontend/Manufacture-DashBoard
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        infer:
+          - "src/**"
+          - "index.html"
+          - "vite.config.ts"
+
+    # ── 7. Frontend: Admin CDSCO Portal ───────────────────────────────────────
+    - image: admin-dashboard
+      context: frontend/Admin-DashBoard
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        infer:
+          - "src/**"
+          - "index.html"
+          - "vite.config.ts"
+
+    # ── 8. Frontend: Shopkeeper Pharmacy Portal ───────────────────────────────
+    - image: shopkeeper-dashboard
+      context: frontend/Shopkeeper-DashBoard
+      docker:
+        dockerfile: Dockerfile
+      sync:
+        infer:
+          - "src/**"
+          - "index.html"
+          - "vite.config.ts"
+
+manifests:
+  rawYaml:
+    # Backend Kubernetes Manifests
+    - server/k8s/secrets.yml
+    - server/k8s/pharma-core.deployment.yml
+    - server/k8s/pharma-core.service.yml
+    - server/k8s/manufacturer.deployment.yml
+    - server/k8s/manufacturer.service.yml
+    - server/k8s/shopkeeper.deployment.yml
+    - server/k8s/shopkeeper.service.yml
+    - server/k8s/consumer.deployment.yml
+    - server/k8s/consumer.service.yml
+    - server/k8s/admin.deployment.yml
+    - server/k8s/admin.service.yml
+    - server/k8s/ingress.yml
+    # Frontend Kubernetes Manifests
+    - frontend/k8s/manufacturer-frontend.deployment.yml
+    - frontend/k8s/manufacturer-frontend.service.yml
+    - frontend/k8s/admin-frontend.deployment.yml
+    - frontend/k8s/admin-frontend.service.yml
+    - frontend/k8s/shopkeeper-frontend.deployment.yml
+    - frontend/k8s/shopkeeper-frontend.service.yml
+
+deploy:
+  kubectl:
+    hooks:
+      before:
+        - host:
+            command: ["sh", "-c", "cd blockchain-server && docker compose up -d"]
+            os: [darwin, linux]
+
+portForward:
+  # ── Frontend Web Dashboards ─────────────────────────────────────────────────
+  # Backend microservices are unified under Ingress (http://localhost:80/api/*)
+  - resourceType: service
+    resourceName: manufacturer-dashboard
+    port: 80
+    localPort: 5173
+    address: 0.0.0.0
+
+  - resourceType: service
+    resourceName: admin-dashboard
+    port: 80
+    localPort: 5174
+    address: 0.0.0.0
+
+  - resourceType: service
+    resourceName: shopkeeper-dashboard
+    port: 80
+    localPort: 5175
+    address: 0.0.0.0
+
+  # ── Backend Pharma Core JWKS Discovery ─────────────────────────────────────
+  # Used by Spring Boot blockchain gateway (pharma-backend) to verify JWTs
+  - resourceType: service
+    resourceName: pharma-core-service
+    port: 80
+    localPort: 4000
+    address: 0.0.0.0

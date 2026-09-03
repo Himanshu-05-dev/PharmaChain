@@ -9,4 +9,13 @@ public class TransitionRequest {
     public String sellingDate;
     public String sellingTime;
     public String sellerId;
+
+    // Rich provenance & GPS seller metadata
+    public String shopName;
+    public String licenseNumber;
+    public String location;
+    public String latitude;
+    public String longitude;
+    public String timestamp;
 }
+

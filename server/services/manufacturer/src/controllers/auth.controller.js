@@ -266,7 +266,7 @@ export const kycApproveController = async (req, res) => {
         let keyGenerated = false;
         try {
             console.log(`[manufacturer-service Auth] Requesting EC P-256 key generation from pharma-core for ${manufacturer.manufacturerId}...`);
-            await axios.post(
+            const keyRes = await axios.post(
                 `${PHARMA_CORE_URL}/core/keys/generate`,
                 { manufacturerId: manufacturer.manufacturerId },
                 {
@@ -279,10 +279,26 @@ export const kycApproveController = async (req, res) => {
                 },
             );
             keyGenerated = true;
+            if (keyRes.data?.publicKeyPem) {
+                manufacturer.publicKeyPem = keyRes.data.publicKeyPem;
+                manufacturer.keyId = keyRes.data.keyId;
+            }
             console.log(`[manufacturer-service Auth] EC P-256 key generated successfully for ${manufacturer.manufacturerId}`);
         } catch (keyErr) {
             if (keyErr.response?.status === 409) {
                 console.log(`[manufacturer-service Auth] EC key already exists in pharma-core for ${manufacturer.manufacturerId}`);
+                try {
+                    const existingRes = await axios.get(`${PHARMA_CORE_URL}/core/keys/${encodeURIComponent(manufacturer.manufacturerId)}`, {
+                        headers: { 'X-Service-Token': SERVICE_TOKEN },
+                        timeout: 5000,
+                    });
+                    if (existingRes.data?.publicKeyPem) {
+                        manufacturer.publicKeyPem = existingRes.data.publicKeyPem;
+                        manufacturer.keyId = existingRes.data.keyId;
+                    }
+                } catch {
+                    // non-fatal
+                }
             } else {
                 console.error(`[manufacturer-service Auth] Key generation failed in pharma-core (non-fatal): ${keyErr.message}`);
             }
@@ -699,4 +715,80 @@ export const logoutController = (_req, res) => {
         sameSite: 'strict',
     });
     return res.status(204).send();
+};
+
+// ── Public Key Lookup — GET /api/manufacturer/auth/public/key/:id or /public/key/:id ──
+// Resolves certified CDSCO public keys by manufacturerId, keyId, batchId, or MongoDB _id.
+export const getManufacturerPublicKeyController = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ status: 'error', message: 'Manufacturer identifier, keyId, or batchId is required' });
+        }
+
+        const query = {
+            $or: [
+                { manufacturerId: id },
+                { keyId: id },
+                { email: id.toLowerCase() },
+                ...(mongoose.isValidObjectId(id) ? [{ _id: id }] : []),
+            ],
+        };
+
+        let manufacturer = await Manufacturer.findOne(query)
+            .select('manufacturerId keyId publicKeyPem publicKeys companyName kycStatus')
+            .lean();
+
+        // If not found by manufacturer ID, check if id is a batchId
+        let batchKey = null;
+        try {
+            const Batch = mongoose.model('Batch');
+            const batch = await Batch.findOne({
+                $or: [{ batchId: id }, { systemBatchId: id }, { manufacturerBatchNumber: id }],
+            }).select('manufacturerId publicKeyPem keyId').lean();
+
+            if (batch) {
+                if (batch.publicKeyPem) batchKey = batch.publicKeyPem;
+                if (!manufacturer && batch.manufacturerId) {
+                    manufacturer = await Manufacturer.findOne({ manufacturerId: batch.manufacturerId })
+                        .select('manufacturerId keyId publicKeyPem publicKeys companyName kycStatus')
+                        .lean();
+                }
+            }
+        } catch {
+            // non-fatal batch lookup
+        }
+
+        const allKeys = [];
+        if (batchKey) allKeys.push(batchKey);
+        if (manufacturer?.publicKeyPem && !allKeys.includes(manufacturer.publicKeyPem)) {
+            allKeys.push(manufacturer.publicKeyPem);
+        }
+        if (Array.isArray(manufacturer?.publicKeys)) {
+            for (const pk of manufacturer.publicKeys) {
+                if (pk && !allKeys.includes(pk)) allKeys.push(pk);
+            }
+        }
+
+        if (allKeys.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                code: 'KEY_NOT_FOUND',
+                message: `No active or historical public keys found for identifier: ${id}`,
+            });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            manufacturerId: manufacturer?.manufacturerId || id,
+            keyId:          manufacturer?.keyId || null,
+            publicKeyPem:   allKeys[0],
+            publicKeys:     allKeys,
+            companyName:    manufacturer?.companyName || null,
+            kycStatus:      manufacturer?.kycStatus || 'APPROVED',
+        });
+    } catch (error) {
+        console.error('[manufacturer-service Auth] getManufacturerPublicKeyController error:', error.message);
+        return res.status(500).json({ status: 'error', message: error.message });
+    }
 };

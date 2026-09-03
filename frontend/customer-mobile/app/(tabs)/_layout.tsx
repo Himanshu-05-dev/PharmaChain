@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, History, ScanLine, FileText, User } from 'lucide-react-native';
+import { Home, History, ScanLine, FileText, CircleUserRound, ShieldCheck } from 'lucide-react-native';
 import { View, StyleSheet, Platform } from 'react-native';
 
 export default function TabLayout() {
@@ -7,24 +7,24 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#3b00b9',
-        tabBarInactiveTintColor: '#94a3b8',
+        tabBarActiveTintColor: '#ff5a36', // Warm Coral
+        tabBarInactiveTintColor: '#9ca3af', // Muted Slate
         tabBarStyle: {
-          height: Platform.OS === 'ios' ? 82 : 68,
+          height: Platform.OS === 'ios' ? 84 : 70,
           paddingBottom: Platform.OS === 'ios' ? 24 : 10,
           paddingTop: 8,
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
-          borderTopColor: '#f1f5f9',
-          shadowColor: '#0f172a',
-          shadowOffset: { width: 0, height: -4 },
+          borderTopColor: '#f3f4f6',
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: -3 },
           shadowOpacity: 0.04,
           shadowRadius: 10,
           elevation: 8,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: '700',
           marginTop: 2,
         },
       }}
@@ -53,13 +53,13 @@ export default function TabLayout() {
           title: 'Scan',
           tabBarIcon: ({ focused }) => (
             <View style={[styles.scanButton, focused && styles.scanButtonActive]}>
-              <ScanLine size={26} color="#ffffff" strokeWidth={2.4} />
+              <ScanLine size={26} color="#ffffff" strokeWidth={2.5} />
             </View>
           ),
           tabBarLabelStyle: {
             fontSize: 11,
-            fontWeight: '700',
-            color: '#3b00b9',
+            fontWeight: '800',
+            color: '#ff5a36',
             marginTop: 4,
           },
         }}
@@ -78,7 +78,9 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <User size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
+            <View style={[styles.profileIconWrapper, focused && styles.profileIconActive]}>
+              <CircleUserRound size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
+            </View>
           ),
         }}
       />
@@ -88,14 +90,14 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   scanButton: {
-    backgroundColor: '#3b00b9',
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    backgroundColor: '#ff5a36',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -22,
-    shadowColor: '#3b00b9',
+    marginTop: -24,
+    shadowColor: '#ff5a36',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -104,7 +106,14 @@ const styles = StyleSheet.create({
     borderColor: '#ffffff',
   },
   scanButtonActive: {
-    backgroundColor: '#2b008a',
+    backgroundColor: '#ea580c',
+    transform: [{ scale: 1.06 }],
+  },
+  profileIconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileIconActive: {
     transform: [{ scale: 1.05 }],
   },
 });

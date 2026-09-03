@@ -6,7 +6,7 @@ import Shopkeeper from '../models/shopkeeper.model.js';
 // ── Constants ─────────────────────────────────────────────────────────────────
 const BCRYPT_ROUNDS      = 12;
 const JWT_SECRET         = process.env.JWT_SECRET;
-const ACCESS_EXPIRES     = process.env.ACCESS_TOKEN_EXPIRES  || '15m';
+const ACCESS_EXPIRES     = process.env.ACCESS_TOKEN_EXPIRES  || '24h';
 const REFRESH_EXPIRES    = process.env.REFRESH_TOKEN_EXPIRES || '30d';
 const MAX_FAILED         = 10;
 const LOCK_DURATION_MS   = 30 * 60 * 1000; // 30 minutes

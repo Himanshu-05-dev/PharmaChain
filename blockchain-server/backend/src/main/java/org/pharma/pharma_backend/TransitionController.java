@@ -55,11 +55,17 @@ public class TransitionController {
     @PostMapping
     public String recordTransition(@RequestBody TransitionRequest req) throws Exception {
         String[] resolved = resolvePackAndEvent(req);
-        log.info("⛓️ [BLOCKCHAIN-GATEWAY] Recording single transition: packId='{}', event='{}', from='{}', to='{}'",
-                resolved[0], resolved[1], req.fromId, req.toId);
+        req.packId = resolved[0];
+        req.eventType = resolved[1];
+        log.info("⛓️ [BLOCKCHAIN-GATEWAY] Recording single transition: packId='{}', event='{}', from='{}', to='{}', shop='{}', loc='{}'",
+                resolved[0], resolved[1], req.fromId, req.toId, req.shopName, req.location);
+        
+        java.util.List<TransitionRequest> list = java.util.Collections.singletonList(req);
+        String transitionsJson = objectMapper.writeValueAsString(list);
         byte[] result = getContract().submitTransaction(
-            "recordTransition",
-            resolved[0], resolved[1], req.fromId, req.toId, req.sellingDate, req.sellingTime, req.sellerId
+            "recordTransitionBatch",
+            req.packId != null ? req.packId : "",
+            transitionsJson
         );
         String resStr = new String(result);
         log.info("✅ [BLOCKCHAIN-GATEWAY] Single transition committed successfully: {}", resStr);

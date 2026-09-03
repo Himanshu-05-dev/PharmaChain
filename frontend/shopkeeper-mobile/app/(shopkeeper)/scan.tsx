@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Animated,
+  Easing,
+  Dimensions,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -16,13 +19,18 @@ import {
   ScanLine,
   ArrowDownLeft,
   ArrowUpRight,
-  AlertTriangle,
-  Info,
+  ArrowLeft,
+  Camera,
+  Radio,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { PharmaTheme } from '../../src/constants/theme';
 
 type ScanMode = 'VERIFY' | 'RECEIVE' | 'DISPENSE';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const FRAME_SIZE = Math.min(SCREEN_WIDTH * 0.72, 270);
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -34,6 +42,11 @@ export default function ScanScreen() {
   const [torchOn, setTorchOn] = useState(false);
   const [scanMode, setScanMode] = useState<ScanMode>(params.mode || 'DISPENSE');
 
+  // Animation values
+  const laserAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rippleAnim1 = useRef(new Animated.Value(0)).current;
+  const rippleAnim2 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (params.mode && (params.mode === 'RECEIVE' || params.mode === 'DISPENSE' || params.mode === 'VERIFY')) {
@@ -41,6 +54,84 @@ export default function ScanScreen() {
     }
   }, [params.mode]);
 
+  // 1. Continuous Laser Line Sweep Animation
+  useEffect(() => {
+    const sweep = Animated.loop(
+      Animated.sequence([
+        Animated.timing(laserAnim, {
+          toValue: FRAME_SIZE - 6,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(laserAnim, {
+          toValue: 6,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    sweep.start();
+
+    return () => sweep.stop();
+  }, [laserAnim]);
+
+  // 2. Pulsing Corner Brackets
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+
+    return () => pulse.stop();
+  }, [pulseAnim]);
+
+  // 3. Radar Wave Ripples
+  useEffect(() => {
+    const createRipple = (anim: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 2200,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
+
+    const r1 = createRipple(rippleAnim1, 0);
+    const r2 = createRipple(rippleAnim2, 1100);
+
+    r1.start();
+    r2.start();
+
+    return () => {
+      r1.stop();
+      r2.stop();
+    };
+  }, [rippleAnim1, rippleAnim2]);
 
   if (!permission) {
     return <View style={styles.container} />;
@@ -50,14 +141,14 @@ export default function ScanScreen() {
     return (
       <View style={[styles.container, styles.permissionContainer]}>
         <View style={styles.permissionIconCircle}>
-          <ScanLine size={48} color="#0284c7" />
+          <Camera size={44} color={PharmaTheme.colors.primary} />
         </View>
-        <Text style={styles.permissionTitle}>Camera Access Required</Text>
+        <Text style={styles.permissionTitle}>Camera Terminal Access</Text>
         <Text style={styles.permissionSubtitle}>
-          PharmaChain needs camera permission to scan 2D DataMatrix security codes on pharmaceutical shipments.
+          PharmaChain requires camera permission to capture and cryptographically verify 2D DataMatrix packaging tokens.
         </Text>
-        <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
-          <Text style={styles.permissionBtnText}>Enable Camera Access</Text>
+        <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission} activeOpacity={0.85}>
+          <Text style={styles.permissionBtnText}>Enable Camera Terminal</Text>
         </TouchableOpacity>
       </View>
     );
@@ -78,18 +169,7 @@ export default function ScanScreen() {
       setLoading(false);
       setScanned(false);
       router.push({ pathname: '/verification', params: { qrData: data, mode: scanMode } });
-    }, 600);
-  };
-
-  const simulateScan = (id: string) => {
-    if (scanned || loading) return;
-    setScanned(true);
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setScanned(false);
-      router.push({ pathname: '/verification', params: { id, mode: scanMode } });
-    }, 400);
+    }, 450);
   };
 
   return (
@@ -104,31 +184,43 @@ export default function ScanScreen() {
         }}
       />
 
-      {/* Sibling Overlay */}
+      {/* Futuristic Titanium HUD Overlay */}
       <View style={[styles.overlay, { paddingTop: Math.max(insets.top, 20) + 8 }]}>
         {/* Top Controls Bar */}
         <View style={styles.topBar}>
-          <View style={styles.scannerBadge}>
-            <ShieldCheck size={16} color="#10b981" />
-            <Text style={styles.scannerBadgeText}>PharmaChain Node</Text>
+          <TouchableOpacity
+            style={styles.glassBtn}
+            onPress={() => {
+              if (router.canGoBack()) router.back();
+              else router.replace('/(shopkeeper)/dashboard');
+            }}
+            activeOpacity={0.8}
+          >
+            <ArrowLeft color="#ffffff" size={20} />
+          </TouchableOpacity>
+
+          <View style={styles.hudTelemetryPill}>
+            <View style={styles.pulseDot} />
+            <Text style={styles.hudTelemetryText}>PEER SYNCED • 24ms</Text>
           </View>
 
           <TouchableOpacity
-            style={[styles.torchBtn, torchOn && styles.torchBtnActive]}
+            style={[styles.glassBtn, torchOn && styles.torchBtnActive]}
             onPress={() => setTorchOn(!torchOn)}
             activeOpacity={0.8}
           >
-            {torchOn ? <Zap size={20} color="#f59e0b" /> : <ZapOff size={20} color="#ffffff" />}
+            {torchOn ? <Zap size={18} color="#f59e0b" /> : <ZapOff size={18} color="#ffffff" />}
           </TouchableOpacity>
         </View>
 
         {/* Scan Mode Switcher */}
-        <View style={styles.modeSwitcher}>
+        <View style={styles.modeSwitcherContainer}>
           <TouchableOpacity
             style={[styles.modeBtn, scanMode === 'VERIFY' && styles.modeBtnActive]}
             onPress={() => setScanMode('VERIFY')}
+            activeOpacity={0.8}
           >
-            <ShieldCheck size={14} color={scanMode === 'VERIFY' ? '#ffffff' : '#cbd5e1'} />
+            <ShieldCheck size={14} color={scanMode === 'VERIFY' ? '#ffffff' : '#94a3b8'} />
             <Text style={[styles.modeBtnText, scanMode === 'VERIFY' && styles.modeBtnTextActive]}>
               Verify
             </Text>
@@ -137,77 +229,130 @@ export default function ScanScreen() {
           <TouchableOpacity
             style={[styles.modeBtn, scanMode === 'RECEIVE' && styles.modeBtnActive]}
             onPress={() => setScanMode('RECEIVE')}
+            activeOpacity={0.8}
           >
-            <ArrowDownLeft size={14} color={scanMode === 'RECEIVE' ? '#ffffff' : '#cbd5e1'} />
+            <ArrowDownLeft size={14} color={scanMode === 'RECEIVE' ? '#ffffff' : '#94a3b8'} />
             <Text style={[styles.modeBtnText, scanMode === 'RECEIVE' && styles.modeBtnTextActive]}>
-              Inbound
+              + Inbound
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.modeBtn, scanMode === 'DISPENSE' && styles.modeBtnActive]}
             onPress={() => setScanMode('DISPENSE')}
+            activeOpacity={0.8}
           >
-            <ArrowUpRight size={14} color={scanMode === 'DISPENSE' ? '#ffffff' : '#cbd5e1'} />
+            <ArrowUpRight size={14} color={scanMode === 'DISPENSE' ? '#ffffff' : '#94a3b8'} />
             <Text style={[styles.modeBtnText, scanMode === 'DISPENSE' && styles.modeBtnTextActive]}>
-              Dispense
+              - Dispense
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Viewfinder Target Frame */}
+        {/* Viewfinder Target Reticle with Animated Laser & Radar */}
         <View style={styles.viewFinderContainer}>
-          <View style={styles.scanFrame}>
+          {/* Radar Waves */}
+          <Animated.View
+            style={[
+              styles.radarWave,
+              {
+                opacity: rippleAnim1.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.6, 0.3, 0],
+                }),
+                transform: [
+                  {
+                    scale: rippleAnim1.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.4, 1.4],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.radarWave,
+              {
+                opacity: rippleAnim2.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.6, 0.3, 0],
+                }),
+                transform: [
+                  {
+                    scale: rippleAnim2.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.4, 1.4],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+
+          {/* Pulsing Target Frame */}
+          <Animated.View
+            style={[
+              styles.scanFrame,
+              {
+                transform: [{ scale: pulseAnim }],
+              },
+            ]}
+          >
+            {/* Luminous Electric Cobalt Reticles */}
             <View style={[styles.corner, styles.topLeft]} />
             <View style={[styles.corner, styles.topRight]} />
             <View style={[styles.corner, styles.bottomLeft]} />
             <View style={[styles.corner, styles.bottomRight]} />
-            <View style={styles.laserLine} />
+
+            {/* Crosshair Center Aim */}
+            <View style={styles.centerCrosshairH} />
+            <View style={styles.centerCrosshairV} />
+
+            {/* Animated Laser Beam */}
+            <Animated.View
+              style={[
+                styles.laserLineContainer,
+                {
+                  transform: [{ translateY: laserAnim }],
+                },
+              ]}
+            >
+              <View style={styles.laserBeam} />
+              <View style={styles.laserGlow} />
+            </Animated.View>
+          </Animated.View>
+
+          {/* Telemetry HUD Labels */}
+          <View style={styles.telemetryTagRow}>
+            <Text style={styles.telemetryTagText}>CIPHER: ES256</Text>
+            <Text style={styles.telemetryTagText}>FPS: 60</Text>
+            <Text style={styles.telemetryTagText}>RESOLUTION: 4K</Text>
           </View>
 
           <Text style={styles.instructionTitle}>
             {scanMode === 'VERIFY'
-              ? 'Scan to Inspect Pack'
+              ? 'Cryptographic Verification HUD'
               : scanMode === 'RECEIVE'
-              ? 'Scan Inbound Delivery'
-              : 'Scan to Dispense Pack'}
+              ? 'Inbound Stock Intake Terminal'
+              : 'Point-of-Sale Dispense Mode'}
           </Text>
           <Text style={styles.instructionSub}>
-            Align the 2D DataMatrix or QR code within the illuminated corners
+            Align the 2D DataMatrix code within the illuminated crosshairs
           </Text>
         </View>
 
-        {/* Bottom Simulation Helpers */}
-        <View style={[styles.bottomControls, { paddingBottom: (insets.bottom || 10) + 16 }]}>
-          <View style={styles.simLabelRow}>
-            <Info size={12} color="rgba(255,255,255,0.7)" />
-            <Text style={styles.simLabelText}>Interactive Triggers</Text>
-          </View>
-          <View style={styles.simButtonsRow}>
-            <TouchableOpacity
-              style={styles.simAuthenticBtn}
-              onPress={() => simulateScan('1')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.simAuthenticText}>✓ Authentic Pack</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.simSuspiciousBtn}
-              onPress={() => simulateScan('4')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.simSuspiciousText}>⚠️ Counterfeit Alert</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        {/* Bottom Spacer for Tab Bar Clearance */}
+        <View style={{ height: 80 }} />
       </View>
 
-      {/* Loading Overlay */}
+      {/* Loading Radar Overlay */}
       {loading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ffffff" />
-          <Text style={styles.loadingText}>Verifying Blockchain Genesis...</Text>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Verifying Blockchain Ledger Hash...</Text>
+          <Text style={styles.loadingSub}>Validating ES256 Signature with CDSCO Authority</Text>
         </View>
       )}
     </View>
@@ -217,222 +362,23 @@ export default function ScanScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  scannerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    gap: 6,
-  },
-  scannerBadgeText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  torchBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  torchBtnActive: {
-    backgroundColor: 'rgba(245, 158, 11, 0.25)',
-    borderColor: '#f59e0b',
-  },
-  modeSwitcher: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    borderRadius: 14,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    gap: 4,
-    alignSelf: 'center',
-  },
-  modeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    gap: 6,
-  },
-  modeBtnActive: {
-    backgroundColor: '#0284c7',
-  },
-  modeBtnText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  modeBtnTextActive: {
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  viewFinderContainer: {
-    alignItems: 'center',
-  },
-  scanFrame: {
-    width: 250,
-    height: 250,
-    backgroundColor: 'transparent',
-    borderRadius: 20,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  corner: {
-    position: 'absolute',
-    width: 30,
-    height: 30,
-    borderColor: '#10b981',
-  },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 3.5,
-    borderLeftWidth: 3.5,
-    borderTopLeftRadius: 18,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 3.5,
-    borderRightWidth: 3.5,
-    borderTopRightRadius: 18,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 3.5,
-    borderLeftWidth: 3.5,
-    borderBottomLeftRadius: 18,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 3.5,
-    borderRightWidth: 3.5,
-    borderBottomRightRadius: 18,
-  },
-  laserLine: {
-    width: '85%',
-    height: 2,
-    backgroundColor: '#10b981',
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  instructionTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  instructionSub: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 12,
-    textAlign: 'center',
-    maxWidth: 260,
-    lineHeight: 16,
-  },
-  bottomControls: {
-    alignItems: 'center',
-  },
-  simLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 8,
-  },
-  simLabelText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  simButtonsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    width: '100%',
-  },
-  simAuthenticBtn: {
-    flex: 1,
-    backgroundColor: 'rgba(16, 185, 129, 0.25)',
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#10b981',
-    alignItems: 'center',
-  },
-  simAuthenticText: {
-    color: '#10b981',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  simSuspiciousBtn: {
-    flex: 1,
-    backgroundColor: 'rgba(239, 68, 68, 0.25)',
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ef4444',
-    alignItems: 'center',
-  },
-  simSuspiciousText: {
-    color: '#ef4444',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#ffffff',
-    marginTop: 16,
-    fontSize: 15,
-    fontWeight: '700',
+    backgroundColor: '#0b0f17',
   },
   permissionContainer: {
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 30,
-    backgroundColor: '#ffffff',
+    padding: 24,
   },
   permissionIconCircle: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ede9fe',
-    justifyContent: 'center',
+    borderRadius: 24,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1.5,
+    borderColor: '#dbeafe',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
   },
   permissionTitle: {
@@ -443,21 +389,240 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   permissionSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748b',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
   },
   permissionBtn: {
-    backgroundColor: '#3b00b9',
+    backgroundColor: '#2563eb',
     paddingHorizontal: 24,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 14,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   permissionBtnText: {
     color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11, 15, 23, 0.45)',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  glassBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  hudTelemetryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.35)',
+    gap: 6,
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10b981',
+  },
+  hudTelemetryText: {
+    color: '#60a5fa',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  torchBtnActive: {
+    backgroundColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: '#f59e0b',
+  },
+  modeSwitcherContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    borderRadius: 16,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+    gap: 4,
+    alignSelf: 'center',
+  },
+  modeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    gap: 5,
+  },
+  modeBtnActive: {
+    backgroundColor: '#2563eb',
+  },
+  modeBtnText: {
+    color: '#94a3b8',
+    fontSize: 12,
     fontWeight: '700',
+  },
+  modeBtnTextActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  viewFinderContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginBottom: 20,
+  },
+  radarWave: {
+    position: 'absolute',
+    width: FRAME_SIZE * 1.1,
+    height: FRAME_SIZE * 1.1,
+    borderRadius: (FRAME_SIZE * 1.1) / 2,
+    borderWidth: 1.5,
+    borderColor: '#3b82f6',
+  },
+  scanFrame: {
+    width: FRAME_SIZE,
+    height: FRAME_SIZE,
+    backgroundColor: 'rgba(15, 23, 42, 0.25)',
+    borderRadius: 24,
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.2)',
+  },
+  corner: {
+    position: 'absolute',
+    width: 36,
+    height: 36,
+    borderColor: '#38bdf8',
+  },
+  topLeft: {
+    top: -2,
+    left: -2,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 20,
+  },
+  topRight: {
+    top: -2,
+    right: -2,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 20,
+  },
+  bottomLeft: {
+    bottom: -2,
+    left: -2,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 20,
+  },
+  bottomRight: {
+    bottom: -2,
+    right: -2,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 20,
+  },
+  centerCrosshairH: {
+    position: 'absolute',
+    width: 28,
+    height: 1.5,
+    backgroundColor: 'rgba(56, 189, 248, 0.4)',
+  },
+  centerCrosshairV: {
+    position: 'absolute',
+    width: 1.5,
+    height: 28,
+    backgroundColor: 'rgba(56, 189, 248, 0.4)',
+  },
+  laserLineContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 8,
+    right: 8,
+    alignItems: 'center',
+  },
+  laserBeam: {
+    width: '100%',
+    height: 2.5,
+    backgroundColor: '#38bdf8',
+    borderRadius: 2,
+  },
+  laserGlow: {
+    width: '90%',
+    height: 8,
+    backgroundColor: 'rgba(56, 189, 248, 0.35)',
+    borderRadius: 4,
+    marginTop: -5,
+  },
+  telemetryTagRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  telemetryTagText: {
+    fontSize: 9.5,
+    color: '#38bdf8',
+    fontWeight: '800',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    letterSpacing: 0.5,
+  },
+  instructionTitle: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  instructionSub: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 12,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11, 15, 23, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  loadingText: {
+    color: '#ffffff',
     fontSize: 15,
+    fontWeight: '800',
+    marginTop: 14,
+  },
+  loadingSub: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginTop: 4,
   },
 });

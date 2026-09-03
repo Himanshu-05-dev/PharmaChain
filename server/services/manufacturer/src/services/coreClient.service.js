@@ -171,10 +171,13 @@ export const fetchBatchPreviewViaPharmaCore = async ({
     return response.data;
 };
 
-export const fetchBatchCsvStreamViaPharmaCore = async (batchId, authToken) => {
+export const fetchBatchCsvStreamViaPharmaCore = async (batchId, authToken, s3FileKey) => {
     const response = await getCoreClient(authToken).get(
         `/core/export/${encodeURIComponent(batchId)}`,
         {
+            params: {
+                s3FileKey: s3FileKey || undefined,
+            },
             responseType: 'stream',
             timeout: 60_000,
         },

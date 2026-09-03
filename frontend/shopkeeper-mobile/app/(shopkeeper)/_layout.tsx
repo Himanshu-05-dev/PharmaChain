@@ -1,84 +1,127 @@
+import React from 'react';
 import { Tabs } from 'expo-router';
-import { View, StyleSheet, Platform } from 'react-native';
-import { Home, History, ScanLine, Package, User } from 'lucide-react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import {
+  LayoutDashboard,
+  Boxes,
+  ScanLine,
+  History,
+  Store,
+  Sparkles,
+} from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PharmaTheme } from '../../src/constants/theme';
 
 export default function ShopkeeperLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#0f766e',
+        tabBarShowLabel: true,
+        tabBarActiveTintColor: PharmaTheme.colors.primary,
         tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
+          position: 'absolute',
+          bottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 14) : 16,
+          left: 16,
+          right: 16,
+          elevation: 10,
           backgroundColor: '#ffffff',
-          borderTopColor: '#f1f5f9',
-          borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 82 : 68,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+          borderRadius: 28,
+          height: 68,
+          paddingBottom: 8,
           paddingTop: 8,
-          elevation: 8,
+          borderWidth: 1,
+          borderColor: 'rgba(226, 232, 240, 0.95)',
           shadowColor: '#0f172a',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.05,
-          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.12,
+          shadowRadius: 22,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10.5,
           fontWeight: '700',
           marginTop: 2,
         },
       }}
     >
+      {/* 1. Overview */}
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Home',
+          title: 'Overview',
           tabBarIcon: ({ color, focused }) => (
-            <Home color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="transactions"
-        options={{
-          title: 'History',
-          tabBarIcon: ({ color, focused }) => (
-            <History color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="scan"
-        options={{
-          title: 'Scan',
-          tabBarIcon: ({ focused }) => (
-            <View style={[styles.scanButton, focused && styles.scanButtonActive]}>
-              <ScanLine color="#ffffff" size={26} strokeWidth={2.4} />
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconWrapperActive]}>
+              <LayoutDashboard size={20} color={color} strokeWidth={focused ? 2.4 : 1.8} />
             </View>
           ),
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '800',
-            color: '#0f766e',
-            marginTop: 4,
-          },
         }}
       />
+
+      {/* 2. Stock Vault */}
       <Tabs.Screen
         name="inventory"
         options={{
-          title: 'Inventory',
+          title: 'Stock Vault',
           tabBarIcon: ({ color, focused }) => (
-            <Package color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconWrapperActive]}>
+              <Boxes size={20} color={color} strokeWidth={focused ? 2.4 : 1.8} />
+            </View>
           ),
         }}
       />
+
+      {/* 3. Center Elevated Scan Button */}
+      <Tabs.Screen
+        name="scan"
+        options={{
+          title: 'Scan POS',
+          tabBarLabel: ({ focused }) => (
+            <Text
+              style={{
+                fontSize: 10.5,
+                fontWeight: '800',
+                color: focused ? PharmaTheme.colors.primary : '#64748b',
+                marginTop: 18,
+              }}
+            >
+              Scan POS
+            </Text>
+          ),
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.centerScanOuterRing}>
+              <View style={[styles.centerScanBtn, focused && styles.centerScanBtnActive]}>
+                <ScanLine size={24} color="#ffffff" strokeWidth={2.4} />
+              </View>
+            </View>
+          ),
+        }}
+      />
+
+      {/* 4. Ledger */}
+      <Tabs.Screen
+        name="transactions"
+        options={{
+          title: 'Ledger',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconWrapperActive]}>
+              <History size={20} color={color} strokeWidth={focused ? 2.4 : 1.8} />
+            </View>
+          ),
+        }}
+      />
+
+      {/* 5. Terminal Profile */}
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Store ID',
           tabBarIcon: ({ color, focused }) => (
-            <User color={color} size={22} strokeWidth={focused ? 2.5 : 2} />
+            <View style={[styles.tabIconWrapper, focused && styles.tabIconWrapperActive]}>
+              <Store size={20} color={color} strokeWidth={focused ? 2.4 : 1.8} />
+            </View>
           ),
         }}
       />
@@ -87,24 +130,42 @@ export default function ShopkeeperLayout() {
 }
 
 const styles = StyleSheet.create({
-  scanButton: {
-    backgroundColor: '#0f766e',
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    justifyContent: 'center',
+  tabIconWrapper: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 14,
     alignItems: 'center',
-    marginTop: -22,
-    shadowColor: '#0f766e',
+    justifyContent: 'center',
+  },
+  tabIconWrapperActive: {
+    backgroundColor: '#eff6ff',
+  },
+  centerScanOuterRing: {
+    position: 'absolute',
+    top: -24,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#dbeafe',
+    shadowColor: '#2563eb',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
-    shadowRadius: 10,
+    shadowRadius: 14,
     elevation: 8,
-    borderWidth: 4,
-    borderColor: '#ffffff',
   },
-  scanButtonActive: {
-    backgroundColor: '#115e59',
-    transform: [{ scale: 1.05 }],
+  centerScanBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2563eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerScanBtnActive: {
+    backgroundColor: '#1d4ed8',
   },
 });

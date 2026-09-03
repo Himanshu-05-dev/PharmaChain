@@ -63,13 +63,19 @@ export const initKeystore = async () => {
  *
  * @returns {Promise<Object>} The full keystore object.
  */
-export const readKeystore = async () => {
-    if (_keystoreCache !== null) return _keystoreCache; // Cache hit — zero disk I/O
+let _lastReadMtime = 0;
 
+export const readKeystore = async () => {
     try {
+        const stat = await fs.stat(KEYSTORE_PATH).catch(() => null);
+        if (stat && _keystoreCache !== null && stat.mtimeMs <= _lastReadMtime) {
+            return _keystoreCache;
+        }
+
         const raw = await fs.readFile(KEYSTORE_PATH, 'utf-8');
         _keystoreCache = JSON.parse(raw);
-        console.log('[pharma-core Keystore] Cache miss — loaded keystore from disk');
+        if (stat) _lastReadMtime = stat.mtimeMs;
+        console.log('[pharma-core Keystore] Loaded keystore from disk (mtime updated)');
         return _keystoreCache;
     } catch (error) {
         console.error('[pharma-core Keystore] Read error:', error.message);

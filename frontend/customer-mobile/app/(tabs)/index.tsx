@@ -6,35 +6,35 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   QrCode,
   ShieldCheck,
-  ShieldAlert,
   AlertTriangle,
-  AlertCircle,
-  Clock,
-  Bell,
   ChevronRight,
-  Info,
   Pill,
   X,
   FileText,
-  PhoneCall,
   Sparkles,
   Check,
+  ScanLine,
+  BookmarkCheck,
+  Zap,
+  Clock,
+  AlertCircle,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCustomerStore } from '../../src/store/customerStore';
 import { useAuthStore } from '../../src/store/authStore';
 import {
-  SAFETY_METRICS,
+  SAFETY_ALERTS,
   HEALTH_INSIGHTS,
 } from '../../src/data/customerData';
-import { SavedMedicine, HealthInsight, MedicineItemStatus } from '../../src/types';
+import { SavedMedicine, HealthInsight, SafetyAlert } from '../../src/types';
 
-export default function HomeDashboard() {
+export default function CustomerHomeDashboard() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { savedMedicines } = useCustomerStore();
@@ -43,27 +43,11 @@ export default function HomeDashboard() {
   const userName = (user as any)?.displayName || 'Himanshu';
   const avatarLetter = userName.charAt(0).toUpperCase();
 
-  const [medicineFilter, setMedicineFilter] = useState<'All' | 'Verified' | 'Expiring'>('All');
-  const [selectedMedicine, setSelectedMedicine] = useState<SavedMedicine | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<SafetyAlert | null>(null);
   const [selectedInsight, setSelectedInsight] = useState<HealthInsight | null>(null);
+  const [selectedMedicine, setSelectedMedicine] = useState<SavedMedicine | null>(null);
 
-  // Filter medicines from live store
-  const filteredMedicines = savedMedicines.filter((med) => {
-    if (medicineFilter === 'Verified') return med.status === 'Verified';
-    if (medicineFilter === 'Expiring') return med.status === 'Expiring Soon' || med.status === 'Needs Attention';
-    return true;
-  });
-
-  const verifiedCount = savedMedicines.filter((m) => m.status === 'Verified').length;
-  const attentionNeededCount = savedMedicines.filter((m) => m.status === 'Needs Attention').length;
-  const expiringSoonCount = savedMedicines.filter((m) => m.status === 'Expiring Soon').length;
-  const suspiciousAlertsCount = savedMedicines.filter((m) => m.status === 'Suspicious' || m.status === 'Expired').length;
-  const overallSafetyScore =
-    savedMedicines.length > 0
-      ? Math.round(savedMedicines.reduce((sum, m) => sum + (m.safetyScore || 95), 0) / savedMedicines.length)
-      : 100;
-
-  const getStatusBadgeConfig = (status: MedicineItemStatus) => {
+  const getStatusBadgeConfig = (status?: string) => {
     switch (status) {
       case 'Verified':
         return {
@@ -89,25 +73,25 @@ export default function HomeDashboard() {
           dot: '#ea580c',
           icon: <AlertCircle size={14} color="#ea580c" />,
         };
-      case 'Suspicious':
-      case 'Expired':
-        return {
-          bg: '#fef2f2',
-          text: '#991b1b',
-          border: '#fecaca',
-          dot: '#ef4444',
-          icon: <ShieldAlert size={14} color="#dc2626" />,
-        };
       default:
         return {
           bg: '#f3f4f6',
-          text: '#374151',
+          text: '#4b5563',
           border: '#e5e7eb',
-          dot: '#6b7280',
-          icon: <Info size={14} color="#4b5563" />,
+          dot: '#9ca3af',
+          icon: <ShieldCheck size={14} color="#6b7280" />,
         };
     }
   };
+
+  const verifiedCount = savedMedicines.filter((m) => m.status === 'Verified').length;
+  const overallSafetyScore =
+    savedMedicines.length > 0
+      ? Math.round(
+          savedMedicines.reduce((sum, m) => sum + (m.safetyScore || 95), 0) /
+            savedMedicines.length
+        )
+      : 100;
 
   return (
     <View style={styles.container}>
@@ -116,371 +100,245 @@ export default function HomeDashboard() {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: (insets.top || 24) + 12,
-            paddingBottom: (insets.bottom || 10) + 24,
+            paddingTop: Math.max(insets.top, 24) + 8,
+            paddingBottom: (insets.bottom || 10) + 30,
           },
         ]}
       >
-        {/* ========================================================================= */}
-        {/* 1. Header & User Context (No 3-dot or hamburger menu)                      */}
-        {/* ========================================================================= */}
+        {/* 1. Header & Brand Context */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity 
-              style={styles.avatarPill}
-              onPress={() => router.push('/(tabs)/profile')}
-              activeOpacity={0.8}
-            >
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarLetter}>{avatarLetter}</Text>
-                <View style={styles.onlineBadge} />
-              </View>
-              <View style={styles.headerTextContainer}>
-                <View style={styles.userTitleRow}>
-                  <Text style={styles.greeting}>Hi, {userName}</Text>
-                  <View style={styles.verifiedUserBadge}>
-                    <Check size={11} color="#059669" strokeWidth={3} />
-                  </View>
-                </View>
-                <Text style={styles.subGreeting}>PharmaCare Shield Active</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
           <TouchableOpacity
-            style={styles.notificationBtn}
-            onPress={() => router.push('/(tabs)/reports')}
-            activeOpacity={0.7}
+            style={styles.avatarPill}
+            onPress={() => router.push('/(tabs)/profile')}
+            activeOpacity={0.8}
           >
-            <Bell size={20} color="#1f2937" />
-            <View style={styles.notificationDot} />
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarLetter}>{avatarLetter}</Text>
+              <View style={styles.onlineBadge} />
+            </View>
+            <View style={styles.headerTextContainer}>
+              <View style={styles.userTitleRow}>
+                <Text style={styles.greeting}>Hi, {userName}</Text>
+                <View style={styles.verifiedUserBadge}>
+                  <Check size={11} color="#ea580c" strokeWidth={3} />
+                </View>
+              </View>
+              <Text style={styles.subGreeting}>PharmaChain Verified Patient</Text>
+            </View>
           </TouchableOpacity>
+
+          <View style={styles.brandBadge}>
+            <ShieldCheck size={14} color="#ea580c" />
+            <Text style={styles.brandBadgeText}>PharmaChain</Text>
+          </View>
         </View>
 
-        {/* ========================================================================= */}
-        {/* 2. Medicine Safety Status                                                 */}
-        {/* ========================================================================= */}
-        <View style={styles.safetyStatusSection}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Medicine Safety Status</Text>
-              <Text style={styles.sectionSubtitle}>Real-time prescription & authenticity health</Text>
+        {/* 2. Hero Quick-Scan Card (Warm Sunset Fire Aesthetic) */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroContent}>
+            <View style={styles.heroTagRow}>
+              <Sparkles size={13} color="#fde047" />
+              <Text style={styles.heroTagText}>BLOCKCHAIN SECURITY</Text>
             </View>
-            <View style={styles.liveIndicator}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>Live</Text>
-            </View>
+            <Text style={styles.heroTitle}>Verify Your Medicine</Text>
+            <Text style={styles.heroSubtitle}>
+              Scan 2D DataMatrix on your packaging to verify batch purity and Hyperledger provenance.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.heroScanBtn}
+              onPress={() => router.push('/(tabs)/scan')}
+              activeOpacity={0.85}
+            >
+              <ScanLine size={18} color="#ffffff" strokeWidth={2.4} />
+              <Text style={styles.heroScanBtnText}>Open Security Scanner</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Safety Score Banner */}
-          <View style={styles.safetyScoreBanner}>
-            <View style={styles.safetyScoreLeft}>
-              <View style={styles.scoreIconContainer}>
-                <ShieldCheck size={24} color="#059669" />
-              </View>
-              <View style={styles.scoreTextWrapper}>
-                <View style={styles.scoreRow}>
-                  <Text style={styles.scoreValue}>{overallSafetyScore}%</Text>
-                  <Text style={styles.scoreTitle}>Safety Index</Text>
-                </View>
-                <Text style={styles.scoreSubtitle}>
-                  {savedMedicines.length === 0
-                    ? '0 Scans • Ready for Verification'
-                    : suspiciousAlertsCount > 0
-                    ? `${suspiciousAlertsCount} Unverified Issues Detected`
-                    : '100% Cryptographically Verified'}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.scoreProgressTrack}>
-              <View style={[styles.scoreProgressBar, { width: `${overallSafetyScore}%` }]} />
-            </View>
-          </View>
-
-          {/* 4 Status Metric Cards */}
-          <View style={styles.statusGrid}>
-            <TouchableOpacity 
-              style={[styles.statusCard, styles.statusCardVerified]}
-              onPress={() => setMedicineFilter('Verified')}
-              activeOpacity={0.8}
-            >
-              <View style={styles.statusCardHeader}>
-                <View style={[styles.statusCardIconBox, { backgroundColor: '#d1fae5' }]}>
-                  <ShieldCheck size={18} color="#059669" />
-                </View>
-                <Text style={[styles.statusCardCount, { color: '#065f46' }]}>
-                  {verifiedCount}
-                </Text>
-              </View>
-              <Text style={styles.statusCardLabel}>Verified</Text>
-              <Text style={styles.statusCardSub}>Authentic Packs</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.statusCard, styles.statusCardAttention]}
-              onPress={() => setMedicineFilter('Expiring')}
-              activeOpacity={0.8}
-            >
-              <View style={styles.statusCardHeader}>
-                <View style={[styles.statusCardIconBox, { backgroundColor: '#ffedd5' }]}>
-                  <AlertCircle size={18} color="#ea580c" />
-                </View>
-                <Text style={[styles.statusCardCount, { color: '#9a3412' }]}>
-                  {attentionNeededCount}
-                </Text>
-              </View>
-              <Text style={styles.statusCardLabel}>Attention</Text>
-              <Text style={styles.statusCardSub}>Review Required</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.statusCard, styles.statusCardExpiring]}
-              onPress={() => setMedicineFilter('Expiring')}
-              activeOpacity={0.8}
-            >
-              <View style={styles.statusCardHeader}>
-                <View style={[styles.statusCardIconBox, { backgroundColor: '#fef3c7' }]}>
-                  <Clock size={18} color="#d97706" />
-                </View>
-                <Text style={[styles.statusCardCount, { color: '#92400e' }]}>
-                  {expiringSoonCount}
-                </Text>
-              </View>
-              <Text style={styles.statusCardLabel}>Expiring Soon</Text>
-              <Text style={styles.statusCardSub}>Within 30 Days</Text>
-            </TouchableOpacity>
-
-            <View style={[styles.statusCard, styles.statusCardSuspicious]}>
-              <View style={styles.statusCardHeader}>
-                <View style={[styles.statusCardIconBox, { backgroundColor: '#fee2e2' }]}>
-                  <ShieldAlert size={18} color="#dc2626" />
-                </View>
-                <Text style={[styles.statusCardCount, { color: '#991b1b' }]}>
-                  {suspiciousAlertsCount}
-                </Text>
-              </View>
-              <Text style={styles.statusCardLabel}>Suspicious</Text>
-              <Text style={styles.statusCardSub}>{suspiciousAlertsCount} Detected</Text>
+          <View style={styles.heroGraphicContainer}>
+            <View style={styles.heroGlowCircle}>
+              <QrCode size={52} color="#fdba74" strokeWidth={1.8} />
             </View>
           </View>
         </View>
 
-        {/* ========================================================================= */}
-        {/* 3. Scan Medicine (UNMODIFIED & PRESERVED EXACTLY)                         */}
-        {/* ========================================================================= */}
-        <View style={styles.scanCard}>
-          <View style={styles.scanCardContent}>
-            <View>
-              <Text style={styles.scanCardTitle}>Scan Medicine</Text>
-              <Text style={styles.scanCardSubtitle}>
-                Scan QR code on medicine pack{'\n'}to verify authenticity
-              </Text>
+        {/* 3. Safety Stats Strip (Warm Amber & Coral) */}
+        <View style={styles.statsStrip}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{savedMedicines.length}</Text>
+            <Text style={styles.statLabel}>Saved Medicines</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statNumber, { color: '#ea580c' }]}>
+              {verifiedCount}
+            </Text>
+            <Text style={styles.statLabel}>100% Authentic</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statNumber, { color: '#e11d48' }]}>
+              {overallSafetyScore}%
+            </Text>
+            <Text style={styles.statLabel}>Cabinet Safety</Text>
+          </View>
+        </View>
+
+        {/* 4. My Medicine Cabinet (Zero Dummy Data) */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionTitleGroup}>
+              <BookmarkCheck size={18} color="#ea580c" />
+              <Text style={styles.sectionTitle}>My Medicine Cabinet</Text>
+            </View>
+            {savedMedicines.length > 0 && (
               <TouchableOpacity
-                style={styles.scanButton}
-                onPress={() => router.push('/(tabs)/scan')}
+                onPress={() => router.push('/(tabs)/history')}
+                activeOpacity={0.7}
               >
-                <Text style={styles.scanButtonText}>Scan Now</Text>
+                <Text style={styles.viewAllText}>View All ({savedMedicines.length})</Text>
               </TouchableOpacity>
-            </View>
-            <View style={styles.qrContainer}>
-              <QrCode size={56} color="#fff" />
-            </View>
-          </View>
-        </View>
-
-        {/* ========================================================================= */}
-        {/* 4. My Medicines (Saved/Verified Medicines)                                 */}
-        {/* ========================================================================= */}
-        <View style={styles.myMedicinesSection}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <View style={styles.titleWithBadge}>
-                <Text style={styles.sectionTitle}>My Medicines</Text>
-                <View style={styles.countBadge}>
-                  <Text style={styles.countBadgeText}>{savedMedicines.length}</Text>
-                </View>
-              </View>
-              <Text style={styles.sectionSubtitle}>Verified prescriptions & cabinet items</Text>
-            </View>
-          </View>
-
-          {/* Filter Pills */}
-          <View style={styles.filterRow}>
-            {(['All', 'Verified', 'Expiring'] as const).map((filter) => {
-              const isActive = medicineFilter === filter;
-              return (
-                <TouchableOpacity
-                  key={filter}
-                  style={[styles.filterChip, isActive && styles.filterChipActive]}
-                  onPress={() => setMedicineFilter(filter)}
-                >
-                  <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                    {filter === 'All' ? 'All Items' : filter === 'Verified' ? '✓ Verified' : '⚠️ Attention / Expiring'}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Medicine List */}
-          <View style={styles.medicineList}>
-            {filteredMedicines.length === 0 ? (
-              <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0', marginVertical: 8 }}>
-                <Pill size={40} color="#cbd5e1" style={{ marginBottom: 12 }} />
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#1e293b', marginBottom: 4 }}>No Medicines in Cabinet</Text>
-                <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 16, lineHeight: 18 }}>
-                  {medicineFilter !== 'All'
-                    ? `No medicines matching the "${medicineFilter}" filter.`
-                    : 'Scan your medicine packaging with PharmaChain to verify authenticity and add it to your personal cabinet.'}
-                </Text>
-                <TouchableOpacity
-                  style={{ backgroundColor: '#3b00b9', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 }}
-                  onPress={() => router.push('/(tabs)/scan')}
-                >
-                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 14 }}>Scan New Medicine</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              filteredMedicines.map((med) => {
-                const badge = getStatusBadgeConfig(med.status);
-                const isUrgent = med.status === 'Expiring Soon' || med.status === 'Needs Attention';
-
-                return (
-                  <TouchableOpacity
-                    key={med.id}
-                    style={[styles.medicineCard, isUrgent && styles.medicineCardUrgent]}
-                    onPress={() => setSelectedMedicine(med)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.medCardTop}>
-                      <View style={styles.medIconBox}>
-                        <Pill size={20} color="#3b00b9" />
-                      </View>
-                      <View style={styles.medHeaderInfo}>
-                        <View style={styles.medNameRow}>
-                          <Text style={styles.medName} numberOfLines={1}>
-                            {med.name}
-                          </Text>
-                        </View>
-                        <Text style={styles.medGeneric} numberOfLines={1}>
-                          {med.genericName}
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.statusPill,
-                          {
-                            backgroundColor: badge.bg,
-                            borderColor: badge.border,
-                          },
-                        ]}
-                      >
-                        {badge.icon}
-                        <Text style={[styles.statusPillText, { color: badge.text }]}>
-                          {med.status}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.medCardDivider} />
-
-                    <View style={styles.medCardMeta}>
-                      <View style={styles.metaItem}>
-                        <Text style={styles.metaLabel}>Batch ID</Text>
-                        <Text style={styles.metaValue}>{med.batchNumber}</Text>
-                      </View>
-                      <View style={styles.metaDivider} />
-                      <View style={styles.metaItem}>
-                        <Text style={styles.metaLabel}>Expiry Date</Text>
-                        <Text
-                          style={[
-                            styles.metaValue,
-                            isUrgent && { color: '#ea580c', fontWeight: '700' },
-                          ]}
-                        >
-                          {med.expiryDate}
-                        </Text>
-                      </View>
-                      <View style={styles.metaDivider} />
-                      <View style={styles.metaAction}>
-                        <Text style={styles.metaActionText}>Inspect</Text>
-                        <ChevronRight size={14} color="#3b00b9" />
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
             )}
           </View>
+
+          {savedMedicines.length === 0 ? (
+            <View style={styles.emptyCabinetCard}>
+              <View style={styles.emptyCabinetIconCircle}>
+                <Pill size={32} color="#ff5a36" />
+              </View>
+              <Text style={styles.emptyCabinetTitle}>No Medicines in Cabinet Yet</Text>
+              <Text style={styles.emptyCabinetDesc}>
+                Scan your medicine packaging with PharmaChain to verify authenticity and save it here.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyCabinetBtn}
+                onPress={() => router.push('/(tabs)/scan')}
+                activeOpacity={0.85}
+              >
+                <ScanLine size={16} color="#ffffff" />
+                <Text style={styles.emptyCabinetBtnText}>Scan First Medicine</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.medicineList}>
+              {savedMedicines.slice(0, 3).map((med) => (
+                <View key={med.id} style={styles.medicineCard}>
+                  <View style={styles.medicineCardLeft}>
+                    <View style={styles.medicineIconCircle}>
+                      <Pill size={20} color="#ea580c" />
+                    </View>
+                    <View style={styles.medicineInfo}>
+                      <Text style={styles.medicineName} numberOfLines={1}>
+                        {med.name}
+                      </Text>
+                      <Text style={styles.medicineBatch}>
+                        Batch: {med.batchNumber} • {med.dosage}
+                      </Text>
+                      <Text style={styles.medicineExpiry}>
+                        Expires: {med.expiryDate}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.verifiedBadgeSmall}>
+                    <ShieldCheck size={13} color="#c2410c" />
+                    <Text style={styles.verifiedBadgeText}>Verified</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
-        {/* ========================================================================= */}
-        {/* 5. Health & Safety Insights & Useful Safety Information                   */}
-        {/* ========================================================================= */}
-        <View style={styles.insightsSection}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <View style={styles.titleWithBadge}>
-                <Text style={styles.sectionTitle}>Health & Safety Insights</Text>
-                <Sparkles size={16} color="#8b5cf6" style={{ marginLeft: 6 }} />
-              </View>
-              <Text style={styles.sectionSubtitle}>Pharmacist-verified safety advice & best practices</Text>
+        {/* 5. National Safety & Recall Advisories */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionTitleGroup}>
+              <AlertTriangle size={18} color="#ea580c" />
+              <Text style={styles.sectionTitle}>CDSCO Safety Bulletins</Text>
             </View>
           </View>
 
-          {HEALTH_INSIGHTS.map((insight) => (
+          {SAFETY_ALERTS.map((alert) => (
             <TouchableOpacity
-              key={insight.id}
-              style={styles.insightCard}
-              onPress={() => setSelectedInsight(insight)}
-              activeOpacity={0.7}
+              key={alert.id}
+              style={styles.alertCard}
+              onPress={() => setSelectedAlert(alert)}
+              activeOpacity={0.8}
             >
-              <View style={styles.insightHeader}>
-                <View style={styles.insightCategoryBadge}>
-                  <Text style={styles.insightCategoryText}>{insight.category}</Text>
+              <View style={styles.alertTopRow}>
+                <View style={styles.alertSourceBadge}>
+                  <Text style={styles.alertSourceText}>{alert.source}</Text>
                 </View>
-                <View style={styles.readTimeRow}>
-                  <Clock size={12} color="#6b7280" />
-                  <Text style={styles.readTimeText}>{insight.readTime}</Text>
-                </View>
+                <Text style={styles.alertDate}>{alert.date}</Text>
               </View>
-
-              <Text style={styles.insightTitle}>{insight.title}</Text>
-              <Text style={styles.insightSummary}>{insight.summary}</Text>
-
-              <View style={styles.insightFooter}>
-                <Text style={styles.insightTapToRead}>Read Safety Guide</Text>
-                <ChevronRight size={14} color="#3b00b9" />
+              <Text style={styles.alertTitle}>{alert.title}</Text>
+              <Text style={styles.alertSummary} numberOfLines={2}>
+                {alert.summary}
+              </Text>
+              <View style={styles.alertFooter}>
+                <Text style={styles.alertActionText}>Read CDSCO Directive</Text>
+                <ChevronRight size={14} color="#ea580c" />
               </View>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* ========================================================================= */}
-        {/* 6. Pharmacovigilance Safety Hotline Banner                                 */}
-        {/* ========================================================================= */}
-        <View style={styles.helplineBanner}>
-          <View style={styles.helplineIconContainer}>
-            <PhoneCall size={24} color="#1d4ed8" />
-          </View>
-          <View style={styles.helplineContent}>
-            <Text style={styles.helplineTitle}>National Drug Safety Helpline</Text>
-            <Text style={styles.helplineSubtitle}>
-              Toll-free 24/7 report for adverse drug reactions & suspicious sellers.
-            </Text>
-            <View style={styles.helplineActions}>
-              <TouchableOpacity
-                style={styles.reportShortcutBtn}
-                onPress={() => router.push('/report')}
-              >
-                <FileText size={14} color="#fff" style={{ marginRight: 4 }} />
-                <Text style={styles.reportShortcutText}>File Complaint</Text>
-              </TouchableOpacity>
-              <View style={styles.helplinePhonePill}>
-                <Text style={styles.helplinePhoneText}>1800-11-4321</Text>
-              </View>
+        {/* 6. Health & Counterfeit Intelligence Feed (Warm Pastel Cards) */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionTitleGroup}>
+              <Sparkles size={18} color="#e11d48" />
+              <Text style={styles.sectionTitle}>Patient Safety Education</Text>
             </View>
           </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalFeed}
+          >
+            {HEALTH_INSIGHTS.map((insight) => (
+              <TouchableOpacity
+                key={insight.id}
+                style={styles.insightCard}
+                onPress={() => setSelectedInsight(insight)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.insightCategoryBadge}>
+                  <Text style={styles.insightCategoryText}>{insight.category}</Text>
+                </View>
+                <Text style={styles.insightTitle} numberOfLines={2}>
+                  {insight.title}
+                </Text>
+                <Text style={styles.insightSummary} numberOfLines={3}>
+                  {insight.summary}
+                </Text>
+                <View style={styles.insightFooter}>
+                  <Text style={styles.insightReadTime}>{insight.readTime}</Text>
+                  <Text style={styles.insightTap}>Read Guide →</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* 7. Pharmacovigilance & Helpline Card (Warm Coral Sunset) */}
+        <View style={styles.helplineCard}>
+          <View style={styles.helplineLeft}>
+            <Text style={styles.helplineTitle}>Suspect a Fake Medicine?</Text>
+            <Text style={styles.helplineDesc}>
+              Directly lodge an encrypted report to the National Pharmacovigilance Cell.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.helplineBtn}
+            onPress={() => router.push('/report')}
+            activeOpacity={0.85}
+          >
+            <FileText size={16} color="#ffffff" />
+            <Text style={styles.helplineBtnText}>File Report</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -672,58 +530,43 @@ export default function HomeDashboard() {
         </View>
       </Modal>
 
-      {/* ========================================================================= */}
-      {/* Detail Modal: Health Insight                                              */}
-      {/* ========================================================================= */}
-      <Modal
-        visible={!!selectedInsight}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedInsight(null)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalSheet, { paddingBottom: (insets.bottom || 10) + 16 }]}>
-            {selectedInsight && (
-              <>
-                <View style={styles.modalHeader}>
-                  <View style={styles.modalHeaderTitleBox}>
-                    <Text style={styles.modalSheetTitle}>{selectedInsight.category}</Text>
-                    <Text style={styles.modalSheetSubtitle}>{selectedInsight.readTime}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.modalCloseBtn}
-                    onPress={() => setSelectedInsight(null)}
-                  >
-                    <X size={20} color="#6b7280" />
-                  </TouchableOpacity>
+      {/* Health Insight Modal */}
+      <Modal visible={Boolean(selectedInsight)} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={[styles.modalTag, { backgroundColor: '#fff1f2' }]}>
+                <Text style={[styles.modalTagText, { color: '#e11d48' }]}>
+                  {selectedInsight?.category}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedInsight(null)}>
+                <X size={20} color="#78716c" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalTitle}>{selectedInsight?.title}</Text>
+            <Text style={styles.modalSource}>{selectedInsight?.readTime}</Text>
+
+            <View style={styles.modalPointsList}>
+              {selectedInsight?.content.map((pt, idx) => (
+                <View key={idx} style={styles.modalPointRow}>
+                  <View style={styles.modalPointDot} />
+                  <Text style={styles.modalPointText}>{pt}</Text>
                 </View>
+              ))}
+            </View>
 
-                <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
-                  <Text style={styles.modalAlertTitle}>{selectedInsight.title}</Text>
+            <View style={styles.modalActionBox}>
+              <Text style={styles.modalActionTitle}>Key Takeaway:</Text>
+              <Text style={styles.modalActionDesc}>{selectedInsight?.keyTakeaway}</Text>
+            </View>
 
-                  <View style={styles.insightContentList}>
-                    {selectedInsight.content.map((point, idx) => (
-                      <View key={idx} style={styles.insightPointRow}>
-                        <View style={styles.insightPointBullet} />
-                        <Text style={styles.insightPointText}>{point}</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  <View style={styles.takeawayBox}>
-                    <Text style={styles.takeawayLabel}>Key Pharmacist Takeaway</Text>
-                    <Text style={styles.takeawayText}>{selectedInsight.keyTakeaway}</Text>
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.modalPrimaryBtn}
-                    onPress={() => setSelectedInsight(null)}
-                  >
-                    <Text style={styles.modalPrimaryBtnText}>Got it, thanks!</Text>
-                  </TouchableOpacity>
-                </ScrollView>
-              </>
-            )}
+            <TouchableOpacity
+              style={styles.modalCloseBtn}
+              onPress={() => setSelectedInsight(null)}
+            >
+              <Text style={styles.modalCloseBtnText}>Done</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -734,628 +577,605 @@ export default function HomeDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fffbf7', // Warm ivory/cream
   },
   scrollContent: {
     paddingHorizontal: 20,
   },
-
-  // ---------------------------------------------------------
-  // 1. Header Styles (Clean, no 3-dot or hamburger)
-  // ---------------------------------------------------------
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 18,
   },
   avatarPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
   avatarCircle: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#3b00b9',
+    backgroundColor: '#ff5a36',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    shadowColor: '#3b00b9',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowColor: '#ff5a36',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
     elevation: 3,
   },
   avatarLetter: {
-    color: '#ffffff',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
+    color: '#ffffff',
   },
   onlineBadge: {
-    width: 11,
-    height: 11,
-    borderRadius: 6,
-    backgroundColor: '#10b981',
-    borderWidth: 2,
-    borderColor: '#ffffff',
     position: 'absolute',
     bottom: 0,
     right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#f59e0b',
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
   headerTextContainer: {
-    marginLeft: 12,
+    gap: 2,
   },
   userTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
   greeting: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
-    letterSpacing: -0.2,
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#1c1917',
   },
   verifiedUserBadge: {
-    marginLeft: 6,
-    backgroundColor: '#d1fae5',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#ffedd5',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fed7aa',
   },
   subGreeting: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  notificationBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-    position: 'relative',
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: 10,
-    right: 11,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ef4444',
-    borderWidth: 1.5,
-    borderColor: '#ffffff',
-  },
-
-  // ---------------------------------------------------------
-  // 2. Medicine Safety Status
-  // ---------------------------------------------------------
-  safetyStatusSection: {
-    marginBottom: 22,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  titleWithBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
-    letterSpacing: -0.3,
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  liveIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ecfdf5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#a7f3d0',
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10b981',
-    marginRight: 4,
-  },
-  liveText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#065f46',
+    color: '#78716c',
+    fontWeight: '600',
   },
-  safetyScoreBanner: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  safetyScoreLeft: {
+  brandBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  scoreIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#ecfdf5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  scoreTextWrapper: {
-    flex: 1,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  scoreValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#065f46',
-    marginRight: 6,
-  },
-  scoreTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  scoreSubtitle: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 1,
-  },
-  scoreProgressTrack: {
-    height: 6,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  scoreProgressBar: {
-    height: '100%',
-    backgroundColor: '#10b981',
-    borderRadius: 3,
-  },
-  statusGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  statusCard: {
-    width: '48.5%',
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  statusCardVerified: {
-    borderColor: '#d1fae5',
-  },
-  statusCardAttention: {
-    borderColor: '#ffedd5',
-  },
-  statusCardExpiring: {
-    borderColor: '#fef3c7',
-  },
-  statusCardSuspicious: {
-    borderColor: '#fee2e2',
-  },
-  statusCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  statusCardIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusCardCount: {
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  statusCardLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1e293b',
-  },
-  statusCardSub: {
-    fontSize: 11,
-    color: '#64748b',
-    marginTop: 2,
-  },
-
-  // ---------------------------------------------------------
-  // 3. Scan Card (PRESERVED EXACTLY AS ORIGINAL)
-  // ---------------------------------------------------------
-  scanCard: {
-    backgroundColor: '#3b00b9',
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 24,
-    shadowColor: '#3b00b9',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  scanCardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  scanCardTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  scanCardSubtitle: {
-    fontSize: 13,
-    color: '#e0e7ff',
-    marginBottom: 20,
-    lineHeight: 18,
-  },
-  scanButton: {
-    backgroundColor: '#fff',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 999,
-    alignSelf: 'flex-start',
-  },
-  scanButtonText: {
-    color: '#10b981',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  qrContainer: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-
-  // ---------------------------------------------------------
-  // 4. My Medicines Section
-  // ---------------------------------------------------------
-  myMedicinesSection: {
-    marginBottom: 24,
-  },
-  countBadge: {
-    marginLeft: 8,
-    backgroundColor: '#ede9fe',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-  },
-  countBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#5b21b6',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 14,
-  },
-  filterChip: {
-    paddingHorizontal: 12,
+    gap: 5,
+    backgroundColor: '#ffedd5',
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#fed7aa',
   },
-  filterChipActive: {
-    backgroundColor: '#3b00b9',
-    borderColor: '#3b00b9',
+  brandBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#c2410c',
   },
-  filterChipText: {
+  heroCard: {
+    backgroundColor: '#1c1917', // Obsidian with warm fire glow
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ffedd5',
+    shadowColor: '#ff5a36',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 6,
+    overflow: 'hidden',
+  },
+  heroContent: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  heroTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 6,
+  },
+  heroTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#fdba74',
+    letterSpacing: 0.8,
+  },
+  heroTitle: {
+    fontSize: 19,
+    fontWeight: '900',
+    color: '#ffffff',
+    marginBottom: 6,
+  },
+  heroSubtitle: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b',
+    color: '#d6d3d1',
+    lineHeight: 17,
+    marginBottom: 16,
   },
-  filterChipTextActive: {
+  heroScanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#ff5a36',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    alignSelf: 'flex-start',
+    shadowColor: '#ff5a36',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  heroScanBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  heroGraphicContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroGlowCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: 'rgba(255, 90, 54, 0.15)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(253, 186, 116, 0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statsStrip: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+    shadowColor: '#ea580c',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#1c1917',
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#78716c',
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#fed7aa',
+    alignSelf: 'center',
+  },
+  sectionContainer: {
+    marginBottom: 22,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#1c1917',
+  },
+  viewAllText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ea580c',
+  },
+  emptyCabinetCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#fed7aa',
+    borderStyle: 'dashed',
+  },
+  emptyCabinetIconCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#fff7ed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  emptyCabinetTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#1c1917',
+    marginBottom: 6,
+  },
+  emptyCabinetDesc: {
+    fontSize: 12,
+    color: '#78716c',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
+    maxWidth: 260,
+  },
+  emptyCabinetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ff5a36',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    shadowColor: '#ff5a36',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  emptyCabinetBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
     color: '#ffffff',
   },
   medicineList: {
-    gap: 12,
+    gap: 10,
   },
   medicineCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 18,
+    padding: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 5,
-    elevation: 2,
+    borderColor: '#fed7aa',
   },
-  medicineCardUrgent: {
-    borderColor: '#fde68a',
-    backgroundColor: '#fffdfa',
-  },
-  medCardTop: {
+  medicineCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+    flex: 1,
   },
-  medIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: '#f3e8ff',
+  medicineIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff7ed',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
-  medHeaderInfo: {
+  medicineInfo: {
     flex: 1,
-    marginRight: 8,
   },
-  medNameRow: {
+  medicineName: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#1c1917',
+    marginBottom: 2,
+  },
+  medicineBatch: {
+    fontSize: 11,
+    color: '#78716c',
+    marginBottom: 2,
+  },
+  medicineExpiry: {
+    fontSize: 10,
+    color: '#ea580c',
+    fontWeight: '800',
+  },
+  verifiedBadgeSmall: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  medName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  medGeneric: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fff7ed',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
-    gap: 4,
+    borderColor: '#fed7aa',
   },
-  statusPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  medCardDivider: {
-    height: 1,
-    backgroundColor: '#f1f5f9',
-    marginVertical: 12,
-  },
-  medCardMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  metaItem: {
-    flex: 1,
-  },
-  metaLabel: {
+  verifiedBadgeText: {
     fontSize: 10,
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    fontWeight: '600',
-    letterSpacing: 0.4,
+    fontWeight: '800',
+    color: '#c2410c',
   },
-  metaValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginTop: 2,
-  },
-  metaDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: '#e2e8f0',
-    marginHorizontal: 8,
-  },
-  metaAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 4,
-  },
-  metaActionText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#3b00b9',
-    marginRight: 2,
-  },
-
-  // ---------------------------------------------------------
-  // 5. Health & Safety Insights
-  // ---------------------------------------------------------
-  insightsSection: {
-    marginBottom: 24,
-  },
-  insightCard: {
+  alertCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
+    borderColor: '#fed7aa',
   },
-  insightHeader: {
+  alertTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  insightCategoryBadge: {
-    backgroundColor: '#f5f3ff',
-    paddingHorizontal: 8,
+  alertSourceBadge: {
+    backgroundColor: '#fff7ed',
+    paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  insightCategoryText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#6d28d9',
+  alertSourceText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#c2410c',
   },
-  readTimeRow: {
+  alertDate: {
+    fontSize: 10,
+    color: '#a8a29e',
+  },
+  alertTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#1c1917',
+    marginBottom: 4,
+  },
+  alertSummary: {
+    fontSize: 11,
+    color: '#78716c',
+    lineHeight: 16,
+    marginBottom: 8,
+  },
+  alertFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  readTimeText: {
+  alertActionText: {
     fontSize: 11,
-    color: '#64748b',
+    fontWeight: '800',
+    color: '#ea580c',
+  },
+  horizontalFeed: {
+    gap: 12,
+    paddingRight: 10,
+  },
+  insightCard: {
+    width: 220,
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+    justifyContent: 'space-between',
+  },
+  insightCategoryBadge: {
+    backgroundColor: '#fff1f2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  insightCategoryText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#e11d48',
   },
   insightTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0f172a',
-    lineHeight: 20,
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#1c1917',
     marginBottom: 6,
+    lineHeight: 18,
   },
   insightSummary: {
-    fontSize: 12,
-    color: '#475569',
-    lineHeight: 18,
-    marginBottom: 10,
+    fontSize: 11,
+    color: '#78716c',
+    lineHeight: 16,
+    marginBottom: 12,
   },
   insightFooter: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#f3ede8',
+    paddingTop: 8,
   },
-  insightTapToRead: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#3b00b9',
-    marginRight: 2,
+  insightReadTime: {
+    fontSize: 10,
+    color: '#a8a29e',
   },
-
-  // ---------------------------------------------------------
-  // 6. Helpline Banner
-  // ---------------------------------------------------------
-  helplineBanner: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 16,
-    padding: 16,
+  insightTap: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#e11d48',
+  },
+  helplineCard: {
+    backgroundColor: '#ff5a36',
+    borderRadius: 22,
+    padding: 18,
     flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    marginBottom: 16,
-  },
-  helplineIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#dbeafe',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: 14,
+    marginBottom: 16,
+    shadowColor: '#ff5a36',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  helplineContent: {
+  helplineLeft: {
     flex: 1,
+    paddingRight: 12,
   },
   helplineTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1e3a8a',
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#ffffff',
     marginBottom: 4,
   },
-  helplineSubtitle: {
-    fontSize: 12,
-    color: '#3b82f6',
+  helplineDesc: {
+    fontSize: 11,
+    color: '#ffedd5',
     lineHeight: 16,
-    marginBottom: 10,
   },
-  helplineActions: {
+  helplineBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#c2410c',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+  },
+  helplineBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 22,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTag: {
+    backgroundColor: '#fff7ed',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  modalTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#c2410c',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#1c1917',
+    marginBottom: 4,
+  },
+  modalSource: {
+    fontSize: 11,
+    color: '#78716c',
+    marginBottom: 14,
+  },
+  modalBody: {
+    fontSize: 13,
+    color: '#44403c',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  modalPointsList: {
+    gap: 10,
+    marginBottom: 16,
+  },
+  modalPointRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 8,
   },
-  reportShortcutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1d4ed8',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
+  modalPointDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#e11d48',
+    marginTop: 6,
   },
-  reportShortcutText: {
-    color: '#ffffff',
+  modalPointText: {
     fontSize: 12,
-    fontWeight: '700',
+    color: '#44403c',
+    lineHeight: 18,
+    flex: 1,
   },
-  helplinePhonePill: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
+  modalActionBox: {
+    backgroundColor: '#fffaf5',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 18,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: '#fed7aa',
   },
-  helplinePhoneText: {
+  modalActionTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#1c1917',
+    marginBottom: 4,
+  },
+  modalActionDesc: {
     fontSize: 12,
+    color: '#ea580c',
     fontWeight: '700',
-    color: '#1d4ed8',
+    lineHeight: 17,
   },
-
-  // ---------------------------------------------------------
-  // Modal Styles
-  // ---------------------------------------------------------
+  modalCloseBtn: {
+    backgroundColor: '#1c1917',
+    paddingVertical: 13,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  modalCloseBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalSheet: {
@@ -1366,37 +1186,21 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     maxHeight: '88%',
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
   modalHeaderTitleBox: {
     flex: 1,
   },
   modalSheetTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#111827',
   },
   modalSheetSubtitle: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#6b7280',
     marginTop: 2,
   },
-  modalCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   modalScroll: {
-    marginTop: 14,
+    marginTop: 16,
   },
   modalStatusBanner: {
     flexDirection: 'row',
@@ -1512,54 +1316,5 @@ const styles = StyleSheet.create({
     color: '#ea580c',
     fontSize: 14,
     fontWeight: '700',
-  },
-  modalAlertTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
-    lineHeight: 22,
-    marginBottom: 4,
-  },
-  insightContentList: {
-    gap: 10,
-    marginVertical: 14,
-  },
-  insightPointRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  insightPointBullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#3b00b9',
-    marginTop: 6,
-    marginRight: 10,
-  },
-  insightPointText: {
-    fontSize: 13,
-    color: '#334155',
-    lineHeight: 19,
-    flex: 1,
-  },
-  takeawayBox: {
-    backgroundColor: '#f5f3ff',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ddd6fe',
-    marginVertical: 14,
-  },
-  takeawayLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#5b21b6',
-    marginBottom: 4,
-  },
-  takeawayText: {
-    fontSize: 13,
-    color: '#4c1d95',
-    lineHeight: 18,
-    fontWeight: '500',
   },
 });

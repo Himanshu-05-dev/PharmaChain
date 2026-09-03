@@ -108,36 +108,66 @@ export const readCsvContent = async (batchId, s3FileKey) => {
  * @param {import('express').Request}  req
  * @param {import('express').Response} res
  */
-export const localExportDownloadController = (req, res) => {
+export const localExportDownloadController = async (req, res) => {
     const { batchId } = req.params;
 
     if (!batchId || !/^[\w\-]+$/.test(batchId)) {
         return res.status(400).json({ code: 'INVALID_BATCH_ID', message: 'batchId is invalid or malformed' });
     }
 
-    const filePath = getLocalExportPath(batchId);
+    // 1. Check AWS S3 first if configured
+    if (isS3Configured()) {
+        const s3Key = req.query.s3FileKey || `batches/${batchId}.csv`;
+        try {
+            const s3Client = new S3Client({
+                region: process.env.AWS_REGION || 'us-east-1',
+                credentials: {
+                    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+                },
+            });
 
-    if (!existsSync(filePath)) {
-        return res.status(404).json({
-            code:    'FILE_NOT_FOUND',
-            message: `CSV file not found for batch ${batchId}. Was this batch minted in local mode?`,
-        });
+            const command = new GetObjectCommand({
+                Bucket: process.env.S3_BUCKET_NAME,
+                Key: s3Key,
+            });
+
+            const s3Response = await s3Client.send(command);
+
+            res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+            res.setHeader('Content-Disposition', `attachment; filename="${batchId}.csv"`);
+            res.setHeader('X-Export-Mode', 's3');
+
+            return s3Response.Body.pipe(res);
+        } catch (s3Err) {
+            console.warn(`[pharma-core Export] S3 stream attempt failed for ${batchId}:`, s3Err.message);
+        }
     }
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="${batchId}.csv"`);
-    res.setHeader('X-Export-Mode', 'local-fallback');
+    // 2. Check local disk fallback
+    const filePath = getLocalExportPath(batchId);
 
-    const fileStream = createReadStream(filePath);
+    if (existsSync(filePath)) {
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${batchId}.csv"`);
+        res.setHeader('X-Export-Mode', 'local-fallback');
 
-    fileStream.on('error', (err) => {
-        console.error(`[pharma-core Export] Stream error for ${batchId}:`, err.message);
-        if (!res.headersSent) {
-            res.status(500).json({ code: 'STREAM_ERROR', message: err.message });
-        }
+        const fileStream = createReadStream(filePath);
+
+        fileStream.on('error', (err) => {
+            console.error(`[pharma-core Export] Stream error for ${batchId}:`, err.message);
+            if (!res.headersSent) {
+                res.status(500).json({ code: 'STREAM_ERROR', message: err.message });
+            }
+        });
+
+        return fileStream.pipe(res);
+    }
+
+    return res.status(404).json({
+        code: 'FILE_NOT_FOUND',
+        message: `CSV file not found for batch ${batchId}. The batch artifact may not have been minted yet or was purged.`,
     });
-
-    fileStream.pipe(res);
 };
 
 export const exportBatchCsvController = localExportDownloadController;

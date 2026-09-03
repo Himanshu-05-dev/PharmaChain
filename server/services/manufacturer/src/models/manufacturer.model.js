@@ -57,6 +57,7 @@ const ManufacturerSchema = new mongoose.Schema(
         passwordHash:   { type: String, required: true },
         kycStatus:      { type: String, enum: KYC_STATUS, default: 'PENDING' },
         publicKeyPem:   { type: String, default: null },
+        publicKeys:     [{ type: String }],
         keyAlgorithm:   { type: String, default: 'ES256 (ECDSA P-256)' },
         rejectionReason:{ type: String, default: null },
         verifiedAt:     { type: Date, default: null },

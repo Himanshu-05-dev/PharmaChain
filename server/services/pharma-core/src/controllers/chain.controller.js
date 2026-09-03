@@ -14,7 +14,7 @@ const formatTime = (d = new Date()) => d.toTimeString().split(' ')[0];
 
 export const chainIntakeController = async (req, res) => {
     try {
-        const { packHash, shopId, operatorId, manufacturerId } = req.body;
+        const { packHash, shopId, operatorId, manufacturerId, shopName, licenseNumber, location, latitude, longitude, timestamp } = req.body;
 
         if (!packHash || !shopId || !operatorId || !manufacturerId) {
             return res.status(400).json({
@@ -33,6 +33,12 @@ export const chainIntakeController = async (req, res) => {
             sellingDate: formatDate(now),
             sellingTime: formatTime(now),
             sellerId: operatorId,
+            shopName: shopName || '',
+            licenseNumber: licenseNumber || '',
+            location: location || '',
+            latitude: latitude ? String(latitude) : '',
+            longitude: longitude ? String(longitude) : '',
+            timestamp: timestamp || now.toISOString(),
         };
 
         // ── Submit transition to pharma-backend with RS256 Bearer JWT ─────────
@@ -66,7 +72,7 @@ export const chainIntakeController = async (req, res) => {
 
 export const chainSaleController = async (req, res) => {
     try {
-        const { packHash, shopId, operatorId } = req.body;
+        const { packHash, shopId, operatorId, shopName, licenseNumber, location, latitude, longitude, timestamp } = req.body;
 
         if (!packHash || !shopId || !operatorId) {
             return res.status(400).json({
@@ -85,13 +91,19 @@ export const chainSaleController = async (req, res) => {
             sellingDate: formatDate(now),
             sellingTime: formatTime(now),
             sellerId: operatorId,
+            shopName: shopName || '',
+            licenseNumber: licenseNumber || '',
+            location: location || '',
+            latitude: latitude ? String(latitude) : '',
+            longitude: longitude ? String(longitude) : '',
+            timestamp: timestamp || now.toISOString(),
         };
 
         // ── Submit transition to pharma-backend with RS256 Bearer JWT ─────────
         let backendResult = null;
         try {
             backendResult = await submitTransition(transition);
-            console.log(`[pharma-core Chain] ✅ Sale transition committed to Fabric for packHash: ${packHash}`);
+            console.log(`[pharma-core Chain] ✅ Sale transition committed to Fabric for packHash: ${packHash} (Shop: ${shopName || shopId})`);
         } catch (backendErr) {
             console.error(`[pharma-core Chain] ❌ Fabric Sale submission failed for ${packHash}: ${backendErr.message}`);
             return res.status(backendErr.status || 502).json({

@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useDashboard } from '../Hooks/dashboard.hooks';
-import { DashboardHeader } from './DashboardHeader';
 import { DashboardStats } from './DashboardStats';
 import { DashboardCharts } from './DashboardCharts';
 import { DashboardQuickActions } from './DashboardQuickActions';
@@ -22,10 +21,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard-root pb-12 space-y-6">
-      {/* 1. Header with greeting, date range & primary CTA */}
-      <DashboardHeader />
-
-      {/* 2. 6 KPI Metric Cards */}
+      {/* 1. 6 KPI Metric Cards */}
       <DashboardStats />
 
       {/* 3. Production Analytics Area Chart & Lifecycle Donut */}

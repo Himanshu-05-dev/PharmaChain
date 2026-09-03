@@ -8,6 +8,7 @@ import {
     kycUnblockController,
     getMeController,
     logoutController,
+    getManufacturerPublicKeyController,
 } from '../controllers/auth.controller.js';
 import { identifyUser } from '../middleware/identifyUser.middleware.js';
 
@@ -20,6 +21,10 @@ router.post('/register', registerController);
 
 // POST /api/manufacturer/auth/login → sets mfr_token cookie
 router.post('/login', loginController);
+
+// GET /api/manufacturer/auth/key/:id and /api/manufacturer/auth/public/key/:id
+router.get('/key/:id', getManufacturerPublicKeyController);
+router.get('/public/key/:id', getManufacturerPublicKeyController);
 
 // POST /api/manufacturer/auth/kyc/approve → admin-only, X-Admin-Token header required
 // Sets kycStatus=APPROVED and provisions EC P-256 signing key via pharma-core.

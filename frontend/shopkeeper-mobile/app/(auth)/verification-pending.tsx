@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Clock, RefreshCw, LogOut, ShieldAlert, Store } from 'lucide-react-native';
 import { useAuthStore } from '../../src/store/authStore';
 import { getVerificationStatus } from '../../src/services/api/auth';
+import { PharmaTheme } from '../../src/constants/theme';
+import { AnimatedAuthBackground } from '../../src/components/common/AnimatedAuthBackground';
 
 export default function VerificationPendingScreen() {
   const router = useRouter();
@@ -42,10 +44,13 @@ export default function VerificationPendingScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <AnimatedAuthBackground />
+
       <View style={styles.card}>
         {/* Animated/Visual Icon */}
         <View style={styles.iconCircle}>
-          <Clock size={48} color="#d97706" />
+          <Clock size={44} color="#d97706" />
         </View>
 
         <Text style={styles.title}>Verification Pending</Text>
@@ -60,45 +65,42 @@ export default function VerificationPendingScreen() {
             <Text style={styles.infoLabel}>Shop Name:</Text>
             <Text style={styles.infoValue}>{shopkeeper?.shopName || 'Registered Pharmacy'}</Text>
           </View>
-
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Shop ID:</Text>
-            <Text style={[styles.infoValue, { color: '#4338ca', fontWeight: '700' }]}>
-              {shopkeeper?.shopId || 'SHOP-PENDING'}
-            </Text>
+            <Text style={styles.infoLabel}>Owner Name:</Text>
+            <Text style={styles.infoValue}>{shopkeeper?.ownerName || 'Authorized Pharmacist'}</Text>
           </View>
-
-          <View style={[styles.infoRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-            <Text style={styles.infoLabel}>Status:</Text>
-            <View style={styles.pendingBadge}>
-              <Text style={styles.pendingBadgeText}>UNDER REVIEW</Text>
-            </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Drug License:</Text>
+            <Text style={[styles.infoValue, { color: PharmaTheme.colors.primary }]}>
+              {shopkeeper?.drugLicenseNumber || 'DL-PENDING'}
+            </Text>
           </View>
         </View>
 
-        {/* Check Status Button */}
+        {/* Action Buttons */}
         <TouchableOpacity 
-          style={[styles.checkBtn, isChecking && styles.disabledBtn]}
+          style={[styles.primaryBtn, isChecking && styles.primaryBtnDisabled]}
           onPress={handleCheckStatus}
           disabled={isChecking}
+          activeOpacity={0.85}
         >
           {isChecking ? (
             <ActivityIndicator size="small" color="#ffffff" />
           ) : (
-            <>
-              <RefreshCw size={18} color="#ffffff" style={{ marginRight: 8 }} />
-              <Text style={styles.checkBtnText}>Check Status</Text>
-            </>
+            <View style={styles.btnRow}>
+              <RefreshCw size={16} color="#ffffff" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryBtnText}>Refresh Approval Status</Text>
+            </View>
           )}
         </TouchableOpacity>
 
-        {/* Logout Button */}
         <TouchableOpacity 
           style={styles.logoutBtn}
           onPress={handleLogout}
+          activeOpacity={0.8}
         >
-          <LogOut size={18} color="#dc2626" style={{ marginRight: 8 }} />
-          <Text style={styles.logoutBtnText}>Logout</Text>
+          <LogOut size={16} color="#dc2626" style={{ marginRight: 6 }} />
+          <Text style={styles.logoutBtnText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -110,121 +112,108 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
     justifyContent: 'center',
-    padding: 24,
+    padding: 20,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 28,
-    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
+    padding: 24,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(226, 232, 240, 0.9)',
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 16,
     elevation: 4,
+    alignItems: 'center',
   },
   iconCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#fef3c7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 2,
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: '#fffbeb',
+    borderWidth: 1.5,
     borderColor: '#fde68a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   title: {
     fontSize: 22,
     fontWeight: '800',
     color: '#0f172a',
-    marginBottom: 10,
+    marginBottom: 8,
     textAlign: 'center',
   },
   message: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748b',
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
+    lineHeight: 19,
+    marginBottom: 20,
+    paddingHorizontal: 8,
   },
   infoCard: {
     width: '100%',
     backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 24,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
   infoLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748b',
-    fontWeight: '500',
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#0f172a',
     fontWeight: '600',
   },
-  pendingBadge: {
-    backgroundColor: '#f59e0b',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  pendingBadgeText: {
-    color: '#ffffff',
-    fontSize: 11,
+  infoValue: {
+    fontSize: 13,
     fontWeight: '700',
+    color: '#0f172a',
   },
-  checkBtn: {
-    width: '100%',
-    backgroundColor: '#0f766e',
-    borderRadius: 12,
+  primaryBtn: {
+    backgroundColor: '#2563eb',
+    borderRadius: 14,
     paddingVertical: 14,
-    flexDirection: 'row',
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
-    shadowColor: '#0f766e',
+    shadowColor: '#2563eb',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 3,
+    marginBottom: 12,
   },
-  checkBtnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  disabledBtn: {
+  primaryBtnDisabled: {
     opacity: 0.65,
   },
+  btnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  primaryBtnText: {
+    color: '#ffffff',
+    fontSize: 14.5,
+    fontWeight: '800',
+  },
   logoutBtn: {
-    width: '100%',
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 12,
-    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
   },
   logoutBtnText: {
     color: '#dc2626',
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '700',
   },
 });

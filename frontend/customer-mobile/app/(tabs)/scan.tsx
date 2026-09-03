@@ -1,23 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Animated,
+  Easing,
+  Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Haptics from 'expo-haptics';
 import {
   ShieldCheck,
   Zap,
   ZapOff,
   ScanLine,
   AlertTriangle,
-  Info,
+  Camera,
   CheckCircle2,
+  Sparkles,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SCAN_BOX_SIZE = Math.min(SCREEN_WIDTH * 0.72, 280);
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -25,6 +34,106 @@ export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
+  const [verifyingModal, setVerifyingModal] = useState<string | null>(null);
+
+  // Laser animation loop
+  const laserAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const laserLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(laserAnim, {
+          toValue: SCAN_BOX_SIZE - 20,
+          duration: 1600,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(laserAnim, {
+          toValue: 0,
+          duration: 1600,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.04,
+          duration: 1100,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1100,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    laserLoop.start();
+    pulseLoop.start();
+
+    return () => {
+      laserLoop.stop();
+      pulseLoop.stop();
+    };
+  }, []);
+
+  const triggerHaptic = () => {
+    try {
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (e) {
+      // Haptics optional fallback
+    }
+  };
+
+  const handleBarcodeScanned = ({ type, data }: any) => {
+    if (scanned) return;
+    setScanned(true);
+    triggerHaptic();
+
+    setVerifyingModal('Verifying QR Code on Hyperledger Fabric...');
+
+    setTimeout(() => {
+      setVerifyingModal(null);
+      setScanned(false);
+      router.push({ pathname: '/scan-result', params: { qrData: data } });
+    }, 700);
+  };
+
+  const handleDemoScan = (status: 'authentic' | 'suspicious') => {
+    if (scanned) return;
+    setScanned(true);
+    triggerHaptic();
+
+    setVerifyingModal(
+      status === 'authentic'
+        ? 'Scanning 2D Matrix & Loading Medicine Journey...'
+        : 'Flagging Mismatch with CDSCO Database...'
+    );
+
+    setTimeout(() => {
+      setVerifyingModal(null);
+      setScanned(false);
+      router.push({
+        pathname: '/scan-result',
+        params: {
+          status,
+          qrData:
+            status === 'authentic'
+              ? 'PC-JWT-GENUINE-BATCH-PCM-2026-SUNPHARMA'
+              : 'PC-JWT-FLAGGED-INVALID-SIGNATURE',
+        },
+      });
+    }, 600);
+  };
 
   if (!permission) {
     return <View style={styles.container} />;
@@ -34,35 +143,23 @@ export default function ScanScreen() {
     return (
       <View style={[styles.container, styles.permissionContainer]}>
         <View style={styles.permissionIconCircle}>
-          <ScanLine size={48} color="#3b00b9" />
+          <Camera size={44} color="#FF5342" />
         </View>
-        <Text style={styles.permissionTitle}>Camera Access Required</Text>
+        <Text style={styles.permissionTitle}>Camera Permission Required</Text>
         <Text style={styles.permissionSubtitle}>
-          PharmaChain needs camera permission to scan security QR codes and barcodes on medicine packaging.
+          PharmaChain needs camera access to scan 2D DataMatrix cryptographic codes and verify tamper-proof provenance.
         </Text>
-        <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
+        <TouchableOpacity
+          style={styles.permissionBtn}
+          onPress={requestPermission}
+          activeOpacity={0.85}
+        >
+          <ShieldCheck size={18} color="#ffffff" />
           <Text style={styles.permissionBtnText}>Enable Camera Access</Text>
         </TouchableOpacity>
       </View>
     );
   }
-
-  const handleBarcodeScanned = ({ type, data }: any) => {
-    if (scanned) return;
-    setScanned(true);
-
-    // Navigate to scan-result with live qrData for real backend verification
-    router.push({ pathname: '/scan-result', params: { qrData: data } });
-
-    setTimeout(() => setScanned(false), 2000);
-  };
-
-  const simulateScan = (status: 'authentic' | 'suspicious') => {
-    if (scanned) return;
-    setScanned(true);
-    router.push({ pathname: '/scan-result', params: { status } });
-    setTimeout(() => setScanned(false), 2000);
-  };
 
   return (
     <View style={styles.container}>
@@ -72,53 +169,117 @@ export default function ScanScreen() {
         enableTorch={torchOn}
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
       />
-      <View style={[styles.overlay, { paddingTop: Math.max(insets.top, 20) + 10 }]}>
-          {/* Top Bar */}
-          <View style={styles.topBar}>
-            <View style={styles.scannerBadge}>
-              <ShieldCheck size={16} color="#10b981" />
-              <Text style={styles.scannerBadgeText}>PharmaChain Scanner</Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.torchBtn, torchOn && styles.torchBtnActive]}
-              onPress={() => setTorchOn(!torchOn)}
-              activeOpacity={0.8}
+
+      <View
+        style={[
+          styles.overlay,
+          {
+            paddingTop: Math.max(insets.top, 20) + 8,
+            paddingBottom: (insets.bottom || 10) + 16,
+          },
+        ]}
+      >
+        {/* Top Floating Bar */}
+        <View style={styles.topBar}>
+          <View style={styles.scannerBadge}>
+            <View style={styles.liveDot} />
+            <ShieldCheck size={16} color="#FF5342" />
+            <Text style={styles.scannerBadgeText}>PharmaChain Scanner</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.torchBtn, torchOn && styles.torchBtnActive]}
+            onPress={() => setTorchOn(!torchOn)}
+            activeOpacity={0.8}
+          >
+            {torchOn ? (
+              <Zap size={20} color="#fbbf24" />
+            ) : (
+              <ZapOff size={20} color="#ffffff" />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Viewfinder Centerpiece with Neon Reticle */}
+        <View style={styles.viewFinderContainer}>
+          <Animated.View
+            style={[
+              styles.scanFrame,
+              { transform: [{ scale: pulseAnim }] },
+            ]}
+          >
+            {/* Glowing Corner Accents */}
+            <View style={[styles.corner, styles.topLeft]} />
+            <View style={[styles.corner, styles.topRight]} />
+            <View style={[styles.corner, styles.bottomLeft]} />
+            <View style={[styles.corner, styles.bottomRight]} />
+
+            {/* Crosshair */}
+            <View style={styles.crosshairH} />
+            <View style={styles.crosshairV} />
+
+            {/* Glowing Laser Sweep Beam */}
+            <Animated.View
+              style={[
+                styles.laserBeamContainer,
+                { transform: [{ translateY: laserAnim }] },
+              ]}
             >
-              {torchOn ? <Zap size={20} color="#f59e0b" /> : <ZapOff size={20} color="#ffffff" />}
+              <View style={styles.laserBeam} />
+              <View style={styles.laserGlow} />
+            </Animated.View>
+          </Animated.View>
+
+          <Text style={styles.instructionTitle}>Align QR or 2D DataMatrix</Text>
+          <Text style={styles.instructionSub}>
+            Position the medicine packaging's security matrix within the illuminated frame
+          </Text>
+        </View>
+
+        {/* Bottom Interactive Controls */}
+        <View style={styles.bottomSection}>
+          {/* Quick Demo Verification Buttons */}
+          <View style={styles.demoButtonsRow}>
+            <TouchableOpacity
+              style={styles.demoBtnSuccess}
+              onPress={() => handleDemoScan('authentic')}
+              activeOpacity={0.85}
+            >
+              <Sparkles size={16} color="#ffffff" />
+              <Text style={styles.demoBtnTextSuccess}>Test Genuine Scan</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.demoBtnWarning}
+              onPress={() => handleDemoScan('suspicious')}
+              activeOpacity={0.85}
+            >
+              <AlertTriangle size={15} color="#fed7aa" />
+              <Text style={styles.demoBtnTextWarning}>Test Flagged</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Scanner Viewfinder Box */}
-          <View style={styles.viewFinderContainer}>
-            <View style={styles.scanFrame}>
-              {/* Corner Accents */}
-              <View style={[styles.corner, styles.topLeft]} />
-              <View style={[styles.corner, styles.topRight]} />
-              <View style={[styles.corner, styles.bottomLeft]} />
-              <View style={[styles.corner, styles.bottomRight]} />
-
-              <View style={styles.laserLine} />
-            </View>
-
-            <Text style={styles.instructionTitle}>Align QR or Barcode</Text>
-            <Text style={styles.instructionSub}>
-              Position the 2D DataMatrix or barcode within the illuminated frame
-            </Text>
-          </View>
-
-          {/* Live Scanner Info Footer */}
-          <View style={[styles.bottomControls, { paddingBottom: (insets.bottom || 10) + 20 }]}>
-            <View style={styles.simLabelRow}>
-              <ShieldCheck size={14} color="#10b981" />
-              <Text style={[styles.simLabelText, { color: '#10b981', fontWeight: '700' }]}>
-                Live Cryptographic Verification
-              </Text>
-            </View>
-            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, textAlign: 'center' }}>
-              ES256 Signature Verification • Hyperledger Fabric Consensus
+          <View style={styles.securityFooterBadge}>
+            <ShieldCheck size={13} color="#FF5342" />
+            <Text style={styles.securityFooterText}>
+              Hyperledger Fabric Consensus • Rule 96 Verified
             </Text>
           </View>
         </View>
+      </View>
+
+      {/* Verification HUD Modal Overlay */}
+      {verifyingModal && (
+        <View style={styles.hudOverlay}>
+          <View style={styles.hudCard}>
+            <View style={styles.hudSpinnerBox}>
+              <ActivityIndicator size="large" color="#FF5342" />
+            </View>
+            <Text style={styles.hudTitle}>Cryptographic Scan</Text>
+            <Text style={styles.hudSubtitle}>{verifyingModal}</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -128,12 +289,57 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  camera: {
-    flex: 1,
+  permissionContainer: {
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 30,
+  },
+  permissionIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FBD9DC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  permissionTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#17181A',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  permissionSubtitle: {
+    fontSize: 13,
+    color: '#5B5F63',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  permissionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FF5342',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 16,
+    shadowColor: '#FF5342',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  permissionBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#ffffff',
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'rgba(0, 0, 0, 0.52)',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
@@ -145,94 +351,122 @@ const styles = StyleSheet.create({
   scannerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    backgroundColor: 'rgba(28, 25, 23, 0.88)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
-    gap: 6,
+    gap: 8,
+  },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#FF5342',
   },
   scannerBadgeText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   torchBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    backgroundColor: 'rgba(28, 25, 23, 0.88)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   torchBtnActive: {
-    backgroundColor: 'rgba(245, 158, 11, 0.25)',
-    borderColor: '#f59e0b',
+    backgroundColor: 'rgba(245, 158, 11, 0.35)',
+    borderColor: '#fbbf24',
   },
   viewFinderContainer: {
     alignItems: 'center',
   },
   scanFrame: {
-    width: 260,
-    height: 260,
+    width: SCAN_BOX_SIZE,
+    height: SCAN_BOX_SIZE,
     backgroundColor: 'transparent',
-    borderRadius: 20,
+    borderRadius: 24,
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   corner: {
     position: 'absolute',
-    width: 32,
-    height: 32,
-    borderColor: '#10b981',
+    width: 36,
+    height: 36,
+    borderColor: '#FF5342',
   },
   topLeft: {
     top: 0,
     left: 0,
-    borderTopWidth: 3.5,
-    borderLeftWidth: 3.5,
-    borderTopLeftRadius: 18,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 20,
   },
   topRight: {
     top: 0,
     right: 0,
-    borderTopWidth: 3.5,
-    borderRightWidth: 3.5,
-    borderTopRightRadius: 18,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 20,
   },
   bottomLeft: {
     bottom: 0,
     left: 0,
-    borderBottomWidth: 3.5,
-    borderLeftWidth: 3.5,
-    borderBottomLeftRadius: 18,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 20,
   },
   bottomRight: {
     bottom: 0,
     right: 0,
-    borderBottomWidth: 3.5,
-    borderRightWidth: 3.5,
-    borderBottomRightRadius: 18,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 20,
   },
-  laserLine: {
-    width: '85%',
+  crosshairH: {
+    position: 'absolute',
+    width: 24,
     height: 2,
-    backgroundColor: '#10b981',
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
-    elevation: 4,
+    backgroundColor: 'rgba(255, 83, 66, 0.6)',
+  },
+  crosshairV: {
+    position: 'absolute',
+    width: 2,
+    height: 24,
+    backgroundColor: 'rgba(255, 83, 66, 0.6)',
+  },
+  laserBeamContainer: {
+    position: 'absolute',
+    top: 10,
+    width: '90%',
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  laserBeam: {
+    width: '100%',
+    height: 3,
+    backgroundColor: '#FF5342',
+  },
+  laserGlow: {
+    position: 'absolute',
+    width: '100%',
+    height: 14,
+    backgroundColor: 'rgba(255, 83, 66, 0.4)',
+    borderRadius: 7,
   },
   instructionTitle: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 6,
     textAlign: 'center',
   },
@@ -240,100 +474,108 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.75)',
     fontSize: 12,
     textAlign: 'center',
-    maxWidth: 260,
-    lineHeight: 17,
+    maxWidth: 270,
+    lineHeight: 18,
   },
-  bottomControls: {
+  bottomSection: {
     alignItems: 'center',
+    gap: 12,
   },
-  simLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginBottom: 10,
-  },
-  simLabelText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  simButtonsRow: {
+  demoButtonsRow: {
     flexDirection: 'row',
     gap: 12,
-    width: '100%',
   },
-  simAuthenticBtn: {
-    flex: 1,
+  demoBtnSuccess: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    paddingVertical: 13,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#10b981',
-    gap: 6,
+    gap: 8,
+    backgroundColor: '#FF5342',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 999,
+    shadowColor: '#FF5342',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  simAuthenticText: {
-    color: '#10b981',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  simSuspiciousBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(249, 115, 22, 0.2)',
-    paddingVertical: 13,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    gap: 6,
-  },
-  simSuspiciousText: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  permissionContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 30,
-    backgroundColor: '#ffffff',
-  },
-  permissionIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f3e8ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  permissionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  permissionSubtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  permissionBtn: {
-    backgroundColor: '#3b00b9',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  permissionBtnText: {
+  demoBtnTextSuccess: {
     color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  demoBtnWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(28, 25, 23, 0.88)',
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderRadius: 999,
+  },
+  demoBtnTextWarning: {
+    color: '#fed7aa',
+    fontSize: 12,
     fontWeight: '700',
-    fontSize: 15,
+  },
+  securityFooterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(28, 25, 23, 0.85)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  securityFooterText: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  hudOverlay: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    zIndex: 9999,
+  },
+  hudCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    width: '85%',
+    shadowColor: '#FF5342',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  hudSpinnerBox: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#FBD9DC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  hudTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#17181A',
+    marginBottom: 6,
+  },
+  hudSubtitle: {
+    fontSize: 12,
+    color: '#5B5F63',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

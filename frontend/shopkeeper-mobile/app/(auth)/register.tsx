@@ -9,7 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
@@ -25,10 +26,15 @@ import {
   FileText, 
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react-native';
 import { RegistrationForm } from '../../src/types/auth';
 import { registerShopkeeper } from '../../src/services/api/auth';
+import { PharmaTheme } from '../../src/constants/theme';
+import { PharmaChainLogo } from '../../src/components/common/PharmaChainLogo';
+import { AnimatedAuthBackground } from '../../src/components/common/AnimatedAuthBackground';
 
 const INITIAL_FORM: RegistrationForm = {
   shopName: '',
@@ -64,13 +70,11 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Generic typed update function for single source of truth
   const updateField = <K extends keyof RegistrationForm>(field: K, value: RegistrationForm[K]) => {
     setForm((prev) => ({
       ...prev,
       [field]: value,
     }));
-    // Clear error for this field if present
     if (errors[field as string]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -106,7 +110,7 @@ export default function RegisterScreen() {
   // Validate Step 2: Owner Info
   const validateStep2 = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!form.ownerName.trim()) newErrors.ownerName = 'Owner/Authorized person name is required.';
+    if (!form.ownerName.trim()) newErrors.ownerName = 'Owner/Authorized pharmacist name is required.';
     if (!form.ownerPhone.trim()) {
       newErrors.ownerPhone = 'Mobile number is required.';
     } else if (form.ownerPhone.trim().replace(/\D/g, '').length < 10) {
@@ -160,7 +164,6 @@ export default function RegisterScreen() {
   };
 
   const handleSelectMockDocument = () => {
-    // Select license document (mock picker for reliability across all devices)
     updateField('licenseDocument', {
       name: `Drug_License_${form.drugLicenseNumber || '2026'}.pdf`,
       size: 1024 * 340,
@@ -191,385 +194,389 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <AnimatedAuthBackground />
+
+      <KeyboardAvoidingView 
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Navigation Bar */}
-        <View style={styles.navBar}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <ArrowLeft size={22} color="#0f172a" />
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>Pharmacy Registration</Text>
-          <View style={{ width: 22 }} />
-        </View>
-
-        {/* Step Progress Tracker */}
-        <View style={styles.progressContainer}>
-          {/* Step 1 */}
-          <View style={styles.stepItem}>
-            <View style={[styles.stepCircle, currentStep >= 1 && styles.stepActive]}>
-              <Building2 size={16} color={currentStep >= 1 ? '#ffffff' : '#94a3b8'} />
-            </View>
-            <Text style={[styles.stepLabel, currentStep >= 1 && styles.stepLabelActive]}>1. Shop</Text>
-          </View>
-
-          <View style={[styles.stepLine, currentStep >= 2 && styles.stepLineActive]} />
-
-          {/* Step 2 */}
-          <View style={styles.stepItem}>
-            <View style={[styles.stepCircle, currentStep >= 2 && styles.stepActive]}>
-              <User size={16} color={currentStep >= 2 ? '#ffffff' : '#94a3b8'} />
-            </View>
-            <Text style={[styles.stepLabel, currentStep >= 2 && styles.stepLabelActive]}>2. Owner</Text>
-          </View>
-
-          <View style={[styles.stepLine, currentStep >= 3 && styles.stepLineActive]} />
-
-          {/* Step 3 */}
-          <View style={styles.stepItem}>
-            <View style={[styles.stepCircle, currentStep >= 3 && styles.stepActive]}>
-              <FileCheck2 size={16} color={currentStep >= 3 ? '#ffffff' : '#94a3b8'} />
-            </View>
-            <Text style={[styles.stepLabel, currentStep >= 3 && styles.stepLabelActive]}>3. License</Text>
-          </View>
-        </View>
-
-        {/* ========================================================================= */}
-        {/* STEP 1: SHOP INFORMATION */}
-        {/* ========================================================================= */}
-        {currentStep === 1 && (
-          <View style={styles.formCard}>
-            <Text style={styles.stepHeading}>Shop Information</Text>
-            <Text style={styles.stepSubheading}>Tell us about your pharmacy store</Text>
-
-            {/* Shop Name */}
-            <Text style={styles.label}>Pharmacy / Shop Name *</Text>
-            <TextInput
-              style={[styles.input, !!errors.shopName && styles.inputError]}
-              placeholder="E.g., Apollo Medicos & Clinic"
-              placeholderTextColor="#94a3b8"
-              value={form.shopName}
-              onChangeText={(val) => updateField('shopName', val)}
-            />
-            {!!errors.shopName && <Text style={styles.errorText}>{errors.shopName}</Text>}
-
-            {/* Shop Phone */}
-            <Text style={styles.label}>Shop Landline / Phone *</Text>
-            <TextInput
-              style={[styles.input, !!errors.shopPhone && styles.inputError]}
-              placeholder="E.g., +91 11 2345 6789"
-              placeholderTextColor="#94a3b8"
-              value={form.shopPhone}
-              onChangeText={(val) => updateField('shopPhone', val)}
-              keyboardType="phone-pad"
-            />
-            {!!errors.shopPhone && <Text style={styles.errorText}>{errors.shopPhone}</Text>}
-
-            {/* Shop Email */}
-            <Text style={styles.label}>Shop Official Email *</Text>
-            <TextInput
-              style={[styles.input, !!errors.shopEmail && styles.inputError]}
-              placeholder="E.g., contact@apollomedicos.com"
-              placeholderTextColor="#94a3b8"
-              value={form.shopEmail}
-              onChangeText={(val) => updateField('shopEmail', val)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {!!errors.shopEmail && <Text style={styles.errorText}>{errors.shopEmail}</Text>}
-
-            {/* Address */}
-            <Text style={styles.label}>Street Address *</Text>
-            <TextInput
-              style={[styles.input, !!errors.address && styles.inputError]}
-              placeholder="Shop No, Building, Market Area"
-              placeholderTextColor="#94a3b8"
-              value={form.address}
-              onChangeText={(val) => updateField('address', val)}
-            />
-            {!!errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
-
-            {/* City & State row */}
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.label}>City *</Text>
-                <TextInput
-                  style={[styles.input, !!errors.city && styles.inputError]}
-                  placeholder="Noida"
-                  placeholderTextColor="#94a3b8"
-                  value={form.city}
-                  onChangeText={(val) => updateField('city', val)}
-                />
-                {!!errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
-              </View>
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.label}>State *</Text>
-                <TextInput
-                  style={[styles.input, !!errors.state && styles.inputError]}
-                  placeholder="Uttar Pradesh"
-                  placeholderTextColor="#94a3b8"
-                  value={form.state}
-                  onChangeText={(val) => updateField('state', val)}
-                />
-                {!!errors.state && <Text style={styles.errorText}>{errors.state}</Text>}
-              </View>
-            </View>
-
-            {/* PIN Code */}
-            <Text style={styles.label}>PIN Code *</Text>
-            <TextInput
-              style={[styles.input, !!errors.pincode && styles.inputError]}
-              placeholder="6-digit PIN code (e.g. 201301)"
-              placeholderTextColor="#94a3b8"
-              value={form.pincode}
-              onChangeText={(val) => updateField('pincode', val)}
-              keyboardType="numeric"
-              maxLength={6}
-            />
-            {!!errors.pincode && <Text style={styles.errorText}>{errors.pincode}</Text>}
-
-            {/* Continue Button */}
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleNext}>
-              <Text style={styles.primaryBtnText}>Continue to Owner Details</Text>
-              <ArrowRight size={18} color="#ffffff" style={{ marginLeft: 8 }} />
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Navigation Bar */}
+          <View style={styles.navBar}>
+            <TouchableOpacity onPress={handleBack} style={styles.backButton} activeOpacity={0.8}>
+              <ArrowLeft size={20} color="#0f172a" />
             </TouchableOpacity>
+            <Text style={styles.navTitle}>Pharmacy Registration</Text>
+            <View style={{ width: 40 }} />
           </View>
-        )}
 
-        {/* ========================================================================= */}
-        {/* STEP 2: OWNER INFORMATION */}
-        {/* ========================================================================= */}
-        {currentStep === 2 && (
-          <View style={styles.formCard}>
-            <Text style={styles.stepHeading}>Owner Information</Text>
-            <Text style={styles.stepSubheading}>Details of the licensed pharmacist or store owner</Text>
+          {/* Step Progress Tracker */}
+          <View style={styles.progressContainer}>
+            {/* Step 1 */}
+            <View style={styles.stepItem}>
+              <View style={[styles.stepCircle, currentStep >= 1 && styles.stepActive]}>
+                <Building2 size={15} color={currentStep >= 1 ? '#ffffff' : '#94a3b8'} />
+              </View>
+              <Text style={[styles.stepLabel, currentStep >= 1 && styles.stepLabelActive]}>1. Shop</Text>
+            </View>
 
-            {/* Owner Name */}
-            <Text style={styles.label}>Owner / Pharmacist Full Name *</Text>
-            <TextInput
-              style={[styles.input, !!errors.ownerName && styles.inputError]}
-              placeholder="Dr. / Mr. Ramesh Sharma"
-              placeholderTextColor="#94a3b8"
-              value={form.ownerName}
-              onChangeText={(val) => updateField('ownerName', val)}
-            />
-            {!!errors.ownerName && <Text style={styles.errorText}>{errors.ownerName}</Text>}
+            <View style={[styles.stepLine, currentStep >= 2 && styles.stepLineActive]} />
 
-            {/* Owner Mobile */}
-            <Text style={styles.label}>Personal Mobile Number *</Text>
-            <TextInput
-              style={[styles.input, !!errors.ownerPhone && styles.inputError]}
-              placeholder="+91 98765 43210"
-              placeholderTextColor="#94a3b8"
-              value={form.ownerPhone}
-              onChangeText={(val) => updateField('ownerPhone', val)}
-              keyboardType="phone-pad"
-            />
-            {!!errors.ownerPhone && <Text style={styles.errorText}>{errors.ownerPhone}</Text>}
+            {/* Step 2 */}
+            <View style={styles.stepItem}>
+              <View style={[styles.stepCircle, currentStep >= 2 && styles.stepActive]}>
+                <User size={15} color={currentStep >= 2 ? '#ffffff' : '#94a3b8'} />
+              </View>
+              <Text style={[styles.stepLabel, currentStep >= 2 && styles.stepLabelActive]}>2. Owner</Text>
+            </View>
 
-            {/* Owner Email */}
-            <Text style={styles.label}>Personal / Login Email *</Text>
-            <TextInput
-              style={[styles.input, !!errors.ownerEmail && styles.inputError]}
-              placeholder="ramesh.sharma@gmail.com"
-              placeholderTextColor="#94a3b8"
-              value={form.ownerEmail}
-              onChangeText={(val) => updateField('ownerEmail', val)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {!!errors.ownerEmail && <Text style={styles.errorText}>{errors.ownerEmail}</Text>}
+            <View style={[styles.stepLine, currentStep >= 3 && styles.stepLineActive]} />
 
-            {/* Buttons */}
-            <View style={styles.btnRow}>
-              <TouchableOpacity style={styles.secondaryBtn} onPress={handleBack}>
-                <Text style={styles.secondaryBtnText}>Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.primaryBtn, { flex: 2, marginLeft: 12 }]} onPress={handleNext}>
-                <Text style={styles.primaryBtnText}>Continue to License</Text>
-                <ArrowRight size={18} color="#ffffff" style={{ marginLeft: 8 }} />
-              </TouchableOpacity>
+            {/* Step 3 */}
+            <View style={styles.stepItem}>
+              <View style={[styles.stepCircle, currentStep >= 3 && styles.stepActive]}>
+                <FileCheck2 size={15} color={currentStep >= 3 ? '#ffffff' : '#94a3b8'} />
+              </View>
+              <Text style={[styles.stepLabel, currentStep >= 3 && styles.stepLabelActive]}>3. License</Text>
             </View>
           </View>
-        )}
 
-        {/* ========================================================================= */}
-        {/* STEP 3: PHARMACEUTICAL LICENSE & PASSWORD */}
-        {/* ========================================================================= */}
-        {currentStep === 3 && (
-          <View style={styles.formCard}>
-            <Text style={styles.stepHeading}>Pharmaceutical License</Text>
-            <Text style={styles.stepSubheading}>Provide your regulatory license credentials</Text>
+          {/* Step Form Card */}
+          <View style={styles.card}>
+            {/* STEP 1: SHOP INFORMATION */}
+            {currentStep === 1 && (
+              <View>
+                <Text style={styles.stepHeading}>Establishment Details</Text>
+                <Text style={styles.stepSubheading}>Enter official pharmacy registration information</Text>
 
-            {/* Drug License Number */}
-            <Text style={styles.label}>Drug License (DL) Number *</Text>
-            <TextInput
-              style={[styles.input, !!errors.drugLicenseNumber && styles.inputError]}
-              placeholder="DL-2026-UP-88741"
-              placeholderTextColor="#94a3b8"
-              value={form.drugLicenseNumber}
-              onChangeText={(val) => updateField('drugLicenseNumber', val)}
-              autoCapitalize="characters"
-            />
-            {!!errors.drugLicenseNumber && <Text style={styles.errorText}>{errors.drugLicenseNumber}</Text>}
-
-            {/* License Type Dropdown / Segmented */}
-            <Text style={styles.label}>License Type *</Text>
-            <View style={styles.segmentedContainer}>
-              {(['retail', 'wholesale', 'other'] as const).map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.segmentOption,
-                    form.licenseType === type && styles.segmentOptionActive
-                  ]}
-                  onPress={() => updateField('licenseType', type)}
-                >
-                  <Text style={[
-                    styles.segmentText,
-                    form.licenseType === type && styles.segmentTextActive
-                  ]}>
-                    {type.toUpperCase()}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Issuing Authority */}
-            <Text style={styles.label}>Issuing Authority *</Text>
-            <TextInput
-              style={[styles.input, !!errors.issuingAuthority && styles.inputError]}
-              placeholder="State Drug Control Administration"
-              placeholderTextColor="#94a3b8"
-              value={form.issuingAuthority}
-              onChangeText={(val) => updateField('issuingAuthority', val)}
-            />
-            {!!errors.issuingAuthority && <Text style={styles.errorText}>{errors.issuingAuthority}</Text>}
-
-            {/* License Dates */}
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.label}>Issue Date *</Text>
-                <TextInput
-                  style={[styles.input, !!errors.licenseIssueDate && styles.inputError]}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#94a3b8"
-                  value={form.licenseIssueDate}
-                  onChangeText={(val) => updateField('licenseIssueDate', val)}
-                />
-                {!!errors.licenseIssueDate && <Text style={styles.errorText}>{errors.licenseIssueDate}</Text>}
-              </View>
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.label}>Expiry Date *</Text>
-                <TextInput
-                  style={[styles.input, !!errors.licenseExpiryDate && styles.inputError]}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#94a3b8"
-                  value={form.licenseExpiryDate}
-                  onChangeText={(val) => updateField('licenseExpiryDate', val)}
-                />
-                {!!errors.licenseExpiryDate && <Text style={styles.errorText}>{errors.licenseExpiryDate}</Text>}
-              </View>
-            </View>
-
-            {/* License Document Upload */}
-            <Text style={styles.label}>Upload License Copy (PDF / JPG / PNG)</Text>
-            {form.licenseDocument ? (
-              <View style={styles.documentPreview}>
-                <FileText size={22} color="#0f766e" style={{ marginRight: 10 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.docName} numberOfLines={1}>{form.licenseDocument.name}</Text>
-                  <Text style={styles.docSize}>Document attached</Text>
+                {/* Shop Name */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Pharmacy / Shop Name *</Text>
+                  <TextInput
+                    style={[styles.input, errors.shopName && styles.inputError]}
+                    placeholder="e.g., Apollo Medicos & Pharmacy"
+                    placeholderTextColor="#94a3b8"
+                    value={form.shopName}
+                    onChangeText={(val) => updateField('shopName', val)}
+                  />
+                  {!!errors.shopName && <Text style={styles.errorText}>{errors.shopName}</Text>}
                 </View>
-                <TouchableOpacity onPress={() => updateField('licenseDocument', null)}>
-                  <Trash2 size={20} color="#dc2626" />
+
+                {/* Shop Phone & Email */}
+                <View style={styles.row}>
+                  <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                    <Text style={styles.inputLabel}>Shop Phone *</Text>
+                    <TextInput
+                      style={[styles.input, errors.shopPhone && styles.inputError]}
+                      placeholder="e.g., 9876543210"
+                      placeholderTextColor="#94a3b8"
+                      value={form.shopPhone}
+                      onChangeText={(val) => updateField('shopPhone', val)}
+                      keyboardType="phone-pad"
+                    />
+                    {!!errors.shopPhone && <Text style={styles.errorText}>{errors.shopPhone}</Text>}
+                  </View>
+
+                  <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                    <Text style={styles.inputLabel}>Shop Email *</Text>
+                    <TextInput
+                      style={[styles.input, errors.shopEmail && styles.inputError]}
+                      placeholder="shop@domain.com"
+                      placeholderTextColor="#94a3b8"
+                      value={form.shopEmail}
+                      onChangeText={(val) => updateField('shopEmail', val)}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                    {!!errors.shopEmail && <Text style={styles.errorText}>{errors.shopEmail}</Text>}
+                  </View>
+                </View>
+
+                {/* Address */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Premise / Shop Address *</Text>
+                  <TextInput
+                    style={[styles.input, { height: 70, textAlignVertical: 'top' }, errors.address && styles.inputError]}
+                    placeholder="Full physical address"
+                    placeholderTextColor="#94a3b8"
+                    value={form.address}
+                    onChangeText={(val) => updateField('address', val)}
+                    multiline
+                  />
+                  {!!errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
+                </View>
+
+                {/* City, State, PIN */}
+                <View style={styles.row}>
+                  <View style={[styles.inputGroup, { flex: 1, marginRight: 6 }]}>
+                    <Text style={styles.inputLabel}>City *</Text>
+                    <TextInput
+                      style={[styles.input, errors.city && styles.inputError]}
+                      placeholder="e.g., Noida"
+                      placeholderTextColor="#94a3b8"
+                      value={form.city}
+                      onChangeText={(val) => updateField('city', val)}
+                    />
+                    {!!errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
+                  </View>
+
+                  <View style={[styles.inputGroup, { flex: 1, marginHorizontal: 3 }]}>
+                    <Text style={styles.inputLabel}>State *</Text>
+                    <TextInput
+                      style={[styles.input, errors.state && styles.inputError]}
+                      placeholder="e.g., Uttar Pradesh"
+                      placeholderTextColor="#94a3b8"
+                      value={form.state}
+                      onChangeText={(val) => updateField('state', val)}
+                    />
+                    {!!errors.state && <Text style={styles.errorText}>{errors.state}</Text>}
+                  </View>
+
+                  <View style={[styles.inputGroup, { flex: 0.9, marginLeft: 6 }]}>
+                    <Text style={styles.inputLabel}>PIN Code *</Text>
+                    <TextInput
+                      style={[styles.input, errors.pincode && styles.inputError]}
+                      placeholder="201301"
+                      placeholderTextColor="#94a3b8"
+                      value={form.pincode}
+                      onChangeText={(val) => updateField('pincode', val)}
+                      keyboardType="numeric"
+                      maxLength={6}
+                    />
+                    {!!errors.pincode && <Text style={styles.errorText}>{errors.pincode}</Text>}
+                  </View>
+                </View>
+
+                {/* Next Button */}
+                <TouchableOpacity style={styles.primaryBtn} onPress={handleNext} activeOpacity={0.85}>
+                  <Text style={styles.primaryBtnText}>Proceed to Owner Details</Text>
+                  <ArrowRight size={16} color="#ffffff" style={{ marginLeft: 6 }} />
                 </TouchableOpacity>
               </View>
-            ) : (
-              <TouchableOpacity style={styles.uploadBox} onPress={handleSelectMockDocument}>
-                <Upload size={24} color="#0f766e" style={{ marginBottom: 6 }} />
-                <Text style={styles.uploadTitle}>Tap to Select License Document</Text>
-                <Text style={styles.uploadSubtitle}>PDF, PNG, JPG up to 10MB</Text>
-              </TouchableOpacity>
             )}
 
-            {/* Password */}
-            <Text style={[styles.label, { marginTop: 14 }]}>Account Password *</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Minimum 6 characters"
-                placeholderTextColor="#94a3b8"
-                value={form.password}
-                onChangeText={(val) => updateField('password', val)}
-                secureTextEntry={!showPassword}
-              />
-              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? <EyeOff size={20} color="#64748b" /> : <Eye size={20} color="#64748b" />}
-              </TouchableOpacity>
-            </View>
-            {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            {/* STEP 2: OWNER INFORMATION */}
+            {currentStep === 2 && (
+              <View>
+                <Text style={styles.stepHeading}>Authorized Pharmacist / Owner</Text>
+                <Text style={styles.stepSubheading}>Details of the licensed practitioner in charge</Text>
 
-            {/* Confirm Password */}
-            <Text style={styles.label}>Confirm Password *</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Re-enter password"
-                placeholderTextColor="#94a3b8"
-                value={form.confirmPassword}
-                onChangeText={(val) => updateField('confirmPassword', val)}
-                secureTextEntry={!showConfirmPassword}
-              />
-              <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                {showConfirmPassword ? <EyeOff size={20} color="#64748b" /> : <Eye size={20} color="#64748b" />}
-              </TouchableOpacity>
-            </View>
-            {!!errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Full Legal Name *</Text>
+                  <TextInput
+                    style={[styles.input, errors.ownerName && styles.inputError]}
+                    placeholder="e.g., Dr. Ramesh Sharma"
+                    placeholderTextColor="#94a3b8"
+                    value={form.ownerName}
+                    onChangeText={(val) => updateField('ownerName', val)}
+                  />
+                  {!!errors.ownerName && <Text style={styles.errorText}>{errors.ownerName}</Text>}
+                </View>
 
-            {/* Terms Checkbox */}
-            <TouchableOpacity 
-              style={styles.checkboxRow}
-              onPress={() => updateField('termsAccepted', !form.termsAccepted)}
-            >
-              {form.termsAccepted ? (
-                <CheckSquare size={22} color="#0f766e" />
-              ) : (
-                <Square size={22} color="#94a3b8" />
-              )}
-              <Text style={styles.checkboxLabel}>
-                I confirm that the pharmaceutical license and store information provided are genuine and accurate.
-              </Text>
-            </TouchableOpacity>
-            {!!errors.termsAccepted && <Text style={styles.errorText}>{errors.termsAccepted}</Text>}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Registered Mobile Number *</Text>
+                  <TextInput
+                    style={[styles.input, errors.ownerPhone && styles.inputError]}
+                    placeholder="e.g., 9876543210"
+                    placeholderTextColor="#94a3b8"
+                    value={form.ownerPhone}
+                    onChangeText={(val) => updateField('ownerPhone', val)}
+                    keyboardType="phone-pad"
+                  />
+                  {!!errors.ownerPhone && <Text style={styles.errorText}>{errors.ownerPhone}</Text>}
+                </View>
 
-            {/* Action Buttons */}
-            <View style={styles.btnRow}>
-              <TouchableOpacity style={styles.secondaryBtn} onPress={handleBack} disabled={isLoading}>
-                <Text style={styles.secondaryBtnText}>Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.primaryBtn, { flex: 2, marginLeft: 12 }, isLoading && styles.disabledBtn]} 
-                onPress={handleSubmit}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <Text style={styles.primaryBtnText}>Create Account</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Personal / Official Email *</Text>
+                  <TextInput
+                    style={[styles.input, errors.ownerEmail && styles.inputError]}
+                    placeholder="ramesh.sharma@domain.com"
+                    placeholderTextColor="#94a3b8"
+                    value={form.ownerEmail}
+                    onChangeText={(val) => updateField('ownerEmail', val)}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                  {!!errors.ownerEmail && <Text style={styles.errorText}>{errors.ownerEmail}</Text>}
+                </View>
+
+                <View style={styles.row}>
+                  <TouchableOpacity style={[styles.secondaryBtn, { flex: 1, marginRight: 8 }]} onPress={handleBack} activeOpacity={0.8}>
+                    <Text style={styles.secondaryBtnText}>Back</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.primaryBtn, { flex: 2, marginLeft: 8 }]} onPress={handleNext} activeOpacity={0.85}>
+                    <Text style={styles.primaryBtnText}>Proceed to License</Text>
+                    <ArrowRight size={16} color="#ffffff" style={{ marginLeft: 6 }} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* STEP 3: LICENSE & CREDENTIALS */}
+            {currentStep === 3 && (
+              <View>
+                <Text style={styles.stepHeading}>CDSCO Drug License</Text>
+                <Text style={styles.stepSubheading}>Regulatory compliance and terminal authentication credentials</Text>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Drug License (DL) Number *</Text>
+                  <TextInput
+                    style={[styles.input, errors.drugLicenseNumber && styles.inputError]}
+                    placeholder="e.g., 20B/21B-UP-2026-8874"
+                    placeholderTextColor="#94a3b8"
+                    value={form.drugLicenseNumber}
+                    onChangeText={(val) => updateField('drugLicenseNumber', val)}
+                    autoCapitalize="characters"
+                  />
+                  {!!errors.drugLicenseNumber && <Text style={styles.errorText}>{errors.drugLicenseNumber}</Text>}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Issuing State Authority *</Text>
+                  <TextInput
+                    style={[styles.input, errors.issuingAuthority && styles.inputError]}
+                    placeholder="e.g., Food and Drug Administration UP"
+                    placeholderTextColor="#94a3b8"
+                    value={form.issuingAuthority}
+                    onChangeText={(val) => updateField('issuingAuthority', val)}
+                  />
+                  {!!errors.issuingAuthority && <Text style={styles.errorText}>{errors.issuingAuthority}</Text>}
+                </View>
+
+                <View style={styles.row}>
+                  <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                    <Text style={styles.inputLabel}>Issue Date *</Text>
+                    <TextInput
+                      style={[styles.input, errors.licenseIssueDate && styles.inputError]}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor="#94a3b8"
+                      value={form.licenseIssueDate}
+                      onChangeText={(val) => updateField('licenseIssueDate', val)}
+                    />
+                    {!!errors.licenseIssueDate && <Text style={styles.errorText}>{errors.licenseIssueDate}</Text>}
+                  </View>
+
+                  <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                    <Text style={styles.inputLabel}>Expiry Date *</Text>
+                    <TextInput
+                      style={[styles.input, errors.licenseExpiryDate && styles.inputError]}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor="#94a3b8"
+                      value={form.licenseExpiryDate}
+                      onChangeText={(val) => updateField('licenseExpiryDate', val)}
+                    />
+                    {!!errors.licenseExpiryDate && <Text style={styles.errorText}>{errors.licenseExpiryDate}</Text>}
+                  </View>
+                </View>
+
+                {/* Document Upload Button */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Upload Drug License PDF</Text>
+                  {form.licenseDocument ? (
+                    <View style={styles.uploadedDocBadge}>
+                      <FileText size={16} color="#2563eb" />
+                      <Text style={styles.uploadedDocName} numberOfLines={1}>
+                        {form.licenseDocument.name}
+                      </Text>
+                      <TouchableOpacity onPress={() => updateField('licenseDocument', null)}>
+                        <Trash2 size={16} color="#dc2626" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={styles.uploadDocBtn} onPress={handleSelectMockDocument} activeOpacity={0.8}>
+                      <Upload size={16} color="#2563eb" style={{ marginRight: 6 }} />
+                      <Text style={styles.uploadDocText}>Select PDF Document</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Password Fields */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Set Terminal Password *</Text>
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, borderWidth: 0 }, errors.password && styles.inputError]}
+                      placeholder="Minimum 6 characters"
+                      placeholderTextColor="#94a3b8"
+                      value={form.password}
+                      onChangeText={(val) => updateField('password', val)}
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
+                      {showPassword ? <EyeOff size={18} color="#64748b" /> : <Eye size={18} color="#64748b" />}
+                    </TouchableOpacity>
+                  </View>
+                  {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Confirm Password *</Text>
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, borderWidth: 0 }, errors.confirmPassword && styles.inputError]}
+                      placeholder="Re-enter password"
+                      placeholderTextColor="#94a3b8"
+                      value={form.confirmPassword}
+                      onChangeText={(val) => updateField('confirmPassword', val)}
+                      secureTextEntry={!showConfirmPassword}
+                    />
+                    <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                      {showConfirmPassword ? <EyeOff size={18} color="#64748b" /> : <Eye size={18} color="#64748b" />}
+                    </TouchableOpacity>
+                  </View>
+                  {!!errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+                </View>
+
+                {/* Terms and conditions */}
+                <TouchableOpacity
+                  style={styles.termsRow}
+                  onPress={() => updateField('termsAccepted', !form.termsAccepted)}
+                  activeOpacity={0.8}
+                >
+                  {form.termsAccepted ? (
+                    <CheckSquare size={18} color="#2563eb" style={{ marginRight: 8 }} />
+                  ) : (
+                    <Square size={18} color="#94a3b8" style={{ marginRight: 8 }} />
+                  )}
+                  <Text style={styles.termsText}>
+                    I solemnly declare that I am an authorized pharmacist complying with CDSCO Drug Rule 96(5B).
+                  </Text>
+                </TouchableOpacity>
+                {!!errors.termsAccepted && <Text style={[styles.errorText, { marginBottom: 12 }]}>{errors.termsAccepted}</Text>}
+
+                {/* Buttons */}
+                <View style={styles.row}>
+                  <TouchableOpacity style={[styles.secondaryBtn, { flex: 1, marginRight: 8 }]} onPress={handleBack} activeOpacity={0.8}>
+                    <Text style={styles.secondaryBtnText}>Back</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { flex: 2, marginLeft: 8 }, isLoading && styles.primaryBtnDisabled]}
+                    onPress={handleSubmit}
+                    disabled={isLoading}
+                    activeOpacity={0.85}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={styles.primaryBtnText}>Submit Registration</Text>
+                        <ShieldCheck size={16} color="#ffffff" style={{ marginLeft: 6 }} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -578,10 +585,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
+  keyboardView: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 54,
     paddingBottom: 40,
+    flexGrow: 1,
   },
   navBar: {
     flexDirection: 'row',
@@ -590,46 +601,57 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   backButton: {
-    padding: 6,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   navTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
     color: '#0f172a',
   },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    justifyContent: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 10,
   },
   stepItem: {
     alignItems: 'center',
   },
   stepCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
     marginBottom: 4,
   },
   stepActive: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
   },
   stepLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#94a3b8',
   },
   stepLabelActive: {
-    color: '#0f766e',
+    color: '#2563eb',
   },
   stepLine: {
     flex: 1,
@@ -639,203 +661,154 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   stepLineActive: {
-    backgroundColor: '#0f766e',
+    backgroundColor: '#2563eb',
   },
-  formCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
+  card: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
+    padding: 22,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(226, 232, 240, 0.9)',
     shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
   },
   stepHeading: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
     color: '#0f172a',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   stepSubheading: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748b',
-    marginBottom: 20,
+    marginBottom: 18,
   },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
     color: '#334155',
     marginBottom: 6,
   },
   input: {
     backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 14,
-    color: '#0f172a',
-    marginBottom: 10,
-  },
-  inputError: {
-    borderColor: '#ef4444',
-    backgroundColor: '#fef2f2',
-  },
-  errorText: {
-    color: '#dc2626',
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 10,
-    marginTop: -4,
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  btnRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  primaryBtn: {
-    backgroundColor: '#0f766e',
-    borderRadius: 10,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#0f766e',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  primaryBtnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  secondaryBtn: {
-    backgroundColor: '#f1f5f9',
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-  },
-  secondaryBtnText: {
-    color: '#334155',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  disabledBtn: {
-    opacity: 0.65,
-  },
-  segmentedContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 10,
-    padding: 3,
-    marginBottom: 14,
-  },
-  segmentOption: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  segmentOptionActive: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  segmentText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  segmentTextActive: {
-    color: '#0f766e',
-    fontWeight: '700',
-  },
-  uploadBox: {
     borderWidth: 1.5,
-    borderColor: '#99f6e4',
-    borderStyle: 'dashed',
-    borderRadius: 10,
-    paddingVertical: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f0fdfa',
-    marginBottom: 14,
-  },
-  uploadTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0f766e',
-    marginBottom: 2,
-  },
-  uploadSubtitle: {
-    fontSize: 11,
-    color: '#64748b',
-  },
-  documentPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 14,
-  },
-  docName: {
-    fontSize: 13,
-    fontWeight: '600',
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 13.5,
     color: '#0f172a',
-  },
-  docSize: {
-    fontSize: 11,
-    color: '#64748b',
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
-    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    paddingRight: 8,
   },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 14,
-    color: '#0f172a',
+  inputError: {
+    borderColor: '#dc2626',
+  },
+  errorText: {
+    fontSize: 11,
+    color: '#dc2626',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   eyeBtn: {
-    padding: 10,
+    padding: 8,
   },
-  checkboxRow: {
+  uploadedDocBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    justifyContent: 'space-between',
+  },
+  uploadedDocName: {
+    fontSize: 12,
+    color: '#2563eb',
+    fontWeight: '700',
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  uploadDocBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1.5,
+    borderColor: '#cbd5e1',
+    borderStyle: 'dashed',
+    borderRadius: 14,
+    paddingVertical: 12,
+  },
+  uploadDocText: {
+    fontSize: 13,
+    color: '#2563eb',
+    fontWeight: '700',
+  },
+  termsRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginTop: 10,
-    marginBottom: 14,
+    marginBottom: 16,
+    marginTop: 4,
   },
-  checkboxLabel: {
-    fontSize: 12,
+  termsText: {
+    fontSize: 11.5,
     color: '#475569',
-    marginLeft: 8,
+    lineHeight: 16,
     flex: 1,
-    lineHeight: 18,
+  },
+  primaryBtn: {
+    backgroundColor: '#2563eb',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  primaryBtnDisabled: {
+    opacity: 0.65,
+  },
+  primaryBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  secondaryBtn: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  secondaryBtnText: {
+    color: '#475569',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

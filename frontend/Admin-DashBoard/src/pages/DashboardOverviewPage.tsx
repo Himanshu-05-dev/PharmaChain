@@ -14,10 +14,18 @@ import {
   CheckCircle2,
   Lock,
   ChevronRight,
-  TrendingUp,
-  Sparkles,
+  Landmark,
+  MapPin,
+  ExternalLink,
+  Activity,
+  Zap,
+  Cpu,
+  Layers,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { ManufacturerRecord } from '../types/admin';
+import { useToast } from '../context/ToastContext';
 
 export const DashboardOverviewPage: React.FC = () => {
   const {
@@ -28,15 +36,29 @@ export const DashboardOverviewPage: React.FC = () => {
     approveManufacturer,
     rejectManufacturer,
   } = useAdminData();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   // Quick Action Modal states
   const [selectedMfrForApproval, setSelectedMfrForApproval] = useState<ManufacturerRecord | null>(null);
   const [selectedMfrForRejection, setSelectedMfrForRejection] = useState<ManufacturerRecord | null>(null);
+  const [copiedLicense, setCopiedLicense] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState(false);
 
   const pendingMfrList = manufacturers.filter((m) => m.kycStatus === 'PENDING');
   const pendingShopList = shopkeepers.filter((s) => s.verificationStatus === 'pending');
+  const totalPending = pendingMfrList.length + pendingShopList.length;
+
+  const handleCopyLicense = (lic: string) => {
+    navigator.clipboard.writeText(lic);
+    setCopiedLicense(lic);
+    showToast({
+      type: 'info',
+      title: 'License Copied',
+      message: `License number ${lic} copied to clipboard.`,
+    });
+    setTimeout(() => setCopiedLicense(null), 2000);
+  };
 
   const handleConfirmApproveMfr = async () => {
     if (!selectedMfrForApproval) return;
@@ -61,201 +83,273 @@ export const DashboardOverviewPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Top Banner / Executive Title */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/70 px-3 py-0.5 rounded-full border border-blue-200/80 dark:border-blue-800/80 inline-flex items-center gap-1.5 shadow-sm">
-              <Sparkles className="w-3 h-3 text-amber-500" />
-              National Drug Verification Network
-            </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">• Central Registry v2.4</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            Executive Regulatory Dashboard
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
-            Live oversight of licensed pharmaceutical manufacturers, pharmacy compliance, and cryptographic keystore.
-          </p>
-        </div>
+    <div className="space-y-6 animate-fadeIn select-none">
+      {/* Hero Operations Center Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#07192f] via-[#0b2545] to-[#0c1f3a] p-6 sm:p-8 text-white border border-[#1a3869] shadow-xl">
+        {/* Ambient Decorative Blurs */}
+        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-blue-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-amber-500/15 blur-3xl pointer-events-none" />
 
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/audit-logs')}
-            icon={<ArrowRight className="w-3.5 h-3.5" />}
-          >
-            Export Compliance Audit
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => navigate('/manufacturers')}
-            icon={<Factory className="w-3.5 h-3.5" />}
-          >
-            Review KYC Queue ({stats?.manufacturers.pending ?? 0})
-          </Button>
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="text-[11px] font-black uppercase tracking-wider text-amber-300 bg-amber-400/10 px-3 py-1 rounded-lg border border-amber-400/30 inline-flex items-center gap-1.5 shadow-sm">
+                <Landmark className="w-3.5 h-3.5 text-amber-400" />
+                CENTRAL DRUGS STANDARD CONTROL ORGANISATION
+              </span>
+              <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-800/60 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                BLOCKCHAIN CONSENSUS: ACTIVE
+              </span>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-black tracking-tight text-white leading-tight">
+              National Drug Verification & Root Keystore
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed font-normal">
+              Central regulatory authority overseeing pharmaceutical KYC credentials, pharmacy drug distribution compliance, and cryptographic batch minting certificates across India.
+            </p>
+
+            {/* Live Telemetry Bar */}
+            <div className="flex flex-wrap items-center gap-4 mt-4 text-[11px] font-mono text-slate-300">
+              <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                <Cpu className="w-3.5 h-3.5 text-blue-400" />
+                <span>ECDSA P-256 (SHA-256)</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                <Layers className="w-3.5 h-3.5 text-purple-400" />
+                <span>Hyperledger Fabric v2.5</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Zero-Tamper Ledger</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 flex-shrink-0">
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => navigate('/manufacturers')}
+              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-[#07192f] font-black shadow-lg shadow-amber-500/20 border border-amber-300/40"
+              icon={<Factory className="w-4 h-4 text-[#07192f]" />}
+            >
+              Inspect KYC Queue ({stats?.manufacturers.pending ?? 0})
+            </Button>
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => navigate('/audit-logs')}
+              className="bg-white/10 hover:bg-white/20 text-white border-white/20 hover:border-white/30 backdrop-blur-sm"
+              icon={<ArrowRight className="w-4 h-4" />}
+            >
+              Export Statutory Audit Log
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* 4 Metric Cards */}
+      {/* 4 Rich Telemetry Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {/* Card 1: Pending MFRs */}
         <div
           onClick={() => navigate('/manufacturers?status=PENDING')}
-          className="glass-panel glass-panel-hover rounded-2xl p-5 cursor-pointer group relative overflow-hidden card-highlight"
+          className="gov-card gov-card-hover p-5 cursor-pointer group card-amber-highlight relative overflow-hidden"
         >
           <div className="flex items-center justify-between">
-            <div className="w-11 h-11 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold border border-amber-500/20 shadow-sm">
-              <Factory className="w-5 h-5" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/20 transition-transform group-hover:scale-105">
+              <Factory className="w-6 h-6" />
             </div>
-            <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-300/80 dark:border-amber-700/60">
+            <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2.5 py-1 rounded-md border border-amber-300 dark:border-amber-800 shadow-sm animate-pulse">
               Action Required
             </span>
           </div>
+
           <div className="mt-4">
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h3 className="text-3xl font-display font-black text-slate-900 dark:text-white tracking-tight">
               {stats?.manufacturers.pending ?? 0}
             </h3>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">Pending Manufacturer KYC</p>
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-1">Pending Manufacturer KYC</p>
           </div>
-          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-            <span>{stats?.manufacturers.total ?? 0} total registered</span>
-            <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+
+          {/* Mini SLA progress indicator */}
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+              <span>{stats?.manufacturers.total ?? 0} Registered Plants</span>
+              <span className="font-bold text-amber-700 dark:text-amber-400">SLA 24h</span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-amber-500 h-full rounded-full w-3/4" />
+            </div>
           </div>
         </div>
 
         {/* Card 2: Pending Shops */}
         <div
           onClick={() => navigate('/shopkeepers?status=pending')}
-          className="glass-panel glass-panel-hover rounded-2xl p-5 cursor-pointer group relative overflow-hidden card-highlight"
+          className="gov-card gov-card-hover p-5 cursor-pointer group card-blue-highlight relative overflow-hidden"
         >
           <div className="flex items-center justify-between">
-            <div className="w-11 h-11 rounded-xl bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold border border-blue-500/20 shadow-sm">
-              <Store className="w-5 h-5" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-500/20 transition-transform group-hover:scale-105">
+              <Store className="w-6 h-6" />
             </div>
-            <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100/70 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full border border-blue-300/80 dark:border-blue-700/60">
-              Review Queue
+            <span className="text-[10px] font-black uppercase tracking-wider text-blue-800 dark:text-blue-300 bg-blue-100 dark:bg-blue-950 px-2.5 py-1 rounded-md border border-blue-300 dark:border-blue-800 shadow-sm">
+              SLA Queue
             </span>
           </div>
+
           <div className="mt-4">
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h3 className="text-3xl font-display font-black text-slate-900 dark:text-white tracking-tight">
               {stats?.shopkeepers.pending ?? 0}
             </h3>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">Pending Pharmacy Licenses</p>
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-1">Pending Pharmacy Licenses</p>
           </div>
-          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-            <span>{stats?.shopkeepers.total ?? 0} total pharmacies</span>
-            <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+
+          {/* Mini SLA progress indicator */}
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+              <span>{stats?.shopkeepers.total ?? 0} Dispensaries</span>
+              <span className="font-bold text-blue-700 dark:text-blue-400">Form 20/21</span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-blue-600 h-full rounded-full w-2/3" />
+            </div>
           </div>
         </div>
 
         {/* Card 3: Cryptographic Keys */}
         <div
           onClick={() => navigate('/keys')}
-          className="glass-panel glass-panel-hover rounded-2xl p-5 cursor-pointer group relative overflow-hidden card-highlight"
+          className="gov-card gov-card-hover p-5 cursor-pointer group card-emerald-highlight relative overflow-hidden"
         >
           <div className="flex items-center justify-between">
-            <div className="w-11 h-11 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold border border-emerald-500/20 shadow-sm">
-              <KeyRound className="w-5 h-5" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center font-bold shadow-md shadow-emerald-500/20 transition-transform group-hover:scale-105">
+              <KeyRound className="w-6 h-6" />
             </div>
-            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-300/80 dark:border-emerald-700/60">
-              ECDSA P-256
+            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-1 rounded-md border border-emerald-300 dark:border-emerald-800 shadow-sm font-mono">
+              FIPS 140-2
             </span>
           </div>
+
           <div className="mt-4">
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h3 className="text-3xl font-display font-black text-slate-900 dark:text-white tracking-tight">
               {stats?.cryptography.activeKeys ?? 0}
             </h3>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">Active Signing Keypairs</p>
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-1">Active Root Keypairs</p>
           </div>
-          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-            <span>Hardware Keystore Active</span>
-            <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+
+          {/* Mini SLA progress indicator */}
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+              <span>Keystore HSM Cluster</span>
+              <span className="font-bold text-emerald-700 dark:text-emerald-400">100% Active</span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-emerald-500 h-full rounded-full w-full" />
+            </div>
           </div>
         </div>
 
         {/* Card 4: Active Approved Network */}
         <div
           onClick={() => navigate('/shopkeepers?status=approved')}
-          className="glass-panel glass-panel-hover rounded-2xl p-5 cursor-pointer group relative overflow-hidden card-highlight"
+          className="gov-card gov-card-hover p-5 cursor-pointer group relative overflow-hidden"
         >
           <div className="flex items-center justify-between">
-            <div className="w-11 h-11 rounded-xl bg-slate-500/10 dark:bg-slate-500/20 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold border border-slate-500/20 shadow-sm">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#0b2545] to-[#1a4478] text-white flex items-center justify-center font-bold shadow-md shadow-navy-900/20 transition-transform group-hover:scale-105">
+              <ShieldCheck className="w-6 h-6" />
             </div>
-            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 bg-slate-200/80 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
-              Live Network
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 bg-slate-200 dark:bg-slate-700 px-2.5 py-1 rounded-md shadow-sm font-mono">
+              SECURE LEDGER
             </span>
           </div>
+
           <div className="mt-4">
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h3 className="text-3xl font-display font-black text-slate-900 dark:text-white tracking-tight">
               {(stats?.shopkeepers.approved ?? 0) + (stats?.manufacturers.approved ?? 0)}
             </h3>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">Verified Network Nodes</p>
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-1">Authorized Supply Chain Nodes</p>
           </div>
-          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors">
-            <span>MFRs & Retail Chemists</span>
-            <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+
+          {/* Mini SLA progress indicator */}
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+              <span>Network Trust Anchor</span>
+              <span className="font-bold text-blue-700 dark:text-blue-400">Verified</span>
+            </div>
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-blue-600 h-full rounded-full w-full" />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main 2-Column Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Urgent Action Items Queue (7 cols) */}
-        <div className="lg:col-span-7 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Priority Verification Queue (7 cols) */}
+        <div className="lg:col-span-7 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <span>Priority Verification Queue</span>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                  {pendingMfrList.length + pendingShopList.length} Pending
+                <span className="text-xs font-black px-2.5 py-0.5 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shadow-sm">
+                  {totalPending} Awaiting Review
                 </span>
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Submissions requiring State Drug Inspector review and key provisioning
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                Statutory applications awaiting CDSCO officer inspection & cryptographic provisioning
               </p>
             </div>
           </div>
 
-          <div className="glass-panel rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/80 shadow-sm">
+          <div className="bg-white dark:bg-[#0b172a] rounded-2xl border border-slate-200/90 dark:border-slate-800/90 divide-y divide-slate-100 dark:divide-slate-800/80 shadow-sm overflow-hidden">
             {pendingMfrList.length === 0 && pendingShopList.length === 0 ? (
-              <div className="p-10 text-center text-slate-400 dark:text-slate-500">
-                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3 animate-bounce" />
-                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">All Queues Cleared</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">There are no pending approvals requiring attention.</p>
+              <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+                <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto mb-3" />
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-200">Regulatory Verification Queue Cleared</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">All manufacturer and pharmacy license submissions are verified.</p>
               </div>
             ) : (
               <>
                 {/* Pending Manufacturers */}
                 {pendingMfrList.map((mfr) => (
-                  <div key={mfr.manufacturerId} className="p-4 sm:p-5 hover:bg-slate-50/90 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div
+                    key={mfr.manufacturerId}
+                    className="p-4 sm:p-5 hover:bg-slate-50/90 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
                     <div className="flex items-start gap-3.5 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
-                        <Factory className="w-5 h-5" />
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm font-bold text-xs">
+                        {mfr.companyName.charAt(0)}
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{mfr.companyName}</h4>
-                          <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-800">
-                            Manufacturer KYC
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-xs font-black text-slate-900 dark:text-white truncate">{mfr.companyName}</h4>
+                          <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-800 shadow-sm">
+                            MANUFACTURER KYC
                           </span>
                         </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-2 mt-1">
-                          <span>License: <code className="font-mono font-semibold text-slate-700 dark:text-slate-300">{mfr.licenseNumber}</code></span>
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400 flex flex-wrap items-center gap-2 mt-1">
+                          <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                            <span className="text-[10px] text-slate-400">Lic:</span>
+                            <code className="font-mono font-bold text-slate-900 dark:text-slate-100">{mfr.licenseNumber}</code>
+                            <button
+                              onClick={() => handleCopyLicense(mfr.licenseNumber)}
+                              className="text-slate-400 hover:text-blue-700 p-0.5"
+                              title="Copy License"
+                            >
+                              {copiedLicense === mfr.licenseNumber ? (
+                                <Check className="w-3 h-3 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
                           <span>•</span>
-                          <span>{mfr.state || 'India'}</span>
-                          {mfr.createdAt && (
-                            <>
-                              <span>•</span>
-                              <span className="text-amber-700 dark:text-amber-400 font-medium">
-                                Submitted: {new Date(mfr.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                              </span>
-                            </>
-                          )}
+                          <span className="inline-flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300">
+                            <MapPin className="w-3 h-3 text-slate-400" />{mfr.state || 'India'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -274,7 +368,7 @@ export const DashboardOverviewPage: React.FC = () => {
                         onClick={() => setSelectedMfrForApproval(mfr)}
                         icon={<Lock className="w-3 h-3" />}
                       >
-                        Approve & Provision
+                        Approve & Provision Key
                       </Button>
                     </div>
                   </div>
@@ -282,22 +376,41 @@ export const DashboardOverviewPage: React.FC = () => {
 
                 {/* Pending Pharmacies */}
                 {pendingShopList.map((shop) => (
-                  <div key={shop.shopId} className="p-4 sm:p-5 hover:bg-slate-50/90 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div
+                    key={shop.shopId}
+                    className="p-4 sm:p-5 hover:bg-slate-50/90 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
                     <div className="flex items-start gap-3.5 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
-                        <Store className="w-5 h-5" />
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm font-bold text-xs">
+                        {shop.shopName.charAt(0)}
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{shop.shopName}</h4>
-                          <span className="text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-xs font-black text-slate-900 dark:text-white truncate">{shop.shopName}</h4>
+                          <span className="text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-300 dark:border-blue-800 shadow-sm uppercase">
                             {shop.licenseType}
                           </span>
                         </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1">
-                          <span>License: <code className="font-mono font-semibold text-slate-700 dark:text-slate-300">{shop.drugLicenseNumber}</code></span>
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400 flex flex-wrap items-center gap-2 mt-1">
+                          <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                            <span className="text-[10px] text-slate-400">Lic:</span>
+                            <code className="font-mono font-bold text-slate-900 dark:text-slate-100">{shop.drugLicenseNumber}</code>
+                            <button
+                              onClick={() => handleCopyLicense(shop.drugLicenseNumber)}
+                              className="text-slate-400 hover:text-blue-700 p-0.5"
+                              title="Copy License"
+                            >
+                              {copiedLicense === shop.drugLicenseNumber ? (
+                                <Check className="w-3 h-3 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
                           <span>•</span>
-                          <span>{shop.city}, {shop.state}</span>
+                          <span className="inline-flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300">
+                            <MapPin className="w-3 h-3 text-slate-400" />{shop.city}, {shop.state}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -308,7 +421,7 @@ export const DashboardOverviewPage: React.FC = () => {
                         size="sm"
                         onClick={() => navigate('/shopkeepers')}
                       >
-                        Inspect License
+                        Inspect License Form
                       </Button>
                     </div>
                   </div>
@@ -318,22 +431,23 @@ export const DashboardOverviewPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Live Regulatory Audit Feed (5 cols) */}
-        <div className="lg:col-span-5 space-y-4">
+        {/* Right Column: Live Regulatory Decisions Feed (5 cols) */}
+        <div className="lg:col-span-5 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Live Regulatory Decisions</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Real-time ledger of officer actions</p>
+              <h2 className="text-base font-black text-slate-900 dark:text-white">Live Decision Trail</h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Immutable audit ledger of officer actions</p>
             </div>
             <button
               onClick={() => navigate('/audit-logs')}
-              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+              className="text-xs font-bold text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-800 shadow-sm"
             >
-              View Full Log →
+              <span>Full Ledger</span>
+              <ExternalLink className="w-3 h-3" />
             </button>
           </div>
 
-          <div className="glass-panel rounded-2xl p-4 sm:p-5 divide-y divide-slate-100 dark:divide-slate-800/80 shadow-sm">
+          <div className="bg-white dark:bg-[#0b172a] rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-slate-800/90 divide-y divide-slate-100 dark:divide-slate-800/80 shadow-sm">
             {auditLogs.slice(0, 5).map((log) => {
               const isApproved = log.action.includes('APPROVED');
               const isSuspended = log.action.includes('SUSPENDED');
@@ -341,12 +455,12 @@ export const DashboardOverviewPage: React.FC = () => {
               return (
                 <div key={log._id} className="py-3.5 first:pt-0 last:pb-0 flex items-start gap-3">
                   <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold ${
+                    className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold border shadow-sm ${
                       isApproved
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
                         : isSuspended
-                        ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
-                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                        ? 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+                        : 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800'
                     }`}
                   >
                     {isApproved ? '✓' : isSuspended ? '⚡' : '✕'}
@@ -354,22 +468,22 @@ export const DashboardOverviewPage: React.FC = () => {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      <span className="text-xs font-black text-slate-900 dark:text-slate-100 truncate">
                         {log.targetName || log.targetId}
                       </span>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1 font-mono">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-mono">
                         <Clock className="w-3 h-3" />
                         {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
 
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{log.action.replace('_', ' ')}</span> by{' '}
-                      <span className="text-slate-600 dark:text-slate-400">{log.performedBy.fullName}</span>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{log.action.replace('_', ' ')}</span> by{' '}
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">{log.performedBy.fullName}</span>
                     </div>
 
                     {log.reason && (
-                      <p className="text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-lg mt-1.5 border border-slate-200/80 dark:border-slate-700/60 leading-relaxed">
+                      <p className="text-[11px] text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl mt-1.5 border border-slate-200 dark:border-slate-700 leading-relaxed shadow-sm">
                         {log.reason}
                       </p>
                     )}
@@ -386,7 +500,7 @@ export const DashboardOverviewPage: React.FC = () => {
         isOpen={!!selectedMfrForApproval}
         onClose={() => setSelectedMfrForApproval(null)}
         onConfirm={handleConfirmApproveMfr}
-        title="Confirm Manufacturer Approval & Key Generation"
+        title="Authorize Manufacturer & Provision Cryptographic Key"
         targetName={selectedMfrForApproval?.companyName || ''}
         targetId={selectedMfrForApproval?.manufacturerId}
         licenseNumber={selectedMfrForApproval?.licenseNumber}

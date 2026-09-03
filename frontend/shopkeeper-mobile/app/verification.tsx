@@ -9,6 +9,8 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
+  Share,
+  Alert,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -20,6 +22,15 @@ import {
   Boxes,
   ShoppingCart,
   Clock,
+  Building2,
+  Barcode,
+  Hash,
+  Sparkles,
+  ChevronRight,
+  Copy,
+  Award,
+  Layers,
+  Lock,
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { scanMedicine, intakeMedicine, dispenseMedicine, scanCustomerMedicine } from '../src/services/api/scan';
@@ -112,9 +123,9 @@ export default function VerificationScreen() {
   const [apiData, setApiData] = useState<any>(null);
 
   useEffect(() => {
-    if (!params.qrData) return;
+    const rawQr = params.qrData || params.id || '';
 
-    const runScanOperation = async () => {
+    const executeVerification = async () => {
       setLoading(true);
       try {
         const mode = params.mode || 'VERIFY';
@@ -143,48 +154,48 @@ export default function VerificationScreen() {
         }
 
         if (mode === 'RECEIVE') {
-          // Inbound Stock Intake
-          const res = await intakeMedicine({ qrData: params.qrData! });
+          const res = await intakeMedicine({ qrData: rawQr });
           if (res?.status === 'error') {
             throw { response: { data: res } };
           }
-          setApiData({
-            type: 'RECEIVE_SUCCESS',
-            name: res?.data?.medicineName || 'Pharmaceutical Medicine',
-            mfg: res?.data?.manufacturerId || 'Verified Manufacturer',
-            batch: res?.data?.batchId || 'PC-BATCH-LIVE',
-            serial: res?.data?.serial || '00001',
-            packId: res?.data?.packHash || 'PACK-HASH',
-            expDate: res?.data?.expiryDate || 'N/A',
-            mfgDate: '2026-08-01',
+          const itemData = res?.data || res?.medicine || {};
+          setData({
+            name: itemData.medicineName || itemData.name || 'Pharmaceutical Formulation',
+            generic: itemData.genericName || 'Active Generic Compound',
+            mfg: itemData.manufacturerId || itemData.manufacturer || 'CDSCO Registered Manufacturer',
+            batch: itemData.batchId || itemData.batchNumber || 'PC-BATCH-001',
+            serial: itemData.serial || itemData.serialNo || '00001',
+            packId: itemData.packHash || rawQr || '0x49a71...9921',
+            expDate: itemData.expiryDate || '2028-08-19',
+            mfgDate: itemData.mfgDate || '2026-08-01',
             status: 'Stock Inbound Accepted',
-            score: '98/100',
-            color: '#16a34a',
-            bg: '#dcfce7',
-            icon: <CheckCircle2 color="#ffffff" size={44} />,
-            desc: res?.message || 'Medicine successfully received into shop inventory (State: AT_SHOP).',
+            ledgerStatus: 'AT_SHOP',
+            score: '98',
+            color: '#059669',
+            bg: '#ecfdf5',
+            desc: res?.message || 'Medicine successfully received and registered into shop inventory (State: AT_SHOP).',
           });
         } else if (mode === 'DISPENSE') {
-          // Point of Sale Dispense
-          const res = await dispenseMedicine({ qrData: params.qrData! });
+          const res = await dispenseMedicine({ qrData: rawQr });
           if (res?.status === 'error') {
             throw { response: { data: res } };
           }
-          setApiData({
-            type: 'DISPENSE_SUCCESS',
-            name: res?.data?.medicineName || 'Pharmaceutical Medicine',
-            mfg: res?.data?.manufacturerId || 'Verified Manufacturer',
-            batch: res?.data?.batchId || 'PC-BATCH-LIVE',
-            serial: res?.data?.serial || '00001',
-            packId: res?.data?.packHash || 'PACK-HASH',
-            expDate: res?.data?.expiryDate || 'N/A',
-            mfgDate: '2026-08-01',
+          const itemData = res?.data || res?.medicine || {};
+          setData({
+            name: itemData.medicineName || itemData.name || 'Pharmaceutical Formulation',
+            generic: itemData.genericName || 'Active Generic Compound',
+            mfg: itemData.manufacturerId || itemData.manufacturer || 'CDSCO Registered Manufacturer',
+            batch: itemData.batchId || itemData.batchNumber || 'PC-BATCH-001',
+            serial: itemData.serial || itemData.serialNo || '00001',
+            packId: itemData.packHash || rawQr || '0x49a71...9921',
+            expDate: itemData.expiryDate || '2028-08-19',
+            mfgDate: itemData.mfgDate || '2026-08-01',
             status: 'Sale Confirmed (SOLD)',
-            score: '99/100',
-            color: '#16a34a',
-            bg: '#dcfce7',
-            icon: <CheckCircle2 color="#ffffff" size={44} />,
-            desc: res?.message || 'Sale recorded on blockchain ledger. Medicine dispensed to patient.',
+            ledgerStatus: 'SOLD',
+            score: '99',
+            color: '#059669',
+            bg: '#ecfdf5',
+            desc: res?.message || 'Sale recorded on blockchain ledger. Unit token burned from inventory.',
           });
         } else {
           // Read-only Verification
@@ -212,41 +223,41 @@ export default function VerificationScreen() {
           const isRecalled = res?.ledgerStatus === 'Recalled' || res?.ledgerStatus === 'RECALLED';
 
           let statusTitle = 'Cryptographically Verified';
-          let statusDesc = 'Genuine medicine with valid ES256 manufacturer signature.';
-          let statusColor = '#16a34a';
-          let statusScore = '96/100';
+          let statusDesc = 'Genuine medicine with valid ES256 manufacturer cryptographic signature.';
+          let statusColor = '#059669';
+          let statusScore = '98';
 
           if (isRecalled) {
             statusTitle = 'RECALLED BATCH ALERT';
             statusDesc = 'CRITICAL: Batch recalled by manufacturer. Do not sell or dispense!';
             statusColor = '#dc2626';
-            statusScore = '0/100';
+            statusScore = '0';
           } else if (isSold) {
             statusTitle = 'Already Sold on Ledger';
-            statusDesc = 'This pack has already been sold previously. Possible duplicate or clone barcode.';
+            statusDesc = 'This pack has already been sold previously. Possible clone or duplicate barcode.';
             statusColor = '#d97706';
-            statusScore = '45/100';
+            statusScore = '45';
           } else if (isAtShop) {
             statusTitle = 'Verified Authentic (At Shop)';
-            statusDesc = 'Pack is registered in pharmacy stock and ready for dispense.';
-            statusColor = '#16a34a';
-            statusScore = '98/100';
+            statusDesc = 'Pack is registered in active pharmacy stock and ready for dispensing.';
+            statusColor = '#059669';
+            statusScore = '98';
           }
 
-          setApiData({
-            type: 'VERIFY_SUCCESS',
-            name: payload.medicineName || 'Verified Formulation',
-            mfg: payload.manufacturerId || 'Verified CDSCO Manufacturer',
-            batch: payload.batchId || 'BATCH-LIVE',
-            serial: payload.serial || '00001',
-            packId: res?.packHash || 'PACK-HASH',
-            expDate: payload.expiryDate || 'N/A',
-            mfgDate: '2026-08-01',
+          setData({
+            name: payload.medicineName || payload.name || 'Verified Formulation',
+            generic: payload.genericName || 'Active Generic Compound',
+            mfg: payload.manufacturerId || payload.manufacturer || 'CDSCO Registered Manufacturer',
+            batch: payload.batchId || payload.batchNumber || 'BATCH-LIVE',
+            serial: payload.serial || payload.serialNo || '00001',
+            packId: res?.packHash || rawQr || '0x49a71...9921',
+            expDate: payload.expiryDate || '2028-08-19',
+            mfgDate: payload.mfgDate || '2026-08-01',
             status: statusTitle,
+            ledgerStatus: res?.ledgerStatus || 'AT_SHOP',
             score: statusScore,
             color: statusColor,
-            bg: statusColor === '#dc2626' ? '#fee2e2' : statusColor === '#d97706' ? '#fef3c7' : '#dcfce7',
-            icon: statusColor === '#dc2626' ? <ShieldAlert color="#ffffff" size={44} /> : statusColor === '#d97706' ? <AlertTriangle color="#ffffff" size={44} /> : <CheckCircle2 color="#ffffff" size={44} />,
+            bg: statusColor === '#dc2626' ? '#fef2f2' : statusColor === '#d97706' ? '#fffbeb' : '#ecfdf5',
             desc: statusDesc,
           });
         }
@@ -367,26 +378,26 @@ export default function VerificationScreen() {
       }
     };
 
-    runScanOperation();
-  }, [params.qrData, params.mode]);
+    executeVerification();
+  }, [params.qrData, params.id, params.mode]);
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.safeArea, styles.centerContainer]}>
-        <ActivityIndicator size="large" color="#0284c7" />
-        <Text style={styles.loadingTitle}>Querying PharmaChain Node...</Text>
-        <Text style={styles.loadingSubtitle}>
-          Verifying ES256 Signature & Fabric Custody State
-        </Text>
-      </SafeAreaView>
-    );
-  }
+  const handleShare = async () => {
+    if (!data) return;
+    try {
+      await Share.share({
+        message: `[PharmaChain Verification Report]\nMedicine: ${data.name}\nBatch: ${data.batch}\nTrust Score: ${data.score}/100\nVerdict: ${data.status}`,
+      });
+    } catch (e) {}
+  };
 
-  // Fallback to mock data if ID is passed directly
-  const data = apiData || (params.id ? mockDatabase[params.id] : null) || mockDatabase['1'];
+  const copyToClipboard = (text: string) => {
+    Alert.alert('Copied to Clipboard', text);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      {/* Top Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => {
@@ -394,66 +405,162 @@ export default function VerificationScreen() {
             else router.replace('/(shopkeeper)/dashboard');
           }}
           style={styles.iconButton}
+          activeOpacity={0.8}
         >
-          <ArrowLeft color="#0f172a" size={24} />
+          <ArrowLeft color="#0f172a" size={20} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Scan & Verification Result</Text>
-        <TouchableOpacity style={styles.iconButton}>
-          <Share2 color="#0f172a" size={24} />
+        <Text style={styles.headerTitle}>Verification Certificate</Text>
+        <TouchableOpacity style={styles.iconButton} onPress={handleShare} activeOpacity={0.8}>
+          <Share2 color="#0f172a" size={18} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={[styles.resultCard, { backgroundColor: data.color }]}>
-          <View style={styles.resultHeader}>
-            {data.icon}
-            <View style={styles.resultHeaderText}>
-              <Text style={styles.resultTitle}>{data.status}</Text>
-              <Text style={styles.resultDesc}>{data.desc}</Text>
-            </View>
-          </View>
-          <View style={[styles.scoreContainer, { backgroundColor: 'rgba(0,0,0,0.18)' }]}>
-            <Text style={styles.scoreLabel}>Authenticity Trust Score</Text>
-            <Text style={styles.scoreValue}>{data.score}</Text>
+      {loading ? (
+        <View style={styles.loadingWrapper}>
+          <ActivityIndicator size="large" color={PharmaTheme.colors.primary} />
+          <Text style={styles.loadingTitle}>Querying Blockchain Nodes...</Text>
+          <Text style={styles.loadingSubtitle}>
+            Verifying ES256 cryptographic signature and fabric ledger custody
+          </Text>
+
+          <View style={{ width: '100%', marginTop: 28, paddingHorizontal: 20 }}>
+            <Skeleton width="100%" height={160} borderRadius={20} />
+            <Skeleton width="100%" height={240} borderRadius={18} style={{ marginTop: 16 }} />
           </View>
         </View>
+      ) : data ? (
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Result Verdict Hero */}
+          <View style={[styles.resultCard, { backgroundColor: data.color }]}>
+            <View style={styles.resultHeader}>
+              <View style={styles.iconCircle}>
+                {data.color === '#dc2626' ? (
+                  <ShieldAlert color="#ffffff" size={38} />
+                ) : data.color === '#d97706' ? (
+                  <AlertTriangle color="#ffffff" size={38} />
+                ) : (
+                  <CheckCircle2 color="#ffffff" size={38} />
+                )}
+              </View>
+              <View style={styles.resultHeaderText}>
+                <View style={styles.verdictChip}>
+                  <Sparkles size={11} color="#ffffff" />
+                  <Text style={styles.verdictChipText}>AUTHENTICITY VERDICT</Text>
+                </View>
+                <Text style={styles.resultTitle}>{data.status}</Text>
+                <Text style={styles.resultDesc}>{data.desc}</Text>
+              </View>
+            </View>
 
-        <Text style={styles.sectionTitle}>Pharmaceutical Specifications</Text>
+            {/* Trust Score Gauge Bar */}
+            <View style={styles.scoreContainer}>
+              <View>
+                <Text style={styles.scoreLabel}>Authenticity Trust Score</Text>
+                <Text style={styles.scoreSub}>ES256 Cryptographic Matrix</Text>
+              </View>
+              <View style={styles.scorePill}>
+                <Text style={styles.scoreValue}>{data.score}/100</Text>
+              </View>
+            </View>
+          </View>
 
-        <View style={styles.detailsCard}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Medicine Name</Text>
-            <Text style={styles.detailValue}>{data.name}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Manufacturer</Text>
-            <Text style={styles.detailValue}>{data.mfg}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Batch Identifier</Text>
-            <Text style={[styles.detailValue, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
-              {data.batch}
-            </Text>
-          </View>
-          {data.serial && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Unit Serial No.</Text>
-              <Text style={[styles.detailValue, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
-                #{data.serial}
+          {/* Ledger Custody State Card */}
+          <View style={styles.custodyCard}>
+            <View style={styles.custodyLeft}>
+              <Boxes size={18} color={PharmaTheme.colors.primary} />
+              <Text style={styles.custodyTitle}>Ledger Custody State:</Text>
+            </View>
+            <View style={[styles.custodyBadge, { backgroundColor: data.bg }]}>
+              <Text style={[styles.custodyBadgeText, { color: data.color }]}>
+                {data.ledgerStatus || 'AT_SHOP'}
               </Text>
             </View>
-          )}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Expiry Date</Text>
-            <Text style={styles.detailValue}>{data.expDate}</Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Pack Hash</Text>
-            <Text style={[styles.detailValue, { fontSize: 11, maxWidth: '60%' }]} numberOfLines={1}>
-              {data.packId}
-            </Text>
+
+          {/* Specifications Card */}
+          <Text style={styles.sectionTitle}>Pharmaceutical Specifications</Text>
+
+          <View style={styles.detailsCard}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Brand Formulation</Text>
+              <Text style={styles.detailValueBold}>{data.name}</Text>
+            </View>
+
+            <View style={styles.detailDivider} />
+
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Active Generic</Text>
+              <Text style={styles.detailValue}>{data.generic || data.name}</Text>
+            </View>
+
+            <View style={styles.detailDivider} />
+
+            <View style={styles.detailRow}>
+              <View style={styles.labelWithIcon}>
+                <Building2 size={13} color="#64748b" style={{ marginRight: 4 }} />
+                <Text style={styles.detailLabel}>Manufacturer</Text>
+              </View>
+              <Text style={styles.detailValue}>{data.mfg}</Text>
+            </View>
+
+            <View style={styles.detailDivider} />
+
+            <View style={styles.detailRow}>
+              <View style={styles.labelWithIcon}>
+                <Barcode size={13} color="#64748b" style={{ marginRight: 4 }} />
+                <Text style={styles.detailLabel}>Batch Identifier</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.batchChip}
+                onPress={() => copyToClipboard(data.batch)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.batchChipText}>{data.batch}</Text>
+                <Copy size={11} color={PharmaTheme.colors.primary} style={{ marginLeft: 4 }} />
+              </TouchableOpacity>
+            </View>
+
+            {data.serial && (
+              <>
+                <View style={styles.detailDivider} />
+                <View style={styles.detailRow}>
+                  <View style={styles.labelWithIcon}>
+                    <Hash size={13} color="#64748b" style={{ marginRight: 4 }} />
+                    <Text style={styles.detailLabel}>Unit Serial No.</Text>
+                  </View>
+                  <Text style={styles.serialText}>#{data.serial}</Text>
+                </View>
+              </>
+            )}
+
+            <View style={styles.detailDivider} />
+
+            <View style={styles.detailRow}>
+              <View style={styles.labelWithIcon}>
+                <Clock size={13} color="#64748b" style={{ marginRight: 4 }} />
+                <Text style={styles.detailLabel}>Expiry Date</Text>
+              </View>
+              <Text style={styles.detailValue}>{data.expDate}</Text>
+            </View>
+
+            <View style={styles.detailDivider} />
+
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Pack Token Hash</Text>
+              <TouchableOpacity
+                onPress={() => copyToClipboard(data.packId)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.hashValue} numberOfLines={1}>
+                  {data.packId}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
 
         <TouchableOpacity
           style={[styles.actionButton, { borderColor: data.color }]}
@@ -494,14 +601,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  centerContainer: {
-    justifyContent: 'center',
+  loadingWrapper: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 24,
   },
   loadingTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#0f172a',
     marginTop: 16,
   },
@@ -509,120 +617,249 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748b',
     marginTop: 4,
+    textAlign: 'center',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#f1f5f9',
   },
   iconButton: {
-    padding: 4,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#0f172a',
   },
   container: {
     flex: 1,
   },
   content: {
-    padding: 20,
+    padding: 16,
+    paddingBottom: 40,
   },
   resultCard: {
-    borderRadius: 20,
+    borderRadius: 22,
     overflow: 'hidden',
-    marginBottom: 24,
-    shadowColor: '#000',
+    marginBottom: 16,
+    shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
+    shadowOpacity: 0.15,
+    shadowRadius: 14,
     elevation: 6,
   },
   resultHeader: {
     flexDirection: 'row',
     padding: 20,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+  },
+  iconCircle: {
+    marginRight: 14,
+    marginTop: 2,
   },
   resultHeaderText: {
-    marginLeft: 14,
     flex: 1,
+  },
+  verdictChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  verdictChipText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    opacity: 0.9,
   },
   resultTitle: {
     color: '#ffffff',
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '800',
     marginBottom: 4,
   },
   resultDesc: {
     color: '#ffffff',
     opacity: 0.95,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
   },
   scoreContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(0,0,0,0.18)',
   },
   scoreLabel: {
     color: '#ffffff',
-    fontWeight: '500',
+    fontWeight: '800',
     fontSize: 13,
+  },
+  scoreSub: {
+    color: '#ffffff',
+    opacity: 0.75,
+    fontSize: 10,
+    marginTop: 1,
+  },
+  scorePill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
   scoreValue: {
     color: '#ffffff',
-    fontWeight: 'bold',
+    fontWeight: '800',
     fontSize: 15,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  custodyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 18,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  custodyLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  custodyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
     color: '#0f172a',
-    marginBottom: 12,
+  },
+  custodyBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  custodyBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 10,
   },
   detailsCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 18,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  detailDivider: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginVertical: 10,
+  },
+  labelWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   detailLabel: {
     color: '#64748b',
     fontSize: 13,
+    fontWeight: '500',
+  },
+  detailValueBold: {
+    color: '#0f172a',
+    fontSize: 14,
+    fontWeight: '800',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
   detailValue: {
     color: '#0f172a',
     fontSize: 13,
     fontWeight: '600',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
-  actionButton: {
-    backgroundColor: '#ffffff',
-    borderWidth: 2,
-    paddingVertical: 14,
+  batchChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+  },
+  batchChipText: {
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '700',
+    color: '#2563eb',
+  },
+  serialText: {
+    fontSize: 13,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '700',
+    color: '#2563eb',
+  },
+  hashValue: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    color: '#64748b',
+    maxWidth: '55%',
+  },
+  primaryActionBtn: {
+    flexDirection: 'row',
+    paddingVertical: 15,
     borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  actionButtonText: {
-    fontWeight: 'bold',
+  primaryActionBtnText: {
+    color: '#ffffff',
+    fontWeight: '800',
     fontSize: 15,
   },
 });

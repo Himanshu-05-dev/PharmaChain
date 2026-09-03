@@ -1,63 +1,104 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
+export const PharmaTheme = {
+  colors: {
+    // Hyper-Minimalist Titanium & Electric Cobalt Blue
+    primary: '#2563eb', // Electric Cobalt Blue
+    primaryDark: '#1d4ed8', // Deep Royal Cobalt
+    primaryLight: '#dbeafe', // Soft Cobalt Frost
+    primarySurface: '#eff6ff', // Ultra-Light Cobalt Ice
+    primaryGlow: '#3b82f6', // Bright Cobalt Glow
 
-import { Platform } from 'react-native';
+    accentCyan: '#06b6d4', // Electric Cyan
+    accentIndigo: '#4f46e5', // Deep Indigo
 
-export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    background: '#f8fafc', // Titanium Ice Canvas
+    card: '#ffffff', // Pure Titanium White Surface
+    surfaceElevated: '#f1f5f9', // Frosted Titanium Card Surface
+    surfaceSubtle: '#e2e8f0', // Titanium Border Tint
+
+    text: '#0f172a', // Titanium Slate High-Contrast Text
+    textSecondary: '#475569', // Muted Titanium Gray
+    textMuted: '#94a3b8', // Subtle Metadata Gray
+
+    border: '#e2e8f0', // Hairline Titanium Border
+    borderStrong: '#cbd5e1', // Defined Titanium Border
+    borderGlow: 'rgba(37, 99, 235, 0.25)', // Cobalt Glow Border
+
+    success: '#10b981', // Emerald Success
+    successLight: '#ecfdf5',
+    successBorder: '#a7f3d0',
+
+    warning: '#f59e0b', // Amber Warning
+    warningLight: '#fffbeb',
+    warningBorder: '#fde68a',
+
+    danger: '#ef4444', // Crimson Alert
+    dangerLight: '#fef2f2',
+    dangerBorder: '#fecaca',
+
+    white: '#ffffff',
+    black: '#000000',
+    titaniumDark: '#0b0f17',
   },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+  typography: {
+    sizes: {
+      xs: 11,
+      sm: 13,
+      md: 15,
+      lg: 18,
+      xl: 22,
+      xxl: 26,
+    },
+    weights: {
+      regular: '400' as const,
+      medium: '500' as const,
+      semibold: '600' as const,
+      bold: '700' as const,
+      heavy: '800' as const,
+    },
   },
-} as const;
-
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
-
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+  shadows: {
+    sm: {
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04,
+      shadowRadius: 3,
+      elevation: 1,
+    },
+    md: {
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    lg: {
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
+      elevation: 4,
+    },
+    floating: {
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 24,
+      elevation: 8,
+    },
+    glowCobalt: {
+      shadowColor: '#2563eb',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.35,
+      shadowRadius: 16,
+      elevation: 8,
+    },
   },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+  radius: {
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 20,
+    xxl: 26,
+    full: 9999,
   },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
-
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
-} as const;
-
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+};

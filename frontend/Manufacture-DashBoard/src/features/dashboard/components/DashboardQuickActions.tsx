@@ -15,56 +15,57 @@ export const DashboardQuickActions: React.FC = () => {
 
   const actions = [
     {
-      title: 'Create Batch',
-      description: 'Register and mint serialized medicine batch',
-      icon: <PlusCircle className="w-5 h-5 text-emerald-400" />,
-      iconBg: 'bg-emerald-950/40 border-emerald-800/50',
+      title: 'Create Production Batch',
+      description: 'Register formula & sign cryptographic block',
+      icon: <PlusCircle className="w-5 h-5 text-amber-500" />,
       action: () => navigateTo('create-batch'),
-      primary: true,
+      badge: 'New',
     },
     {
-      title: 'Generate QR Codes',
-      description: 'Export thermal print-ready ZIP & CSV packages',
-      icon: <QrCode className="w-5 h-5 text-sky-400" />,
-      iconBg: 'bg-sky-950/40 border-sky-800/50',
+      title: 'GS1 QR Code Hub',
+      description: 'Export 2D DataMatrix print-ready packages',
+      icon: <QrCode className="w-5 h-5 text-amber-500" />,
       action: () => navigateTo('qr-codes'),
     },
     {
       title: 'Medicine Inventory',
-      description: 'Track 84 finished product SKUs and stock levels',
-      icon: <Layers className="w-5 h-5 text-indigo-400" />,
-      iconBg: 'bg-indigo-950/40 border-indigo-800/50',
+      description: 'Real-time SKU stock levels and warehouse silos',
+      icon: <Layers className="w-5 h-5 text-amber-500" />,
       action: () => navigateTo('inventory'),
     },
     {
-      title: 'Initiate Recall',
-      description: 'Trigger CDSCO compliant batch isolation',
-      icon: <AlertOctagon className="w-5 h-5 text-rose-400" />,
-      iconBg: 'bg-rose-950/40 border-rose-800/50',
-      action: () => setIsRecallModalOpen(true),
-      danger: true,
-    },
-    {
       title: 'Traceability Explorer',
-      description: 'Verify pack hashes and supply chain hops',
-      icon: <Search className="w-5 h-5 text-cyan-400" />,
-      iconBg: 'bg-cyan-950/40 border-cyan-800/50',
+      description: 'Zero-trust custody hops and dispensary verification',
+      icon: <Search className="w-5 h-5 text-amber-500" />,
       action: () => navigateTo('traceability'),
     },
     {
-      title: 'Regulatory Reports',
+      title: 'Regulatory Audit Dossiers',
       description: 'Generate GMP compliance & batch audit logs',
-      icon: <FileSpreadsheet className="w-5 h-5 text-amber-400" />,
-      iconBg: 'bg-amber-950/40 border-amber-800/50',
+      icon: <FileSpreadsheet className="w-5 h-5 text-amber-500" />,
       action: () => navigateTo('reports'),
+    },
+    {
+      title: 'Initiate Recall Notice',
+      description: 'Trigger statutory batch isolation protocol',
+      icon: <AlertOctagon className="w-5 h-5 text-rose-500" />,
+      action: () => setIsRecallModalOpen(true),
+      danger: true,
     },
   ];
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-[var(--text-primary)]">Quick Operations</h3>
-        <span className="text-[11px] text-[var(--text-muted)]">Core Manufacturing Workflows</span>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
+            Operational Workflows
+          </h2>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--bg-element)] text-[var(--text-muted)] border border-[var(--border)]">
+            Core Actions
+          </span>
+        </div>
+        <span className="text-xs text-[var(--text-muted)]">Instant Execution</span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -72,25 +73,24 @@ export const DashboardQuickActions: React.FC = () => {
           <div
             key={idx}
             onClick={item.action}
-            className={`p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] hover:bg-[var(--bg-overlay)] hover:border-[var(--border-strong)] transition-all cursor-pointer group flex flex-col justify-between space-y-3 shadow-subtle ${item.danger
-                ? 'hover:border-rose-500/50'
-                : item.primary
-                  ? 'hover:border-[var(--brand-primary)]'
-                  : ''
-              }`}
+            className={`p-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] hover:bg-[var(--bg-element)] hover:border-amber-500/40 transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 ${
+              item.danger ? 'hover:border-rose-500/40' : ''
+            }`}
           >
             <div className="flex items-center justify-between">
-              <div className={`p-2 rounded-lg border ${item.iconBg}`}>
+              <div className="p-2.5 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] group-hover:border-amber-500/30 transition-colors">
                 {item.icon}
               </div>
-              <ArrowUpRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors opacity-0 group-hover:opacity-100" />
+              <ArrowUpRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-amber-500 transition-colors transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </div>
 
             <div>
-              <h4 className="text-xs font-bold text-[var(--text-primary)] group-hover:text-[var(--brand-primary)] transition-colors">
-                {item.title}
-              </h4>
-              <p className="text-[10px] text-[var(--text-muted)] mt-0.5 line-clamp-2 leading-tight">
+              <div className="flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-[var(--text-primary)] group-hover:text-amber-500 transition-colors truncate">
+                  {item.title}
+                </h4>
+              </div>
+              <p className="text-[10px] text-[var(--text-muted)] mt-1 line-clamp-2 leading-tight">
                 {item.description}
               </p>
             </div>
@@ -100,3 +100,5 @@ export const DashboardQuickActions: React.FC = () => {
     </div>
   );
 };
+
+export default DashboardQuickActions;

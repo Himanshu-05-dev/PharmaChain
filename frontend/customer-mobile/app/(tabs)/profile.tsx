@@ -21,6 +21,8 @@ import {
   CheckCircle2,
   LogOut,
   Phone,
+  Key,
+  CircleUserRound,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -70,29 +72,29 @@ export default function ProfileScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Patient Profile</Text>
+            <Text style={styles.headerTitle}>Patient Account</Text>
             <View style={styles.verifiedBadge}>
-              <ShieldCheck size={14} color="#059669" />
+              <ShieldCheck size={14} color="#ea580c" />
               <Text style={styles.verifiedText}>KYC Verified</Text>
             </View>
           </View>
 
-          {/* Avatar Card */}
+          {/* Avatar Profile Card */}
           <View style={styles.profileCard}>
             <View style={styles.avatarContainer}>
-              <Text style={styles.avatarText}>{name.charAt(0)}</Text>
-              <TouchableOpacity style={styles.cameraBtn} activeOpacity={0.8}>
-                <Camera size={14} color="#ffffff" />
-              </TouchableOpacity>
+              <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+              <View style={styles.cameraBtn}>
+                <Camera size={12} color="#ffffff" />
+              </View>
             </View>
             <View style={styles.profileInfo}>
               <View style={styles.nameRow}>
                 <Text style={styles.avatarName}>{name}</Text>
-                <CheckCircle2 size={16} color="#3b00b9" />
+                <CheckCircle2 size={16} color="#ff5a36" />
               </View>
               <Text style={styles.avatarEmail}>{email}</Text>
               <View style={styles.patientIdPill}>
-                <Text style={styles.patientIdText}>ID: #PC-889214 • PharmaChain Node</Text>
+                <Text style={styles.patientIdText}>ID: #PC-889214 • Fabric Node</Text>
               </View>
             </View>
           </View>
@@ -100,20 +102,20 @@ export default function ProfileScreen() {
           {/* Personal Info Form */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <User size={18} color="#3b00b9" />
-              <Text style={styles.sectionTitle}>Account Information</Text>
+              <CircleUserRound size={18} color="#ff5a36" />
+              <Text style={styles.sectionTitle}>Account Details</Text>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Full Name</Text>
               <View style={styles.inputContainer}>
-                <User size={18} color="#94a3b8" style={styles.inputIcon} />
+                <CircleUserRound size={18} color="#a8a29e" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
                   placeholder="Enter full name"
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor="#a8a29e"
                 />
               </View>
             </View>
@@ -121,13 +123,13 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email Address</Text>
               <View style={styles.inputContainer}>
-                <Mail size={18} color="#94a3b8" style={styles.inputIcon} />
+                <Mail size={18} color="#a8a29e" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   value={email}
                   onChangeText={setEmail}
                   placeholder="Enter email address"
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor="#a8a29e"
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
@@ -137,25 +139,46 @@ export default function ProfileScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Mobile Number</Text>
               <View style={styles.inputContainer}>
-                <Phone size={18} color="#94a3b8" style={styles.inputIcon} />
+                <Phone size={18} color="#a8a29e" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   value={phone}
                   onChangeText={setPhone}
                   placeholder="Enter phone number"
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor="#a8a29e"
                   keyboardType="phone-pad"
                 />
               </View>
             </View>
 
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
               <Text style={styles.saveBtnText}>Save Profile Updates</Text>
             </TouchableOpacity>
           </View>
 
+          {/* Security & Ledger Node Status */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Key size={18} color="#ea580c" />
+              <Text style={styles.sectionTitle}>Cryptographic Consensus</Text>
+            </View>
+
+            <View style={styles.ledgerInfoRow}>
+              <Text style={styles.ledgerLabel}>Network Identity</Text>
+              <Text style={styles.ledgerVal}>ECDSA secp256r1</Text>
+            </View>
+            <View style={styles.ledgerInfoRow}>
+              <Text style={styles.ledgerLabel}>Consensus State</Text>
+              <Text style={[styles.ledgerVal, { color: '#ff5a36' }]}>Active & Synchronized</Text>
+            </View>
+            <View style={[styles.ledgerInfoRow, { borderBottomWidth: 0 }]}>
+              <Text style={styles.ledgerLabel}>CDSCO Compliance</Text>
+              <Text style={styles.ledgerVal}>Rule 96 Verifiable</Text>
+            </View>
+          </View>
+
           {/* Sign Out */}
-          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
             <LogOut size={18} color="#dc2626" style={{ marginRight: 8 }} />
             <Text style={styles.logoutText}>Sign Out of Patient Account</Text>
           </TouchableOpacity>
@@ -168,7 +191,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
   },
   keyboardView: {
     flex: 1,
@@ -184,35 +207,35 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#111827',
     letterSpacing: -0.3,
   },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ecfdf5',
+    backgroundColor: '#fff7ed',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#a7f3d0',
+    borderColor: '#fed7aa',
     gap: 4,
   },
   verifiedText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#065f46',
+    fontWeight: '800',
+    color: '#c2410c',
   },
   profileCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#f3f4f6',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
@@ -220,28 +243,33 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   avatarContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#3b00b9',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#ff5a36',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    marginRight: 16,
+    marginRight: 14,
+    shadowColor: '#ff5a36',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   avatarText: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     color: '#ffffff',
   },
   cameraBtn: {
     position: 'absolute',
     bottom: -2,
     right: -2,
-    backgroundColor: '#0f172a',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    backgroundColor: '#1f2937',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -256,104 +284,128 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   avatarName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
   },
   avatarEmail: {
-    fontSize: 13,
-    color: '#64748b',
-    marginTop: 2,
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 1,
   },
   patientIdPill: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#fff7ed',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     alignSelf: 'flex-start',
     marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#fed7aa',
   },
   patientIdText: {
     fontSize: 10,
-    fontWeight: '600',
-    color: '#475569',
+    color: '#c2410c',
+    fontWeight: '800',
   },
   sectionCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#f3f4f6',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.02,
-    shadowRadius: 4,
+    shadowRadius: 6,
     elevation: 1,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: '800',
+    color: '#111827',
   },
   inputGroup: {
-    marginBottom: 12,
+    marginBottom: 14,
   },
   label: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: '700',
+    color: '#4b5563',
     marginBottom: 6,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    backgroundColor: '#fafafa',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
     paddingHorizontal: 12,
-    backgroundColor: '#f8fafc',
+    height: 46,
   },
   inputIcon: {
     marginRight: 8,
   },
   input: {
     flex: 1,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#0f172a',
+    fontSize: 13,
+    color: '#111827',
   },
   saveBtn: {
-    backgroundColor: '#3b00b9',
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: '#ff5a36',
+    paddingVertical: 13,
+    borderRadius: 14,
     alignItems: 'center',
     marginTop: 6,
+    shadowColor: '#ff5a36',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   saveBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
     color: '#ffffff',
-    fontSize: 14,
+  },
+  ledgerInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f9fafb',
+  },
+  ledgerLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '600',
+  },
+  ledgerVal: {
+    fontSize: 12,
     fontWeight: '700',
+    color: '#111827',
   },
   logoutBtn: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 15,
-    backgroundColor: '#fef2f2',
+    justifyContent: 'center',
+    backgroundColor: '#fff1f2',
+    paddingVertical: 14,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    marginTop: 6,
+    borderColor: '#fecdd3',
   },
   logoutText: {
-    color: '#dc2626',
-    fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#e11d48',
   },
 });

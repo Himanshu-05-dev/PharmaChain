@@ -12,7 +12,6 @@ import {
   Modal,
   ScrollView,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import {
   Search,
@@ -25,12 +24,20 @@ import {
   X,
   ChevronRight,
   ArrowDownLeft,
-  RefreshCw,
+  Building2,
+  Barcode,
+  MapPin,
+  Calendar,
+  Layers,
+  Sparkles,
+  Copy,
+  Plus,
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInventory } from '../../src/services/api/shopkeeper';
 import { InventoryItem, StockStatus } from '../../src/types';
+import { PharmaTheme } from '../../src/constants/theme';
+import { SkeletonInventoryCard } from '../../src/components/common/Skeleton';
 
 const TABS: Array<'All' | StockStatus> = [
   'All',
@@ -42,7 +49,6 @@ const TABS: Array<'All' | StockStatus> = [
 
 export default function InventoryScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<'All' | StockStatus>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
@@ -98,38 +104,43 @@ export default function InventoryScreen() {
     switch (status) {
       case 'In Stock':
         return {
-          bg: '#f0fdfa',
-          text: '#0f766e',
-          border: '#ccfbf1',
-          icon: <ShieldCheck size={13} color="#0f766e" />,
+          bg: '#ecfdf5',
+          text: '#059669',
+          border: '#a7f3d0',
+          indicator: '#10b981',
+          icon: <ShieldCheck size={13} color="#059669" />,
         };
       case 'Low Stock':
         return {
           bg: '#fff7ed',
           text: '#ea580c',
           border: '#fed7aa',
+          indicator: '#f97316',
           icon: <AlertTriangle size={13} color="#ea580c" />,
         };
       case 'Expiring Soon':
         return {
           bg: '#fffbeb',
           text: '#d97706',
-          border: '#fef3c7',
+          border: '#fde68a',
+          indicator: '#f59e0b',
           icon: <Clock size={13} color="#d97706" />,
         };
       case 'Quarantined':
         return {
           bg: '#fef2f2',
           text: '#dc2626',
-          border: '#fee2e2',
+          border: '#fecaca',
+          indicator: '#ef4444',
           icon: <ShieldAlert size={13} color="#dc2626" />,
         };
       default:
         return {
-          bg: '#f0fdfa',
-          text: '#0f766e',
-          border: '#ccfbf1',
-          icon: <ShieldCheck size={13} color="#0f766e" />,
+          bg: '#ecfdf5',
+          text: '#059669',
+          border: '#a7f3d0',
+          indicator: '#10b981',
+          icon: <ShieldCheck size={13} color="#059669" />,
         };
     }
   };
@@ -139,73 +150,74 @@ export default function InventoryScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.inventoryCard}
+        style={styles.stockCard}
         onPress={() => setSelectedItem(item)}
-        activeOpacity={0.75}
+        activeOpacity={0.8}
       >
-        <View style={styles.cardTop}>
-          <View style={styles.iconBox}>
-            <Package size={20} color="#0f766e" />
-          </View>
-          <View style={styles.itemHeaderInfo}>
-            <Text style={styles.itemName} numberOfLines={1}>
-              {item.name}
-            </Text>
-            <Text style={styles.itemGeneric} numberOfLines={1}>
-              {item.genericName || item.name}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.statusPill,
-              { backgroundColor: badge.bg, borderColor: badge.border },
-            ]}
-          >
-            {badge.icon}
-            <Text style={[styles.statusPillText, { color: badge.text }]}>
-              {item.status}
-            </Text>
-          </View>
-        </View>
+        {/* Status Indicator Stripe */}
+        <View style={[styles.statusStripe, { backgroundColor: badge.indicator }]} />
 
-        <View style={styles.cardDivider} />
-
-        <View style={styles.cardMetaRow}>
-          <View style={styles.metaCol}>
-            <Text style={styles.metaLabel}>Batch ID</Text>
-            <Text style={styles.metaValueBold}>{item.batchNumber}</Text>
-          </View>
-
-          <View style={styles.metaDivider} />
-
-          <View style={styles.metaCol}>
-            <Text style={styles.metaLabel}>Stock Qty</Text>
-            <Text
+        <View style={styles.cardMainContent}>
+          <View style={styles.cardTopRow}>
+            <View style={styles.iconBox}>
+              <Package size={20} color={PharmaTheme.colors.primary} />
+            </View>
+            <View style={styles.titleInfoCol}>
+              <Text style={styles.itemNameText} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={styles.itemGenericText} numberOfLines={1}>
+                {item.genericName || item.name}
+              </Text>
+            </View>
+            <View
               style={[
-                styles.metaValueBold,
-                item.quantity <= 10 && { color: '#ea580c' },
+                styles.statusBadge,
+                { backgroundColor: badge.bg, borderColor: badge.border },
               ]}
             >
-              {item.quantity} Units
-            </Text>
+              {badge.icon}
+              <Text style={[styles.statusBadgeText, { color: badge.text }]}>
+                {item.status}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.metaDivider} />
+          <View style={styles.cardDivider} />
 
-          <View style={styles.metaCol}>
-            <Text style={styles.metaLabel}>Expiry Date</Text>
-            <Text
-              style={[
-                styles.metaValue,
-                item.daysToExpiry <= 30 && { color: '#ea580c', fontWeight: '700' },
-              ]}
-            >
-              {item.expiryDate}
-            </Text>
-          </View>
+          <View style={styles.cardMetaRow}>
+            <View style={styles.metaCol}>
+              <Text style={styles.metaLabelText}>BATCH NUMBER</Text>
+              <Text style={styles.batchMonoText}>{item.batchNumber}</Text>
+            </View>
 
-          <View style={styles.metaAction}>
-            <ChevronRight size={16} color="#0f766e" />
+            <View style={styles.metaCol}>
+              <Text style={styles.metaLabelText}>AVAILABLE</Text>
+              <Text
+                style={[
+                  styles.stockUnitsBold,
+                  item.quantity <= 10 && { color: '#ea580c' },
+                ]}
+              >
+                {item.quantity} Units
+              </Text>
+            </View>
+
+            <View style={styles.metaCol}>
+              <Text style={styles.metaLabelText}>EXPIRY DATE</Text>
+              <Text
+                style={[
+                  styles.expiryDateText,
+                  item.daysToExpiry <= 30 && { color: '#ea580c', fontWeight: '800' },
+                ]}
+              >
+                {item.expiryDate}
+              </Text>
+            </View>
+
+            <View style={styles.actionArrowBox}>
+              <ChevronRight size={16} color={PharmaTheme.colors.primary} />
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -214,32 +226,33 @@ export default function InventoryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={{ flex: 1, marginRight: 10 }}>
-            <Text style={styles.headerTitle}>Medicine Inventory</Text>
+        {/* Header Bar */}
+        <View style={styles.headerBar}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={styles.headerTitle}>Stock Vault</Text>
             <Text style={styles.headerSubtitle}>
-              {inventoryList.length} authenticated batch types tracked
+              {inventoryList.length} authenticated batches in repository
             </Text>
           </View>
           <TouchableOpacity
-            style={styles.receiveStockBtn}
+            style={styles.intakeButton}
             onPress={() => router.push({ pathname: '/(shopkeeper)/scan', params: { mode: 'RECEIVE' } })}
             activeOpacity={0.85}
           >
-            <ArrowDownLeft size={14} color="#ffffff" />
-            <Text style={styles.receiveStockBtnText}>Receive Stock</Text>
+            <Plus size={15} color="#ffffff" strokeWidth={2.5} />
+            <Text style={styles.intakeButtonText}>Receive Stock</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Search */}
+        {/* Search Bar Section */}
         <View style={styles.searchSection}>
-          <View style={styles.searchBar}>
-            <Search size={18} color="#94a3b8" style={{ marginRight: 8 }} />
+          <View style={styles.searchContainer}>
+            <Search size={17} color="#94a3b8" style={{ marginRight: 8 }} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by medicine, batch, or rack..."
+              placeholder="Search by brand, generic, batch or rack..."
               placeholderTextColor="#94a3b8"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -252,9 +265,13 @@ export default function InventoryScreen() {
           </View>
         </View>
 
-        {/* Horizontal Filters */}
-        <View style={styles.tabsWrapper}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContainer}>
+        {/* Horizontal Category Filter Pills */}
+        <View style={styles.filtersWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersContainer}
+          >
             {TABS.map((tab) => {
               const isActive = activeTab === tab;
               const count =
@@ -265,11 +282,11 @@ export default function InventoryScreen() {
               return (
                 <TouchableOpacity
                   key={tab}
-                  style={[styles.tab, isActive && styles.activeTab]}
+                  style={[styles.filterPill, isActive && styles.filterPillActive]}
                   onPress={() => setActiveTab(tab)}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.tabText, isActive && styles.activeTabText]}>
+                  <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
                     {tab} ({count})
                   </Text>
                 </TouchableOpacity>
@@ -278,50 +295,55 @@ export default function InventoryScreen() {
           </ScrollView>
         </View>
 
-        {/* Inventory List */}
+        {/* Inventory Items List */}
         {loading && !refreshing ? (
-          <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#0f766e" />
-            <Text style={styles.loadingText}>Fetching shop inventory...</Text>
+          <View style={{ padding: 16 }}>
+            <SkeletonInventoryCard />
+            <SkeletonInventoryCard />
+            <SkeletonInventoryCard />
           </View>
         ) : (
           <FlatList
             data={filteredInventory}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
-            contentContainerStyle={[
-              styles.listContainer,
-              { paddingBottom: (insets.bottom || 10) + 24 },
-            ]}
+            contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0f766e']} />
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[PharmaTheme.colors.primary]}
+                tintColor={PharmaTheme.colors.primary}
+              />
             }
             ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Package size={48} color="#cbd5e1" />
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconCircle}>
+                  <Boxes size={32} color="#94a3b8" />
+                </View>
                 <Text style={styles.emptyTitle}>
-                  {searchQuery ? 'No matching stock found' : 'No inventory items yet'}
+                  {searchQuery ? 'No Matching Medicine Found' : 'No Batches in Stock'}
                 </Text>
                 <Text style={styles.emptySubtitle}>
                   {searchQuery
-                    ? 'Try adjusting your search query.'
-                    : 'Scan your first inbound medicine delivery to register stock.'}
+                    ? 'Try adjusting your search terms or clearing the filter.'
+                    : 'Scan your first inbound medicine delivery to log verified stock into your vault.'}
                 </Text>
                 <TouchableOpacity
-                  style={[styles.receiveStockBtn, { marginTop: 14 }]}
+                  style={styles.emptyActionBtn}
                   onPress={() => router.push({ pathname: '/(shopkeeper)/scan', params: { mode: 'RECEIVE' } })}
                   activeOpacity={0.85}
                 >
                   <ArrowDownLeft size={14} color="#ffffff" />
-                  <Text style={styles.receiveStockBtnText}>Scan Inbound Stock</Text>
+                  <Text style={styles.emptyActionBtnText}>Scan Inbound Delivery</Text>
                 </TouchableOpacity>
               </View>
             }
           />
         )}
 
-        {/* Batch Inspection Modal */}
+        {/* Batch Traceability Modal Sheet */}
         <Modal
           visible={!!selectedItem}
           transparent
@@ -329,21 +351,21 @@ export default function InventoryScreen() {
           onRequestClose={() => setSelectedItem(null)}
         >
           <View style={styles.modalBackdrop}>
-            <View style={[styles.modalSheet, { paddingBottom: (insets.bottom || 10) + 20 }]}>
+            <View style={styles.modalSheet}>
               {selectedItem && (
                 <>
                   <View style={styles.modalHeader}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.modalSheetTitle}>Batch Traceability Record</Text>
+                      <Text style={styles.modalSheetTitle}>Batch Traceability Certificate</Text>
                       <Text style={styles.modalSheetSubtitle}>
-                        PharmaChain Cryptographic Inventory
+                        PharmaChain Cryptographic Ledger Record
                       </Text>
                     </View>
                     <TouchableOpacity
                       style={styles.modalCloseBtn}
                       onPress={() => setSelectedItem(null)}
                     >
-                      <X size={20} color="#64748b" />
+                      <X size={18} color="#64748b" />
                     </TouchableOpacity>
                   </View>
 
@@ -367,16 +389,17 @@ export default function InventoryScreen() {
                             { color: getStatusBadgeConfig(selectedItem.status).text },
                           ]}
                         >
-                          Stock State: {selectedItem.status}
+                          Vault State: {selectedItem.status}
                         </Text>
                         <Text style={styles.modalStatusDesc}>
-                          {selectedItem.quantity} units available in shop inventory
+                          {selectedItem.quantity} units available for verified pharmacy dispensing
                         </Text>
                       </View>
                     </View>
 
+                    {/* Product Specs */}
                     <View style={styles.modalGroup}>
-                      <Text style={styles.modalGroupName}>Product Details</Text>
+                      <Text style={styles.modalGroupName}>Product Identification</Text>
 
                       <View style={styles.modalRow}>
                         <Text style={styles.modalLabel}>Brand Name</Text>
@@ -384,7 +407,7 @@ export default function InventoryScreen() {
                       </View>
 
                       <View style={styles.modalRow}>
-                        <Text style={styles.modalLabel}>Generic Formulation</Text>
+                        <Text style={styles.modalLabel}>Active Generic</Text>
                         <Text style={styles.modalValue}>{selectedItem.genericName}</Text>
                       </View>
 
@@ -394,22 +417,44 @@ export default function InventoryScreen() {
                       </View>
 
                       <View style={styles.modalRow}>
-                        <Text style={styles.modalLabel}>Batch ID</Text>
-                        <Text style={[styles.modalValueBold, { color: '#0f766e' }]}>
+                        <Text style={styles.modalLabel}>Batch Identifier</Text>
+                        <Text style={[styles.modalValueBold, { color: PharmaTheme.colors.primary }]}>
                           {selectedItem.batchNumber}
                         </Text>
                       </View>
 
                       <View style={styles.modalRow}>
                         <Text style={styles.modalLabel}>Expiry Date</Text>
-                        <Text style={[styles.modalValueBold, { color: '#dc2626' }]}>
+                        <Text style={[styles.modalValueBold, { color: '#ea580c' }]}>
                           {selectedItem.expiryDate}
                         </Text>
                       </View>
+                    </View>
+
+                    {/* Storage & Pedigree */}
+                    <View style={styles.modalGroup}>
+                      <Text style={styles.modalGroupName}>Storage & Logistics</Text>
 
                       <View style={styles.modalRow}>
-                        <Text style={styles.modalLabel}>Stock Location</Text>
+                        <Text style={styles.modalLabel}>Storage Rack</Text>
                         <Text style={styles.modalValue}>{selectedItem.locationRack}</Text>
+                      </View>
+
+                      <View style={styles.modalRow}>
+                        <Text style={styles.modalLabel}>Distributor</Text>
+                        <Text style={styles.modalValue}>{selectedItem.distributor}</Text>
+                      </View>
+
+                      <View style={styles.modalRow}>
+                        <Text style={styles.modalLabel}>Invoice Number</Text>
+                        <Text style={styles.modalValue}>{selectedItem.invoiceNumber}</Text>
+                      </View>
+
+                      <View style={[styles.modalRow, { borderBottomWidth: 0 }]}>
+                        <Text style={styles.modalLabel}>Pack Serial ID</Text>
+                        <Text style={[styles.modalValue, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }]}>
+                          {selectedItem.packSerialId}
+                        </Text>
                       </View>
                     </View>
 
@@ -417,7 +462,7 @@ export default function InventoryScreen() {
                       style={styles.modalDismissBtn}
                       onPress={() => setSelectedItem(null)}
                     >
-                      <Text style={styles.modalDismissBtnText}>Close Record</Text>
+                      <Text style={styles.modalDismissBtnText}>Done / Close Certificate</Text>
                     </TouchableOpacity>
                   </ScrollView>
                 </>
@@ -439,18 +484,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  loadingText: {
-    fontSize: 13,
-    color: '#64748b',
-    marginTop: 10,
-  },
-  header: {
+  headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -463,7 +497,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#0f172a',
   },
   headerSubtitle: {
@@ -471,118 +505,139 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginTop: 2,
   },
-  receiveStockBtn: {
+  intakeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0f766e',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    gap: 5,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+    elevation: 3,
   },
-  receiveStockBtnText: {
+  intakeButtonText: {
     color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginLeft: 5,
+    fontSize: 12.5,
+    fontWeight: '800',
   },
   searchSection: {
     paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: '#ffffff',
   },
-  searchBar: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 42,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: '#0f172a',
   },
-  tabsWrapper: {
+  filtersWrapper: {
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
-    paddingBottom: 10,
+    paddingBottom: 12,
   },
-  tabsContainer: {
+  filtersContainer: {
     paddingHorizontal: 20,
     gap: 8,
   },
-  tab: {
+  filterPill: {
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 20,
     backgroundColor: '#f1f5f9',
-  },
-  activeTab: {
-    backgroundColor: '#0f766e',
-  },
-  tabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  activeTabText: {
-    color: '#ffffff',
-  },
-  listContainer: {
-    padding: 16,
-    gap: 12,
-  },
-  inventoryCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 14,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
   },
-  cardTop: {
+  filterPillActive: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  filterPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  filterPillTextActive: {
+    color: '#ffffff',
+  },
+  listContent: {
+    padding: 16,
+    paddingBottom: 110,
+    gap: 12,
+  },
+  stockCard: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  statusStripe: {
+    width: 5,
+  },
+  cardMainContent: {
+    flex: 1,
+    padding: 14,
+  },
+  cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#f0fdfa',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#eff6ff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
   },
-  itemHeaderInfo: {
+  titleInfoCol: {
     flex: 1,
   },
-  itemName: {
-    fontSize: 15,
-    fontWeight: 'bold',
+  itemNameText: {
+    fontSize: 14.5,
+    fontWeight: '800',
     color: '#0f172a',
   },
-  itemGeneric: {
+  itemGenericText: {
     fontSize: 12,
     color: '#64748b',
     marginTop: 1,
   },
-  statusPill: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3.5,
     borderRadius: 8,
     borderWidth: 1,
     gap: 4,
   },
-  statusPillText: {
-    fontSize: 11,
+  statusBadgeText: {
+    fontSize: 10.5,
     fontWeight: '700',
   },
   cardDivider: {
@@ -598,43 +653,57 @@ const styles = StyleSheet.create({
   metaCol: {
     flex: 1,
   },
-  metaLabel: {
-    fontSize: 10,
+  metaLabelText: {
+    fontSize: 9.5,
     color: '#94a3b8',
-    textTransform: 'uppercase',
-    fontWeight: '600',
+    letterSpacing: 0.4,
+    fontWeight: '700',
   },
-  metaValueBold: {
+  batchMonoText: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '800',
     color: '#0f172a',
     marginTop: 2,
   },
-  metaValue: {
+  stockUnitsBold: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: 2,
+  },
+  expiryDateText: {
     fontSize: 12,
     color: '#475569',
     marginTop: 2,
+    fontWeight: '600',
   },
-  metaDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#e2e8f0',
-    marginHorizontal: 8,
-  },
-  metaAction: {
+  actionArrowBox: {
     paddingLeft: 4,
   },
-  emptyState: {
+  emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 48,
     paddingHorizontal: 24,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  emptyIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#0f172a',
-    marginTop: 12,
   },
   emptySubtitle: {
     fontSize: 12,
@@ -643,16 +712,32 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 18,
   },
+  emptyActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 16,
+    gap: 6,
+  },
+  emptyActionBtnText: {
+    color: '#ffffff',
+    fontSize: 12.5,
+    fontWeight: '800',
+  },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(11, 15, 23, 0.55)',
     justifyContent: 'flex-end',
   },
   modalSheet: {
     backgroundColor: '#ffffff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
     padding: 20,
+    paddingBottom: 40,
     maxHeight: '85%',
   },
   modalHeader: {
@@ -663,7 +748,7 @@ const styles = StyleSheet.create({
   },
   modalSheetTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#0f172a',
   },
   modalSheetSubtitle: {
@@ -672,7 +757,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   modalCloseBtn: {
-    padding: 4,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalScroll: {
     marginBottom: 8,
@@ -680,17 +770,17 @@ const styles = StyleSheet.create({
   modalStatusBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 16,
     borderWidth: 1,
     marginBottom: 16,
   },
   modalStatusIconWrapper: {
-    padding: 4,
+    padding: 2,
   },
   modalStatusTitle: {
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
   modalStatusDesc: {
     fontSize: 11,
@@ -699,49 +789,59 @@ const styles = StyleSheet.create({
   },
   modalGroup: {
     backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   modalGroupName: {
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: '#0f172a',
     marginBottom: 10,
   },
   modalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
   modalLabel: {
     fontSize: 12,
     color: '#64748b',
+    fontWeight: '500',
   },
   modalValue: {
     fontSize: 12,
     color: '#0f172a',
-    fontWeight: '500',
+    fontWeight: '600',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
   modalValueBold: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#0f172a',
-    fontWeight: 'bold',
+    fontWeight: '800',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
   modalDismissBtn: {
-    backgroundColor: '#0f766e',
-    paddingVertical: 12,
-    borderRadius: 12,
+    backgroundColor: '#2563eb',
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
   modalDismissBtnText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
 });

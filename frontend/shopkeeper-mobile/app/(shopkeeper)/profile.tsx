@@ -18,11 +18,22 @@ import {
   LogOut,
   Edit3,
   CheckCircle2,
+  Building2,
+  Phone,
+  Mail,
+  MapPin,
+  ShieldCheck,
+  Award,
+  Sparkles,
+  QrCode,
+  Layers,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { logoutShopkeeper } from '../../src/services/api/auth';
 import { getProfile, updateProfile } from '../../src/services/api/shopkeeper';
+import { PharmaTheme } from '../../src/constants/theme';
+import { PharmaChainLogo } from '../../src/components/common/PharmaChainLogo';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -30,16 +41,16 @@ export default function ProfileScreen() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [shopName, setShopName] = useState(
-    shopkeeper?.shopName || user?.displayName || 'Pharmacy Store'
+    shopkeeper?.shopName || user?.displayName || 'Apollo Medicos & Pharmacy'
   );
   const [ownerName, setOwnerName] = useState(
-    shopkeeper?.ownerName || 'Pharmacy Owner'
+    shopkeeper?.ownerName || 'Dr. Ramesh Sharma'
   );
   const [phone, setPhone] = useState(
     shopkeeper?.ownerPhone || shopkeeper?.shopPhone || '+91 98765 43210'
   );
   const [email, setEmail] = useState(
-    shopkeeper?.ownerEmail || shopkeeper?.shopEmail || 'owner@pharmacy.com'
+    shopkeeper?.ownerEmail || shopkeeper?.shopEmail || 'ramesh.sharma@apollo.com'
   );
 
   useEffect(() => {
@@ -70,45 +81,81 @@ export default function ProfileScreen() {
     Alert.alert('Success', 'Profile details updated successfully');
   };
 
-  const handleLogout = async () => {
-    try {
-      await logoutShopkeeper();
-    } catch (e) {}
-    await logout();
-    router.replace('/(auth)/login');
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out of this pharmacy terminal?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logoutShopkeeper();
+            } catch (e) {}
+            await logout();
+            router.replace('/(auth)/login');
+          },
+        },
+      ]
+    );
   };
+
+  const shopId = shopkeeper?.shopId || user?.shopId || 'SHOP-2026';
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>Pharmacy Node Profile</Text>
         <TouchableOpacity
           style={styles.editBadge}
           onPress={() => (isEditing ? handleSave() : setIsEditing(true))}
+          activeOpacity={0.8}
         >
           {isEditing ? (
             <>
-              <CheckCircle2 size={16} color="#0f766e" style={{ marginRight: 4 }} />
-              <Text style={[styles.editBadgeText, { color: '#0f766e' }]}>Save</Text>
+              <CheckCircle2 size={15} color={PharmaTheme.colors.primary} style={{ marginRight: 4 }} />
+              <Text style={styles.editBadgeText}>Save Changes</Text>
             </>
           ) : (
             <>
-              <Edit3 size={16} color="#0f766e" style={{ marginRight: 4 }} />
-              <Text style={[styles.editBadgeText, { color: '#0f766e' }]}>Edit</Text>
+              <Edit3 size={15} color={PharmaTheme.colors.primary} style={{ marginRight: 4 }} />
+              <Text style={styles.editBadgeText}>Edit Profile</Text>
             </>
           )}
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {/* Pharmacy Info Card */}
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Profile Hero Avatar with Official PharmaChain Logo */}
+        <View style={styles.heroCard}>
+          <View style={styles.avatarCircle}>
+            <PharmaChainLogo size={36} colorScheme="cobalt" />
+          </View>
+          <Text style={styles.heroTitle} numberOfLines={1}>
+            {shopName}
+          </Text>
+          <View style={styles.heroChipRow}>
+            <View style={styles.heroChip}>
+              <Text style={styles.heroChipText}>ID: #{shopId}</Text>
+            </View>
+            <View style={styles.verifiedSeal}>
+              <ShieldCheck size={12} color="#059669" style={{ marginRight: 4 }} />
+              <Text style={styles.verifiedSealText}>CDSCO VALIDATED NODE</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Pharmacy Establishment Info */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Store size={20} color="#0f766e" style={{ marginRight: 8 }} />
-            <Text style={styles.cardTitle}>Pharmacy Information</Text>
+            <Building2 size={18} color={PharmaTheme.colors.primary} style={{ marginRight: 8 }} />
+            <Text style={styles.cardTitle}>Pharmacy Establishment</Text>
           </View>
 
-          <Text style={styles.label}>Shop Name:</Text>
+          <Text style={styles.label}>Shop / Business Name:</Text>
           {isEditing ? (
             <TextInput
               style={styles.input}
@@ -119,12 +166,7 @@ export default function ProfileScreen() {
             <Text style={styles.value}>{shopName}</Text>
           )}
 
-          <Text style={styles.label}>Shop ID (System Unique):</Text>
-          <Text style={[styles.value, { color: '#0f766e' }]}>
-            {shopkeeper?.shopId || user?.shopId || 'SHOP-12345'}
-          </Text>
-
-          <Text style={styles.label}>Official Address:</Text>
+          <Text style={styles.label}>Official Registered Address:</Text>
           <Text style={styles.value}>
             {shopkeeper?.address
               ? `${shopkeeper.address}, ${shopkeeper.city || ''}, ${shopkeeper.state || ''}`
@@ -132,14 +174,14 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        {/* Owner Details Card */}
+        {/* Pharmacist in charge */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <User size={20} color="#0f766e" style={{ marginRight: 8 }} />
-            <Text style={styles.cardTitle}>Owner / Authorized Person</Text>
+            <User size={18} color={PharmaTheme.colors.primary} style={{ marginRight: 8 }} />
+            <Text style={styles.cardTitle}>Authorized Pharmacist / Owner</Text>
           </View>
 
-          <Text style={styles.label}>Full Name:</Text>
+          <Text style={styles.label}>Pharmacist In-Charge:</Text>
           {isEditing ? (
             <TextInput
               style={styles.input}
@@ -150,7 +192,7 @@ export default function ProfileScreen() {
             <Text style={styles.value}>{ownerName}</Text>
           )}
 
-          <Text style={styles.label}>Email Address:</Text>
+          <Text style={styles.label}>Contact Email:</Text>
           {isEditing ? (
             <TextInput
               style={styles.input}
@@ -175,38 +217,34 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Pharmaceutical License Card */}
+        {/* CDSCO License */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <FileText size={20} color="#0f766e" style={{ marginRight: 8 }} />
-            <Text style={styles.cardTitle}>Pharmaceutical License</Text>
+            <Award size={18} color={PharmaTheme.colors.primary} style={{ marginRight: 8 }} />
+            <Text style={styles.cardTitle}>Pharmaceutical Regulatory License</Text>
           </View>
 
           <Text style={styles.label}>Drug License (DL) Number:</Text>
-          <Text style={styles.value}>
+          <Text style={[styles.value, { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: PharmaTheme.colors.primary }]}>
             {shopkeeper?.drugLicenseNumber || 'DL-2026-UP-88741'}
           </Text>
 
-          <Text style={styles.label}>License Type:</Text>
+          <Text style={styles.label}>License Classification:</Text>
           <Text style={styles.value}>
-            {(shopkeeper?.licenseType || 'retail').toUpperCase()} Retail Pharmacy
+            {(shopkeeper?.licenseType || 'retail').toUpperCase()} Retail Drug Distribution
           </Text>
 
-          <Text style={styles.label}>Issuing Authority:</Text>
-          <Text style={styles.value}>
-            {shopkeeper?.issuingAuthority || 'Drug Control Department UP'}
-          </Text>
-
-          <Text style={styles.label}>Status & Validity:</Text>
+          <Text style={styles.label}>Compliance State:</Text>
           <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>✓ CDSCO VALIDATED (Expires 2029)</Text>
+            <ShieldCheck size={14} color="#059669" style={{ marginRight: 4 }} />
+            <Text style={styles.statusText}>CDSCO AUTHORIZED (Active Validity to 2029)</Text>
           </View>
         </View>
 
         {/* Sign Out Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <LogOut size={20} color="#ef4444" style={{ marginRight: 8 }} />
-          <Text style={styles.logoutText}>Sign Out of Pharmacy Account</Text>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
+          <LogOut size={18} color="#dc2626" style={{ marginRight: 8 }} />
+          <Text style={styles.logoutText}>Sign Out of Pharmacy Terminal</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -224,13 +262,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
     color: '#0f172a',
   },
@@ -238,85 +276,155 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 16,
+    paddingBottom: 110,
+  },
+  heroCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    padding: 22,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  avatarCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#eff6ff',
+    borderWidth: 2,
+    borderColor: '#dbeafe',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    textAlign: 'center',
+  },
+  heroChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 8,
+  },
+  heroChip: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  heroChipText: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '700',
+    color: '#475569',
+  },
+  verifiedSeal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+  },
+  verifiedSealText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#059669',
   },
   editBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0fdfa',
+    backgroundColor: '#eff6ff',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingVertical: 7,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ccfbf1',
+    borderColor: '#dbeafe',
   },
   editBadgeText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
+    color: '#2563eb',
   },
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 10,
+    marginBottom: 14,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: '#0f172a',
   },
   label: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#64748b',
-    marginBottom: 4,
+    fontWeight: '700',
+    marginBottom: 3,
   },
   value: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#0f172a',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   input: {
     backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#2563eb',
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 15,
+    fontSize: 14,
     color: '#0f172a',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   statusBadge: {
-    backgroundColor: '#f0fdfa',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
     paddingVertical: 6,
     paddingHorizontal: 10,
-    borderRadius: 6,
+    borderRadius: 8,
     alignSelf: 'flex-start',
-    marginTop: 4,
+    marginTop: 2,
     borderWidth: 1,
-    borderColor: '#ccfbf1',
+    borderColor: '#a7f3d0',
   },
   statusText: {
-    color: '#0f766e',
-    fontWeight: '700',
-    fontSize: 12,
+    color: '#059669',
+    fontWeight: '800',
+    fontSize: 11,
   },
   logoutButton: {
     flexDirection: 'row',
@@ -327,11 +435,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#fee2e2',
+    borderColor: '#fecaca',
   },
   logoutText: {
-    color: '#ef4444',
-    fontSize: 15,
-    fontWeight: '700',
+    color: '#dc2626',
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

@@ -1,49 +1,53 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
+  TouchableOpacity,
   SafeAreaView,
   Platform,
   StatusBar,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { useAuthStore } from '../../src/store/authStore';
-import { getStats, getHistory } from '../../src/services/api/shopkeeper';
 import {
-  Bell,
-  QrCode,
-  ShieldCheck,
+  ScanLine,
+  CheckCircle2,
   AlertTriangle,
   ShieldAlert,
+  ArrowRight,
+  ShieldCheck,
   Store,
-  CheckCircle2,
-  ChevronRight,
-  Sparkles,
-  Camera,
+  Boxes,
+  ShoppingCart,
   Clock,
-  ArrowUpRight,
   ArrowDownLeft,
-  Package,
+  ArrowUpRight,
+  History,
+  Building2,
+  Sparkles,
+  Zap,
+  TrendingUp,
+  Activity,
+  Layers,
+  ChevronRight,
+  Radio,
 } from 'lucide-react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useAuthStore } from '../../src/store/authStore';
+import { getStats, getHistory, getProfile } from '../../src/services/api/shopkeeper';
+import { PharmaTheme } from '../../src/constants/theme';
+import { SkeletonStatCard, SkeletonHistoryCard } from '../../src/components/common/Skeleton';
+import { PharmaChainLogo } from '../../src/components/common/PharmaChainLogo';
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { shopkeeper, user } = useAuthStore();
+  const { shopkeeper, user, updateShopkeeper } = useAuthStore();
 
-  const [statsData, setStatsData] = useState<any>({
-    totalScans: 0,
-    verifiedCount: 0,
-    suspiciousCount: 0,
-    counterfeitCount: 0,
-    todaySalesCount: 0,
-    lowStockCount: 0,
-    verifiedPacksInStock: 0,
-    blockchainIntegrityScore: 99.4,
+  const [stats, setStats] = useState({
+    verifiedToday: 0,
+    suspiciousToday: 0,
+    counterfeitToday: 0,
   });
 
   const [recentScans, setRecentScans] = useState<any[]>([]);
@@ -52,24 +56,36 @@ export default function DashboardScreen() {
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      const [statsRes, historyRes] = await Promise.allSettled([
+      const [statsRes, historyRes, profileRes] = await Promise.allSettled([
         getStats(),
-        getHistory({ limit: 5 }),
+        getHistory({ limit: 8 }),
+        getProfile(),
       ]);
 
-      if (statsRes.status === 'fulfilled' && statsRes.value?.data) {
-        setStatsData(statsRes.value.data);
+      if (statsRes.status === 'fulfilled' && statsRes.value?.data?.stats) {
+        setStats(statsRes.value.data.stats);
+      } else if (statsRes.status === 'fulfilled' && statsRes.value?.stats) {
+        setStats(statsRes.value.stats);
       }
+
       if (historyRes.status === 'fulfilled' && historyRes.value?.data?.history) {
         setRecentScans(historyRes.value.data.history);
+      } else if (historyRes.status === 'fulfilled' && Array.isArray(historyRes.value?.history)) {
+        setRecentScans(historyRes.value.history);
+      } else if (historyRes.status === 'fulfilled' && Array.isArray(historyRes.value)) {
+        setRecentScans(historyRes.value);
+      }
+
+      if (profileRes.status === 'fulfilled' && profileRes.value?.data) {
+        updateShopkeeper(profileRes.value.data);
       }
     } catch (err: any) {
-      console.warn('[DashboardScreen] fetch error:', err?.message);
+      console.warn('[Dashboard] fetch error:', err?.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [updateShopkeeper]);
 
   useFocusEffect(
     useCallback(() => {
@@ -82,252 +98,339 @@ export default function DashboardScreen() {
     fetchDashboardData();
   };
 
-  const shopName = shopkeeper?.shopName || user?.displayName || 'Pharmacy Store';
-  const shopId = shopkeeper?.shopId || user?.shopId || 'SHOP-NODE';
+  const shopName =
+    shopkeeper?.shopName || user?.displayName || 'Apollo Medicos & Pharmacy';
+  const shopId = shopkeeper?.shopId || user?.shopId || 'SHOP-2026';
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0f766e']} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[PharmaTheme.colors.primary]}
+            tintColor={PharmaTheme.colors.primary}
+          />
         }
       >
-        {/* 1. Top Professional Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.storeBadge}>
-              <Store size={22} color="#0f766e" />
-              <View style={styles.onlinePulse} />
+        {/* Luxury Titanium Glass Header Bar with Official PharmaChain Logo */}
+        <View style={styles.headerGlassCard}>
+          <View style={styles.headerTopRow}>
+            <View style={styles.avatarGlowContainer}>
+              <View style={styles.storeAvatarBox}>
+                <PharmaChainLogo size={28} colorScheme="cobalt" />
+              </View>
+              <View style={styles.avatarOnlineDot} />
             </View>
-            <View style={styles.greetingContainer}>
-              <Text style={styles.greeting} numberOfLines={1}>
-                {shopName}
-              </Text>
-              <View style={styles.shopIdRow}>
-                <View style={styles.shopIdChip}>
-                  <Text style={styles.shopIdText}>ID: #{shopId}</Text>
+
+            <View style={styles.headerTextCol}>
+              <View style={styles.tagRow}>
+                <View style={styles.livePulsePill}>
+                  <View style={styles.pulseDot} />
+                  <Text style={styles.livePulseText}>CDSCO NODE LIVE</Text>
                 </View>
-                <View style={styles.verifiedTag}>
-                  <CheckCircle2 size={11} color="#0f766e" style={{ marginRight: 3 }} />
-                  <Text style={styles.verifiedTagText}>CDSCO VERIFIED</Text>
+                <View style={styles.peerPill}>
+                  <Radio size={10} color={PharmaTheme.colors.primary} />
+                  <Text style={styles.peerPillText}>24ms</Text>
                 </View>
               </View>
+              <Text style={styles.storeTitleText} numberOfLines={1}>
+                {shopName}
+              </Text>
+              <Text style={styles.storeSubText}>ID: #{shopId}</Text>
             </View>
           </View>
-
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push('/(shopkeeper)/transactions')}
-            activeOpacity={0.8}
-          >
-            <Bell color="#0f172a" size={20} />
-            <View style={styles.notificationDot} />
-          </TouchableOpacity>
         </View>
 
-        {/* 2. Hero Scan Medicine Card */}
-        <View style={styles.scanCard}>
-          <View style={styles.scanCardContent}>
-            <View style={styles.scanTagRow}>
-              <Sparkles size={12} color="#ccfbf1" />
-              <Text style={styles.scanTagText}>AUTHENTICATION SCANNER</Text>
-            </View>
+        {/* Hero Interactive Cobalt Scan Portal */}
+        <View style={styles.heroPortalCard}>
+          <View style={styles.heroOrbGlow1} />
+          <View style={styles.heroOrbGlow2} />
 
-            <Text style={styles.scanCardTitle}>Scan Medicine Pack</Text>
-            <Text style={styles.scanCardDesc}>
-              Instant cryptographic verification, batch traceability, and intake/dispense lifecycle.
+          <View style={styles.heroHeader}>
+            <View style={styles.heroBadge}>
+              <PharmaChainLogo size={14} colorScheme="white" style={{ marginRight: 4 }} />
+              <Text style={styles.heroBadgeText}>PHARMACHAIN POS TERMINAL</Text>
+            </View>
+            <Text style={styles.heroHeading}>Ready to Scan & Audit</Text>
+            <Text style={styles.heroDescription}>
+              Instantly verify 2D DataMatrix security codes on pharmaceutical shipments and burn sale tokens on the blockchain.
             </Text>
+          </View>
+
+          {/* Action Pills */}
+          <View style={styles.heroActionsRow}>
+            <TouchableOpacity
+              style={styles.heroPrimaryBtn}
+              onPress={() => router.push({ pathname: '/(shopkeeper)/scan', params: { mode: 'VERIFY' } })}
+              activeOpacity={0.85}
+            >
+              <ShieldCheck size={16} color={PharmaTheme.colors.primary} />
+              <Text style={styles.heroPrimaryBtnText}>Verify Pack</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.scanButton}
+              style={styles.heroSecondaryBtn}
+              onPress={() => router.push({ pathname: '/(shopkeeper)/scan', params: { mode: 'RECEIVE' } })}
+              activeOpacity={0.85}
+            >
+              <ArrowDownLeft size={16} color="#ffffff" />
+              <Text style={styles.heroSecondaryBtnText}>+ Inbound</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.heroSecondaryBtn}
               onPress={() => router.push({ pathname: '/(shopkeeper)/scan', params: { mode: 'DISPENSE' } })}
               activeOpacity={0.85}
             >
-              <Camera size={16} color="#0f766e" style={{ marginRight: 6 }} />
-              <Text style={styles.scanButtonText}>Launch POS Scanner</Text>
-              <ChevronRight size={16} color="#0f766e" style={{ marginLeft: 2 }} />
+              <ShoppingCart size={16} color="#ffffff" />
+              <Text style={styles.heroSecondaryBtnText}>- Dispense</Text>
             </TouchableOpacity>
-
-            <View style={styles.quickModeRow}>
-              <TouchableOpacity
-                style={styles.quickModeBtn}
-                onPress={() => router.push({ pathname: '/(shopkeeper)/scan', params: { mode: 'RECEIVE' } })}
-                activeOpacity={0.8}
-              >
-                <ArrowDownLeft size={12} color="#ccfbf1" />
-                <Text style={styles.quickModeText}>Inbound</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.quickModeBtn}
-                onPress={() => router.push({ pathname: '/(shopkeeper)/scan', params: { mode: 'DISPENSE' } })}
-                activeOpacity={0.8}
-              >
-                <ArrowUpRight size={12} color="#ccfbf1" />
-                <Text style={styles.quickModeText}>Dispense</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.scanGraphic}>
-            <QrCode color="#ffffff" size={64} strokeWidth={1.2} />
           </View>
         </View>
 
-        {/* 3. Quick Overview (3 Metrics Cards) */}
+        {/* 3D Core Metrics */}
         <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={styles.sectionTitle}>Quick Overview</Text>
-            <View style={styles.liveIndicator}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>Live Node Stats</Text>
+          <Text style={styles.sectionTitle}>Daily Verification Stream</Text>
+          <View style={styles.syncBadge}>
+            <Activity size={12} color="#059669" />
+            <Text style={styles.syncBadgeText}>Fabric Sync</Text>
+          </View>
+        </View>
+
+        {loading && !refreshing ? (
+          <View style={styles.statsGrid}>
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+          </View>
+        ) : (
+          <View style={styles.statsGrid}>
+            {/* Verified Card */}
+            <View style={[styles.statCard, styles.statCardVerified]}>
+              <View style={styles.statTopRow}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#ecfdf5' }]}>
+                  <CheckCircle2 size={18} color="#059669" />
+                </View>
+                <View style={styles.trendChip}>
+                  <TrendingUp size={10} color="#059669" />
+                  <Text style={styles.trendChipText}>100%</Text>
+                </View>
+              </View>
+              <Text style={styles.statLargeNumber}>{stats.verifiedToday}</Text>
+              <Text style={styles.statLabelText}>Verified Authentic</Text>
+              <Text style={styles.statFootnoteText}>Genuine signature</Text>
+            </View>
+
+            {/* Suspicious Card */}
+            <View style={[styles.statCard, styles.statCardSuspicious]}>
+              <View style={styles.statTopRow}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#fffbeb' }]}>
+                  <AlertTriangle size={18} color="#d97706" />
+                </View>
+                <Text style={styles.warningTagText}>WARN</Text>
+              </View>
+              <Text style={[styles.statLargeNumber, { color: '#d97706' }]}>
+                {stats.suspiciousToday}
+              </Text>
+              <Text style={styles.statLabelText}>Duplicate Alerts</Text>
+              <Text style={styles.statFootnoteText}>Double scans</Text>
+            </View>
+
+            {/* Counterfeit Card */}
+            <View style={[styles.statCard, styles.statCardDanger]}>
+              <View style={styles.statTopRow}>
+                <View style={[styles.statIconBadge, { backgroundColor: '#fef2f2' }]}>
+                  <ShieldAlert size={18} color="#dc2626" />
+                </View>
+                <Text style={styles.dangerTagText}>ALERT</Text>
+              </View>
+              <Text style={[styles.statLargeNumber, { color: '#dc2626' }]}>
+                {stats.counterfeitToday}
+              </Text>
+              <Text style={styles.statLabelText}>Counterfeits</Text>
+              <Text style={styles.statFootnoteText}>Blocked tokens</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={() => router.push('/(shopkeeper)/transactions')}>
-            <Text style={styles.viewAllText}>View All →</Text>
+        )}
+
+        {/* Quick Operations Matrix */}
+        <Text style={styles.sectionTitle}>Pharmacy Hub Operations</Text>
+
+        <View style={styles.operationsGrid}>
+          {/* Op 1: Receive Stock */}
+          <TouchableOpacity
+            style={styles.operationGlassTile}
+            onPress={() => router.push({ pathname: '/(shopkeeper)/scan', params: { mode: 'RECEIVE' } })}
+            activeOpacity={0.82}
+          >
+            <View style={[styles.opIconCircle, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }]}>
+              <ArrowDownLeft size={22} color={PharmaTheme.colors.primary} />
+            </View>
+            <Text style={styles.opTitleText}>Receive Stock</Text>
+            <Text style={styles.opDescText}>Inbound shipment scan</Text>
+          </TouchableOpacity>
+
+          {/* Op 2: Dispense POS */}
+          <TouchableOpacity
+            style={styles.operationGlassTile}
+            onPress={() => router.push({ pathname: '/(shopkeeper)/scan', params: { mode: 'DISPENSE' } })}
+            activeOpacity={0.82}
+          >
+            <View style={[styles.opIconCircle, { backgroundColor: '#eef2ff', borderColor: '#c7d2fe' }]}>
+              <ShoppingCart size={22} color="#4f46e5" />
+            </View>
+            <Text style={styles.opTitleText}>Dispense POS</Text>
+            <Text style={styles.opDescText}>Burn sale tokens</Text>
+          </TouchableOpacity>
+
+          {/* Op 3: Inventory Vault */}
+          <TouchableOpacity
+            style={styles.operationGlassTile}
+            onPress={() => router.push('/(shopkeeper)/inventory')}
+            activeOpacity={0.82}
+          >
+            <View style={[styles.opIconCircle, { backgroundColor: '#f0f9ff', borderColor: '#bae6fd' }]}>
+              <Boxes size={22} color="#0284c7" />
+            </View>
+            <Text style={styles.opTitleText}>Stock Vault</Text>
+            <Text style={styles.opDescText}>Batch inventory & racks</Text>
+          </TouchableOpacity>
+
+          {/* Op 4: Audit Trail */}
+          <TouchableOpacity
+            style={styles.operationGlassTile}
+            onPress={() => router.push('/(shopkeeper)/transactions')}
+            activeOpacity={0.82}
+          >
+            <View style={[styles.opIconCircle, { backgroundColor: '#faf5ff', borderColor: '#e9d5ff' }]}>
+              <History size={22} color="#7c3aed" />
+            </View>
+            <Text style={styles.opTitleText}>Audit Trail</Text>
+            <Text style={styles.opDescText}>Full custody ledger</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.statsContainer}>
-          {/* Verified In Stock Card */}
-          <View style={[styles.statCard, { borderColor: '#ccfbf1' }]}>
-            <View style={[styles.statIconBox, { backgroundColor: '#f0fdfa' }]}>
-              <ShieldCheck color="#0f766e" size={20} />
-            </View>
-            <Text style={[styles.statNumber, { color: '#0f766e' }]}>
-              {statsData.verifiedCount || statsData.verifiedPacksInStock || 0}
-            </Text>
-            <Text style={styles.statLabel}>Verified</Text>
-            <View style={styles.statTrendGreen}>
-              <Text style={styles.statTrendGreenText}>
-                {statsData.todaySalesCount ? `+${statsData.todaySalesCount} Today` : 'In Stock'}
-              </Text>
-            </View>
-          </View>
-
-          {/* Suspicious Card */}
-          <View style={[styles.statCard, { borderColor: '#fef3c7' }]}>
-            <View style={[styles.statIconBox, { backgroundColor: '#fffbeb' }]}>
-              <AlertTriangle color="#d97706" size={20} />
-            </View>
-            <Text style={[styles.statNumber, { color: '#d97706' }]}>
-              {statsData.suspiciousCount || 0}
-            </Text>
-            <Text style={styles.statLabel}>Duplicates</Text>
-            <View style={styles.statTrendAmber}>
-              <Text style={styles.statTrendAmberText}>
-                {statsData.suspiciousCount > 0 ? 'Review' : 'Clear'}
-              </Text>
-            </View>
-          </View>
-
-          {/* Counterfeit Card */}
-          <View style={[styles.statCard, { borderColor: '#fee2e2' }]}>
-            <View style={[styles.statIconBox, { backgroundColor: '#fef2f2' }]}>
-              <ShieldAlert color="#dc2626" size={20} />
-            </View>
-            <Text style={[styles.statNumber, { color: '#dc2626' }]}>
-              {statsData.counterfeitCount || 0}
-            </Text>
-            <Text style={styles.statLabel}>Counterfeit</Text>
-            <View style={styles.statTrendRed}>
-              <Text style={styles.statTrendRedText}>
-                {statsData.counterfeitCount > 0 ? 'Flagged' : 'Zero Risk'}
-              </Text>
-            </View>
-          </View>
+        {/* Live Custody Activity Feed */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Custody Events</Text>
+          <TouchableOpacity
+            onPress={() => router.push('/(shopkeeper)/transactions')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.viewLedgerLink}>View Full Ledger →</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* 4. Recent Scans & Transactions List */}
-        <View style={[styles.sectionHeader, { marginTop: 12 }]}>
-          <Text style={styles.sectionTitle}>Recent Scans & Activity</Text>
-        </View>
+        {loading && !refreshing ? (
+          <View>
+            <SkeletonHistoryCard />
+            <SkeletonHistoryCard />
+          </View>
+        ) : recentScans.length === 0 ? (
+          <View style={styles.emptyFeedContainer}>
+            <View style={styles.emptyIconCircle}>
+              <Boxes size={30} color="#94a3b8" />
+            </View>
+            <Text style={styles.emptyFeedTitle}>No Activity Recorded Today</Text>
+            <Text style={styles.emptyFeedSubtitle}>
+              Inbound stock receipts and Point-of-Sale dispenses will appear here in real time.
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyActionBtn}
+              onPress={() => router.push({ pathname: '/(shopkeeper)/scan', params: { mode: 'RECEIVE' } })}
+              activeOpacity={0.85}
+            >
+              <ArrowDownLeft size={14} color="#ffffff" />
+              <Text style={styles.emptyActionBtnText}>Scan Inbound Delivery</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          recentScans.map((item, index) => {
+            const isVerified =
+              item.status === 'Verified' ||
+              item.status === 'Stock Received' ||
+              item.action === 'RECEIVE';
+            const isSuspicious = item.status === 'Suspicious' || item.status === 'Duplicate';
 
-        <View style={styles.recentList}>
-          {recentScans.length > 0 ? (
-            recentScans.map((item, index) => {
-              const isVerified = item.status === 'Verified' || item.status === 'Stock Received' || item.action === 'RECEIVE';
-              const isSuspicious = item.status === 'Suspicious' || item.status === 'Duplicate';
-              const isLast = index === recentScans.length - 1;
-
-              return (
-                <TouchableOpacity
-                  key={item.id || index}
-                  style={[styles.recentItem, isLast && { borderBottomWidth: 0 }]}
-                  onPress={() => router.push('/(shopkeeper)/transactions')}
-                  activeOpacity={0.7}
+            return (
+              <TouchableOpacity
+                key={item.id || index}
+                style={styles.feedGlassCard}
+                onPress={() => {
+                  if (item.packId) {
+                    router.push({ pathname: '/verification', params: { qrData: item.packId, mode: 'VERIFY' } });
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <View
+                  style={[
+                    styles.feedIconWrapper,
+                    isVerified
+                      ? { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }
+                      : isSuspicious
+                      ? { backgroundColor: '#fffbeb', borderColor: '#fde68a' }
+                      : { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
+                  ]}
                 >
-                  <View
-                    style={[
-                      styles.recentIcon,
-                      isVerified
-                        ? { backgroundColor: '#f0fdfa' }
-                        : isSuspicious
-                        ? { backgroundColor: '#fffbeb' }
-                        : { backgroundColor: '#fef2f2' },
-                    ]}
-                  >
-                    {isVerified ? (
-                      <ShieldCheck color="#0f766e" size={20} />
-                    ) : isSuspicious ? (
-                      <AlertTriangle color="#d97706" size={20} />
-                    ) : (
-                      <ShieldAlert color="#dc2626" size={20} />
-                    )}
-                  </View>
+                  {isVerified ? (
+                    <ShieldCheck size={18} color="#059669" />
+                  ) : isSuspicious ? (
+                    <AlertTriangle size={18} color="#d97706" />
+                  ) : (
+                    <ShieldAlert size={18} color="#dc2626" />
+                  )}
+                </View>
 
-                  <View style={styles.recentInfo}>
-                    <Text style={styles.medicineName} numberOfLines={1}>
-                      {item.name || item.medicineName || 'Medicine Pack'}
+                <View style={styles.feedInfoCol}>
+                  <View style={styles.feedHeaderRow}>
+                    <Text style={styles.feedItemTitle} numberOfLines={1}>
+                      {item.name || item.medicineName || 'Pharmaceutical Unit'}
                     </Text>
-                    <Text style={styles.medicineMfg} numberOfLines={1}>
-                      Action: {item.action || 'SCAN'} • Batch: {item.batch || item.batchNo || 'N/A'}
-                    </Text>
-                    <View style={styles.timeRow}>
-                      <Clock size={11} color="#94a3b8" style={{ marginRight: 4 }} />
-                      <Text style={styles.timeText}>{item.time || 'Recently'}</Text>
+                    <View
+                      style={[
+                        styles.feedStatusBadge,
+                        isVerified
+                          ? { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }
+                          : isSuspicious
+                          ? { backgroundColor: '#fffbeb', borderColor: '#fde68a' }
+                          : { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.feedStatusBadgeText,
+                          isVerified
+                            ? { color: '#059669' }
+                            : isSuspicious
+                            ? { color: '#d97706' }
+                            : { color: '#dc2626' },
+                        ]}
+                      >
+                        {item.status || 'Verified'}
+                      </Text>
                     </View>
                   </View>
 
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      isVerified
-                        ? { backgroundColor: '#f0fdfa', borderColor: '#ccfbf1' }
-                        : isSuspicious
-                        ? { backgroundColor: '#fffbeb', borderColor: '#fef3c7' }
-                        : { backgroundColor: '#fef2f2', borderColor: '#fee2e2' },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statusBadgeText,
-                        isVerified
-                          ? { color: '#0f766e' }
-                          : isSuspicious
-                          ? { color: '#d97706' }
-                          : { color: '#dc2626' },
-                      ]}
-                    >
-                      {item.status || 'Verified'}
-                    </Text>
+                  <Text style={styles.feedMetaText}>
+                    Batch: <Text style={styles.feedBatchMono}>{item.batch || item.batchNo || 'N/A'}</Text> • Action: {item.action || 'SCAN'}
+                  </Text>
+                  <View style={styles.timeRow}>
+                    <Clock size={11} color="#94a3b8" style={{ marginRight: 4 }} />
+                    <Text style={styles.feedTimeText}>{item.time || 'Recently'}</Text>
                   </View>
-                </TouchableOpacity>
-              );
-            })
-          ) : (
-            <View style={styles.emptyRecentBox}>
-              <Package size={36} color="#cbd5e1" />
-              <Text style={styles.emptyRecentText}>No scan activity recorded yet</Text>
-              <Text style={styles.emptyRecentSub}>
-                Use Inbound or Dispense mode above to scan medicine packages.
-              </Text>
-            </View>
-          )}
-        </View>
+                </View>
+                <ChevronRight size={16} color="#cbd5e1" style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            );
+          })
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -342,187 +445,214 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 110,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  storeBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#f0fdfa',
+  headerGlassCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#ccfbf1',
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarGlowContainer: {
+    position: 'relative',
+    marginRight: 14,
+  },
+  storeAvatarBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1.5,
+    borderColor: '#dbeafe',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-    marginRight: 12,
   },
-  onlinePulse: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#10b981',
+  avatarOnlineDot: {
     position: 'absolute',
-    top: -2,
+    bottom: -2,
     right: -2,
-    borderWidth: 2,
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
+    backgroundColor: '#10b981',
+    borderWidth: 2.5,
     borderColor: '#ffffff',
   },
-  greetingContainer: {
+  headerTextCol: {
     flex: 1,
   },
-  greeting: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0f172a',
-  },
-  shopIdRow: {
+  tagRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 3,
     gap: 6,
-  },
-  shopIdChip: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  shopIdText: {
-    fontSize: 10,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    fontWeight: '700',
-    color: '#475569',
-  },
-  verifiedTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0fdfa',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#ccfbf1',
-  },
-  verifiedTagText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#0f766e',
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    position: 'relative',
-  },
-  notificationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#0f766e',
-    position: 'absolute',
-    top: 9,
-    right: 9,
-  },
-  scanCard: {
-    backgroundColor: '#0f766e',
-    borderRadius: 20,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    shadowColor: '#0f766e',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  scanCardContent: {
-    flex: 1,
-    marginRight: 10,
-  },
-  scanTagRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 4,
-  },
-  scanTagText: {
-    color: '#ccfbf1',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  scanCardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
     marginBottom: 4,
   },
-  scanCardDesc: {
-    fontSize: 12,
-    color: '#ccfbf1',
-    lineHeight: 16,
-    marginBottom: 14,
-  },
-  scanButton: {
+  livePulsePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 999,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#059669',
+  },
+  livePulseText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#059669',
+    letterSpacing: 0.4,
+  },
+  peerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 999,
+    gap: 3,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+  },
+  peerPillText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#2563eb',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  storeTitleText: {
+    fontSize: 16.5,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  storeSubText: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    color: '#64748b',
+    marginTop: 1,
+  },
+  heroPortalCard: {
+    backgroundColor: '#2563eb',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 22,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  heroOrbGlow1: {
+    position: 'absolute',
+    top: -50,
+    right: -50,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  heroOrbGlow2: {
+    position: 'absolute',
+    bottom: -60,
+    left: -40,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(6, 182, 212, 0.3)',
+  },
+  heroHeader: {
+    marginBottom: 16,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginBottom: 8,
+  },
+  heroBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  heroHeading: {
+    color: '#ffffff',
+    fontSize: 21,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  heroDescription: {
+    color: '#ffffff',
+    opacity: 0.92,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  heroActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  heroPrimaryBtn: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    borderRadius: 14,
+    gap: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 10,
+    elevation: 3,
   },
-  scanButtonText: {
+  heroPrimaryBtnText: {
+    color: '#2563eb',
     fontSize: 13,
-    fontWeight: 'bold',
-    color: '#0f766e',
+    fontWeight: '800',
   },
-  quickModeRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  quickModeBtn: {
+  heroSecondaryBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    paddingVertical: 12,
+    borderRadius: 14,
+    gap: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
   },
-  quickModeText: {
+  heroSecondaryBtnText: {
     color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  scanGraphic: {
-    opacity: 0.85,
+    fontSize: 12,
+    fontWeight: '800',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -530,170 +660,262 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15.5,
+    fontWeight: '800',
     color: '#0f172a',
+    marginBottom: 12,
   },
-  liveIndicator: {
+  syncBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0fdfa',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
     gap: 4,
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
   },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10b981',
+  syncBadgeText: {
+    fontSize: 11,
+    color: '#059669',
+    fontWeight: '800',
   },
-  liveText: {
-    fontSize: 10,
-    color: '#0f766e',
-    fontWeight: '700',
-  },
-  viewAllText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#0f766e',
-  },
-  statsContainer: {
+  statsGrid: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   statCard: {
     flex: 1,
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    borderRadius: 20,
+    padding: 13,
+    borderWidth: 1.5,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowRadius: 8,
     elevation: 2,
   },
-  statIconBox: {
+  statCardVerified: {
+    borderColor: '#a7f3d0',
+  },
+  statCardSuspicious: {
+    borderColor: '#fde68a',
+  },
+  statCardDanger: {
+    borderColor: '#fecaca',
+  },
+  statTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  statIconBadge: {
     width: 34,
     height: 34,
-    borderRadius: 10,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trendChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 2,
+  },
+  trendChipText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#059669',
+  },
+  warningTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#d97706',
+  },
+  dangerTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#dc2626',
+  },
+  statLargeNumber: {
+    fontSize: 23,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 2,
+  },
+  statLabelText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  statFootnoteText: {
+    fontSize: 9.5,
+    color: '#94a3b8',
+    marginTop: 2,
+  },
+  operationsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 24,
+  },
+  operationGlassTile: {
+    width: '48.4%',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  opIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    borderWidth: 1,
+  },
+  opTitleText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 2,
+  },
+  opDescText: {
+    fontSize: 11,
+    color: '#64748b',
+    lineHeight: 15,
+  },
+  viewLedgerLink: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#2563eb',
+  },
+  emptyFeedContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
   },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  emptyFeedTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: 4,
   },
-  statLabel: {
-    fontSize: 11,
+  emptyFeedSubtitle: {
+    fontSize: 12,
     color: '#64748b',
-    fontWeight: '500',
-    marginTop: 2,
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 18,
+    paddingHorizontal: 16,
   },
-  statTrendGreen: {
-    marginTop: 6,
-  },
-  statTrendGreenText: {
-    fontSize: 10,
-    color: '#10b981',
-    fontWeight: '700',
-  },
-  statTrendAmber: {
-    marginTop: 6,
-  },
-  statTrendAmberText: {
-    fontSize: 10,
-    color: '#d97706',
-    fontWeight: '700',
-  },
-  statTrendRed: {
-    marginTop: 6,
-  },
-  statTrendRedText: {
-    fontSize: 10,
-    color: '#dc2626',
-    fontWeight: '700',
-  },
-  recentList: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    overflow: 'hidden',
-  },
-  recentItem: {
+  emptyActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  recentIcon: {
-    width: 38,
-    height: 38,
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 12,
+    marginTop: 14,
+    gap: 6,
+  },
+  emptyActionBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  feedGlassCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.8)',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  feedIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    borderWidth: 1,
   },
-  recentInfo: {
+  feedInfoCol: {
     flex: 1,
   },
-  medicineName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#0f172a',
+  feedHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
   },
-  medicineMfg: {
+  feedItemTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a',
+    flex: 1,
+    marginRight: 8,
+  },
+  feedStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 7,
+    borderWidth: 1,
+  },
+  feedStatusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  feedMetaText: {
     fontSize: 11,
     color: '#64748b',
-    marginTop: 2,
+    marginTop: 1,
+  },
+  feedBatchMono: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    color: '#0f172a',
+    fontWeight: '700',
   },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 3,
   },
-  timeText: {
-    fontSize: 10,
+  feedTimeText: {
+    fontSize: 10.5,
     color: '#94a3b8',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  statusBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  emptyRecentBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-  },
-  emptyRecentText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    marginTop: 8,
-  },
-  emptyRecentSub: {
-    fontSize: 11,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 4,
   },
 });

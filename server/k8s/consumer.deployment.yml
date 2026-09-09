@@ -43,6 +43,8 @@ spec:
         - containerPort: 3003
           name: cons-http
         env:
+        - name: TZ
+          value: "Asia/Kolkata"
         - name: PORT
           value: "3003"
         - name: NODE_ENV
@@ -54,3 +56,14 @@ spec:
             secretKeyRef:
               name: auth-secret
               key: SERVICE_TOKEN
+        - name: JWT_SECRET
+          value: "fbf90411fe9cebf9079d22ef36fc1321f0ce244ed073152e86dc962715389b703463f6f163953269c641c9cd69ba3fd7c4b3f3a97a5305811c3d3c38608554cd"
+        - name: GOOGLE_CLIENT_ID_WEB
+          value: "465391349595-u9juj323k2l5r21is3lnfe9ue6dtjr7n.apps.googleusercontent.com"
+        - name: GOOGLE_CLIENT_SECRET_WEB
+          value: "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"
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: database-secret
+              key: CONSUMER_MONGO_URI

@@ -21,6 +21,19 @@ export default function Layout() {
       try {
         const token = await SecureStore.getItemAsync("pharmaToken");
         if (token) {
+          if (token === "demo-customer-token") {
+            setAuth(
+              {
+                googleId: "demo_consumer_123",
+                name: "Demo Customer",
+                email: "demo@pharmachain.com",
+                picture: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+                role: "consumer",
+              },
+              token
+            );
+            return;
+          }
           const user = await getMe(token);
           setAuth(user, token);
         } else {
@@ -64,6 +77,7 @@ export default function Layout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="scan-result" />
         <Stack.Screen name="report" />
+        <Stack.Screen name="chat" options={{ animation: 'slide_from_right' }} />
       </Stack>
     </SafeAreaProvider>
   );

@@ -15,7 +15,8 @@ import * as SecureStore from "expo-secure-store";
 import {
   GoogleSignin,
   statusCodes,
-} from "@react-native-google-signin/google-signin";
+  isGoogleSigninAvailable,
+} from "../../src/services/auth/googleAuth";
 import {
   ScanLine,
   ShieldCheck,
@@ -36,15 +37,17 @@ export default function Home() {
   const { setAuth } = useAuthStore();
 
   useEffect(() => {
-    try {
-      GoogleSignin.configure({
-        webClientId:
-          process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-          "465391349595-u9juj323k2l5r21is3lnfe9ue6dtjr7n.apps.googleusercontent.com",
-        offlineAccess: false,
-      });
-    } catch (err) {
-      console.warn("[MediaCare Auth] GoogleSignin configure notice:", err);
+    if (isGoogleSigninAvailable && GoogleSignin) {
+      try {
+        GoogleSignin.configure({
+          webClientId:
+            process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
+            "465391349595-u9juj323k2l5r21is3lnfe9ue6dtjr7n.apps.googleusercontent.com",
+          offlineAccess: false,
+        });
+      } catch (err) {
+        console.warn("[MediaCare Auth] GoogleSignin configure notice:", err);
+      }
     }
   }, []);
 
@@ -199,6 +202,38 @@ export default function Home() {
   }, []);
 
   const handleGoogleSignIn = async () => {
+    if (!isGoogleSigninAvailable || !GoogleSignin) {
+      Alert.alert(
+        "Development / Expo Go Mode",
+        "Native Google Sign-In requires an Android build (npx expo run:android) or custom dev client. Would you like to sign in with a demo account to test all features?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Demo Sign In",
+            onPress: async () => {
+              setLoading(true);
+              try {
+                const demoUser = {
+                  googleId: "demo_consumer_123",
+                  name: "Demo Customer",
+                  email: "demo@pharmachain.com",
+                  picture: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+                  role: "consumer",
+                };
+                const demoToken = "demo-customer-token";
+                await SecureStore.setItemAsync("pharmaToken", demoToken);
+                setAuth(demoUser, demoToken);
+                router.replace("/(tabs)");
+              } finally {
+                setLoading(false);
+              }
+            },
+          },
+        ]
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       GoogleSignin.configure({
@@ -227,7 +262,6 @@ export default function Home() {
       setAuth(user, token);
       router.replace("/(tabs)");
     } catch (error: any) {
-      setLoading(false);
       console.error("[MediaCare Auth] Google Sign-In error:", error);
 
       if (error?.code === statusCodes?.SIGN_IN_CANCELLED) {
@@ -249,6 +283,8 @@ export default function Home() {
           "Failed to sign in with Google. Please try again."
         );
       }
+    } finally {
+      setLoading(false);
     }
   };
 

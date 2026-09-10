@@ -69,6 +69,17 @@ manifests:
     - k8s/admin.service.yml
     - k8s/ingress.yml
 
+deploy:
+  kubectl:
+    hooks:
+      before:
+        - host:
+            command: ["sh", "-c", "cd ../blockchain-server && docker compose up -d"]
+            os: [darwin, linux]
+        - host:
+            command: ["cmd.exe", "/c", "cd ..\\blockchain-server && docker compose up -d"]
+            os: [windows]
+
 portForward:
   - resourceType: service
     resourceName: pharma-core-service

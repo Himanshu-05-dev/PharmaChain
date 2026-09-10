@@ -24,6 +24,7 @@ import {
   Zap,
   Clock,
   AlertCircle,
+  Bot,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCustomerStore } from '../../src/store/customerStore';
@@ -183,6 +184,44 @@ export default function CustomerHomeDashboard() {
             <Text style={styles.statLabel}>Cabinet Safety</Text>
           </View>
         </View>
+
+        {/* PharmaBot AI Assistant Card */}
+        <TouchableOpacity
+          style={styles.aiCard}
+          onPress={() => router.push('/chat')}
+          activeOpacity={0.92}
+        >
+          <View style={styles.aiCardHeader}>
+            <View style={styles.aiCardTagRow}>
+              <View style={styles.aiTagBadge}>
+                <Sparkles size={12} color="#ff5a36" />
+                <Text style={styles.aiTagText}>MISTRAL POWERED</Text>
+              </View>
+              <View style={styles.aiOnlinePill}>
+                <View style={styles.aiOnlineDot} />
+                <Text style={styles.aiOnlineText}>AI Assistant</Text>
+              </View>
+            </View>
+            <ChevronRight size={18} color="#9a3412" />
+          </View>
+
+          <Text style={styles.aiCardTitle}>Ask PharmaBot About Your Meds</Text>
+          <Text style={styles.aiCardDesc}>
+            Instant medical safety guidance, expiring batch analysis & storage rules grounded in your account data.
+          </Text>
+
+          <View style={styles.aiChipRow}>
+            <View style={styles.aiChip}>
+              <Text style={styles.aiChipText}>📦 Expiring Meds</Text>
+            </View>
+            <View style={styles.aiChip}>
+              <Text style={styles.aiChipText}>🌡️ Storage Rules</Text>
+            </View>
+            <View style={styles.aiChip}>
+              <Text style={styles.aiChipText}>🔍 Spot Fakes</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
 
         {/* 4. My Medicine Cabinet (Zero Dummy Data) */}
         <View style={styles.sectionContainer}>
@@ -575,6 +614,24 @@ export default function CustomerHomeDashboard() {
           </View>
         </View>
       </Modal>
+
+      {/* Floating PharmaBot AI Assistant Button */}
+      <TouchableOpacity
+        style={[
+          styles.floatingAiBtn,
+          { bottom: (insets.bottom || 10) + 16 },
+        ]}
+        onPress={() => router.push('/chat')}
+        activeOpacity={0.88}
+      >
+        <View style={styles.floatingAiGlow} />
+        <View style={styles.floatingAiInner}>
+          <Bot size={24} color="#ffffff" />
+          <View style={styles.aiSparkleBadge}>
+            <Sparkles size={11} color="#ffedd5" />
+          </View>
+        </View>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -1321,5 +1378,126 @@ const styles = StyleSheet.create({
     color: '#ea580c',
     fontSize: 14,
     fontWeight: '700',
+  },
+  aiCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: '#fed7aa',
+    shadowColor: '#ea580c',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  aiCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  aiCardTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  aiTagBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff7ed',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+  },
+  aiTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#ea580c',
+    letterSpacing: 0.5,
+  },
+  aiOnlinePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+    gap: 4,
+  },
+  aiOnlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10b981',
+  },
+  aiOnlineText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  aiCardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1c1917',
+    marginBottom: 4,
+  },
+  aiCardDesc: {
+    fontSize: 12,
+    color: '#78716c',
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  aiChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  aiChip: {
+    backgroundColor: '#fff7ed',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ffedd5',
+  },
+  aiChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9a3412',
+  },
+  floatingAiBtn: {
+    position: 'absolute',
+    right: 18,
+    zIndex: 99,
+  },
+  floatingAiGlow: {
+    position: 'absolute',
+    inset: -3,
+    borderRadius: 32,
+    backgroundColor: '#ff5a36',
+    opacity: 0.25,
+  },
+  floatingAiInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#ff5a36',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#ff5a36',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+  },
+  aiSparkleBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
   },
 });

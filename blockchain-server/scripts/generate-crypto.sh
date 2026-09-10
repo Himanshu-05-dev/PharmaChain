@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # =============================================================================
 # generate-crypto.sh
 # Generates all cryptographic material for Org1 and Orderer using cryptogen.

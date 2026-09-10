@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # =============================================================================
 # deploy-channel.sh
 # Joins orderer and peer, packages and deploys pharmacc chaincode.

@@ -67,3 +67,14 @@ spec:
             secretKeyRef:
               name: database-secret
               key: CONSUMER_MONGO_URI
+        - name: MISTRAL_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: consumer-auth-secret
+              key: MISTRAL_API_KEY
+        - name: MISTRAL_MODEL
+          valueFrom:
+            secretKeyRef:
+              name: consumer-auth-secret
+              key: MISTRAL_MODEL
+

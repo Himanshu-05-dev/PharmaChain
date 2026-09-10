@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import verifyRouter from '../routes/verify.routes.js';
 import reportRouter from '../routes/report.routes.js';
 import authRouter from '../routes/auth.routes.js';
+import chatRouter from '../routes/chat.routes.js';
 import { initIST } from '../utils/time.js';
 
 initIST();
@@ -22,6 +23,7 @@ app.use(morgan('dev'));
 app.use('/api/consumer/verify', verifyRouter);
 app.use('/api/consumer/report', reportRouter);
 app.use('/api/consumer/auth', authRouter);
+app.use('/api/consumer/chat', chatRouter);
 
 // ── Health Probes ─────────────────────────────────────────────────────────────
 app.get('/healthz', (_req, res) => {
